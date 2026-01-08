@@ -4,6 +4,8 @@ import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Screen } from '../types';
 import { MOCK_TRANSACTIONS } from '../constants';
+import { Colors, getColorWithOpacity } from '../styles/colors';
+import { GlobalStyles } from '../styles/globalStyles';
 
 interface TransactionScreenProps {
   onNavigate: (screen: Screen) => void;
@@ -18,15 +20,15 @@ const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate }) => 
   ];
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={GlobalStyles.container} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
       <View style={styles.header}>
         <Pressable style={styles.headerButton}>
-          <MaterialIcons name="menu" size={24} color="#475569" />
+          <MaterialIcons name="menu" size={24} color={Colors.textSecondary} />
         </Pressable>
         <Text style={styles.headerTitle}>Land Services</Text>
         <Pressable style={styles.headerButton}>
-          <MaterialIcons name="notifications" size={24} color="#3b82f6" />
-          <View style={styles.notificationBadge} />
+          <MaterialIcons name="notifications" size={24} color={Colors.primary} />
+          <View style={GlobalStyles.badge} />
         </Pressable>
       </View>
 
@@ -41,7 +43,7 @@ const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate }) => 
             <View style={styles.actionContent}>
               <View style={styles.actionText}>
                 <View style={styles.actionHeader}>
-                  <MaterialIcons name="verified-user" size={20} color="#3b82f6" />
+                  <MaterialIcons name="verified-user" size={20} color={Colors.primary} />
                   <Text style={styles.actionTitle}>Link Digital ID</Text>
                 </View>
                 <Text style={styles.actionDescription}>Ensure your Irembo ID is linked for faster processing.</Text>
@@ -65,7 +67,7 @@ const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate }) => 
               <View key={tx.id} style={styles.transactionCard}>
                 <View style={styles.transactionHeader}>
                   <View style={styles.transactionIcon}>
-                    <MaterialIcons name="receipt-long" size={20} color="#3b82f6" />
+                    <MaterialIcons name="receipt-long" size={20} color={Colors.primary} />
                   </View>
                   <View style={styles.transactionInfo}>
                     <Text style={styles.transactionTitle}>{tx.title}</Text>
@@ -90,11 +92,11 @@ const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate }) => 
                 onPress={() => onNavigate(action.screen as Screen)}
                 style={({ pressed }) => [
                   styles.actionItem,
-                  pressed && styles.pressed
+                  pressed && GlobalStyles.pressed
                 ]}
               >
                 <View style={styles.actionItemIcon}>
-                  <MaterialIcons name={action.icon as any} size={24} color="#475569" />
+                  <MaterialIcons name={action.icon as any} size={24} color={Colors.textSecondary} />
                 </View>
                 <View style={styles.actionItemText}>
                   <Text style={styles.actionItemTitle}>{action.title}</Text>
@@ -110,19 +112,15 @@ const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate }) => 
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: Colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: Colors.borderLight,
   },
   headerButton: {
     width: 40,
@@ -135,18 +133,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#0f172a',
-  },
-  notificationBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#ef4444',
-    borderWidth: 2,
-    borderColor: '#ffffff',
+    color: Colors.textPrimary,
   },
   content: {
     padding: 20,
@@ -158,22 +145,22 @@ const styles = StyleSheet.create({
   heroTitle: {
     fontSize: 30,
     fontWeight: '800',
-    color: '#0f172a',
+    color: Colors.textPrimary,
   },
   heroSubtitle: {
     fontSize: 14,
-    color: '#64748b',
+    color: Colors.textSecondary,
   },
   actionPanel: {
-    padding: 16,
+    padding: 0,
   },
   actionCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.surface,
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: 'rgba(59, 130, 246, 0.1)',
-    shadowColor: '#000',
+    borderColor: Colors.borderLight,
+    shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
@@ -198,21 +185,21 @@ const styles = StyleSheet.create({
   actionTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#0f172a',
+    color: Colors.textPrimary,
   },
   actionDescription: {
     fontSize: 12,
-    color: '#64748b',
+    color: Colors.textSecondary,
     lineHeight: 18,
   },
   linkButton: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: Colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
   },
   linkButtonText: {
-    color: '#ffffff',
+    color: Colors.white,
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -223,29 +210,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 8,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#0f172a',
+    color: Colors.textPrimary,
   },
   sectionLink: {
     fontSize: 12,
     fontWeight: 'bold',
-    color: '#3b82f6',
+    color: Colors.primary,
   },
   transactionsList: {
     marginHorizontal: -20,
     paddingHorizontal: 20,
   },
   transactionCard: {
-    width: 340,
-    backgroundColor: '#ffffff',
+    width: 300,
+    backgroundColor: Colors.surface,
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: Colors.borderLight,
     marginRight: 16,
     gap: 12,
   },
@@ -258,7 +245,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    backgroundColor: getColorWithOpacity(Colors.primary, 0.1),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -269,25 +256,25 @@ const styles = StyleSheet.create({
   transactionTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#0f172a',
+    color: Colors.textPrimary,
   },
   transactionId: {
     fontSize: 12,
-    color: '#64748b',
+    color: Colors.textSecondary,
   },
   progressBar: {
     height: 4,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: Colors.borderLight,
     borderRadius: 2,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#3b82f6',
+    backgroundColor: Colors.primary,
   },
   progressText: {
     fontSize: 12,
-    color: '#64748b',
+    color: Colors.textSecondary,
   },
   actionsGrid: {
     flexDirection: 'row',
@@ -296,18 +283,18 @@ const styles = StyleSheet.create({
   },
   actionItem: {
     width: '47%',
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.surface,
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#f8fafc',
+    borderColor: Colors.borderLight,
     gap: 12,
   },
   actionItemIcon: {
     width: 40,
     height: 40,
     borderRadius: 8,
-    backgroundColor: '#f8fafc',
+    backgroundColor: Colors.backgroundLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -317,15 +304,11 @@ const styles = StyleSheet.create({
   actionItemTitle: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#0f172a',
+    color: Colors.textPrimary,
   },
   actionItemSub: {
     fontSize: 10,
-    color: '#64748b',
-  },
-  pressed: {
-    opacity: 0.8,
-    transform: [{ scale: 0.95 }],
+    color: Colors.textSecondary,
   },
 });
 

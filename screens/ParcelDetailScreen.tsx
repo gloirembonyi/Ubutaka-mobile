@@ -4,6 +4,8 @@ import { View, Text, StyleSheet, ScrollView, Pressable, Image } from 'react-nati
 import { MaterialIcons } from '@expo/vector-icons';
 import { Screen } from '../types';
 import { MOCK_PARCELS } from '../constants';
+import { Colors, getColorWithOpacity } from '../styles/colors';
+import { GlobalStyles } from '../styles/globalStyles';
 
 interface ParcelDetailScreenProps {
   onNavigate: (screen: Screen) => void;
@@ -14,14 +16,14 @@ const ParcelDetailScreen: React.FC<ParcelDetailScreenProps> = ({ onNavigate }) =
   const parcel = MOCK_PARCELS[0];
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={GlobalStyles.container} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
       <View style={styles.header}>
         <Pressable onPress={() => onNavigate('dashboard')} style={styles.headerButton}>
-          <MaterialIcons name="arrow-back" size={24} color="#1e293b" />
+          <MaterialIcons name="arrow-back" size={24} color={Colors.textPrimary} />
         </Pressable>
         <Text style={styles.headerTitle}>My Parcel</Text>
         <Pressable style={styles.headerButton}>
-          <MaterialIcons name="share" size={24} color="#1e293b" />
+          <MaterialIcons name="share" size={24} color={Colors.textPrimary} />
         </Pressable>
       </View>
 
@@ -31,14 +33,14 @@ const ParcelDetailScreen: React.FC<ParcelDetailScreenProps> = ({ onNavigate }) =
             onPress={() => setViewMode('image')}
             style={[styles.toggleButton, viewMode === 'image' && styles.toggleButtonActive]}
           >
-            <MaterialIcons name="image" size={16} color={viewMode === 'image' ? '#3b82f6' : '#94a3b8'} />
+            <MaterialIcons name="image" size={16} color={viewMode === 'image' ? Colors.primary : Colors.textTertiary} />
             <Text style={[styles.toggleText, viewMode === 'image' && styles.toggleTextActive]}>Image</Text>
           </Pressable>
           <Pressable
             onPress={() => setViewMode('map')}
             style={[styles.toggleButton, viewMode === 'map' && styles.toggleButtonActive]}
           >
-            <MaterialIcons name="map" size={16} color={viewMode === 'map' ? '#3b82f6' : '#94a3b8'} />
+            <MaterialIcons name="map" size={16} color={viewMode === 'map' ? Colors.primary : Colors.textTertiary} />
             <Text style={[styles.toggleText, viewMode === 'map' && styles.toggleTextActive]}>Map View</Text>
           </Pressable>
         </View>
@@ -48,12 +50,12 @@ const ParcelDetailScreen: React.FC<ParcelDetailScreenProps> = ({ onNavigate }) =
             <Image source={{ uri: parcel.imageUrl }} style={styles.mediaImage} resizeMode="cover" />
           ) : (
             <View style={styles.mapPlaceholder}>
-              <MaterialIcons name="map" size={48} color="#cbd5e1" />
+              <MaterialIcons name="map" size={48} color={Colors.border} />
               <Text style={styles.mapText}>Map View</Text>
             </View>
           )}
           <View style={styles.verifiedBadge}>
-            <MaterialIcons name="verified-user" size={18} color="#3b82f6" />
+            <MaterialIcons name="verified-user" size={18} color={Colors.primary} />
             <Text style={styles.verifiedText}>Registered & Secure</Text>
           </View>
         </View>
@@ -61,7 +63,7 @@ const ParcelDetailScreen: React.FC<ParcelDetailScreenProps> = ({ onNavigate }) =
         <View style={styles.statsCard}>
           <View style={styles.statsHeader}>
             <Text style={styles.statsLabel}>Unique Parcel Identifier (UPI)</Text>
-            <MaterialIcons name="lock" size={16} color="#3b82f6" />
+            <MaterialIcons name="lock" size={16} color={Colors.primary} />
           </View>
           <Text style={styles.upi}>{parcel.upi}</Text>
           <View style={styles.blockchainBadge}>
@@ -71,24 +73,24 @@ const ParcelDetailScreen: React.FC<ParcelDetailScreenProps> = ({ onNavigate }) =
 
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
-            <MaterialIcons name="square-foot" size={20} color="#64748b" />
+            <MaterialIcons name="square-foot" size={20} color={Colors.textSecondary} />
             <Text style={styles.statLabel}>Size</Text>
             <Text style={styles.statValue}>{parcel.size}</Text>
           </View>
           <View style={styles.statCard}>
-            <MaterialIcons name="home-work" size={20} color="#64748b" />
+            <MaterialIcons name="home-work" size={20} color={Colors.textSecondary} />
             <Text style={styles.statLabel}>Use</Text>
             <Text style={styles.statValue}>{parcel.use}</Text>
           </View>
           <View style={styles.statCard}>
-            <MaterialIcons name="location-city" size={20} color="#64748b" />
+            <MaterialIcons name="location-city" size={20} color={Colors.textSecondary} />
             <Text style={styles.statLabel}>District</Text>
             <Text style={styles.statValue}>{parcel.district}</Text>
           </View>
         </View>
 
         <Pressable style={styles.downloadButton}>
-          <MaterialIcons name="download" size={20} color="#ffffff" />
+          <MaterialIcons name="download" size={20} color={Colors.white} />
           <Text style={styles.downloadText}>Download Title Deed</Text>
         </Pressable>
 
@@ -97,7 +99,7 @@ const ParcelDetailScreen: React.FC<ParcelDetailScreenProps> = ({ onNavigate }) =
           style={styles.anomalyCard}
         >
           <View style={styles.anomalyIcon}>
-            <MaterialIcons name="report-problem" size={32} color="#d97706" />
+            <MaterialIcons name="report-problem" size={32} color={Colors.accent} />
           </View>
           <View style={styles.anomalyContent}>
             <Text style={styles.anomalyTitle}>Data Discrepancy?</Text>
@@ -115,19 +117,15 @@ const ParcelDetailScreen: React.FC<ParcelDetailScreenProps> = ({ onNavigate }) =
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    backgroundColor: getColorWithOpacity(Colors.background, 0.95),
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: Colors.borderLight,
   },
   headerButton: {
     width: 40,
@@ -139,7 +137,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#0f172a',
+    color: Colors.textPrimary,
   },
   content: {
     padding: 16,
@@ -147,7 +145,7 @@ const styles = StyleSheet.create({
   },
   toggleContainer: {
     flexDirection: 'row',
-    backgroundColor: '#f1f5f9',
+    backgroundColor: Colors.borderLight,
     padding: 4,
     borderRadius: 12,
     alignSelf: 'center',
@@ -162,16 +160,16 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   toggleButtonActive: {
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.white,
   },
   toggleText: {
     fontSize: 10,
     fontWeight: 'bold',
-    color: '#94a3b8',
+    color: Colors.textTertiary,
     textTransform: 'uppercase',
   },
   toggleTextActive: {
-    color: '#3b82f6',
+    color: Colors.primary,
   },
   mediaContainer: {
     position: 'relative',
@@ -180,8 +178,8 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#f1f5f9',
-    backgroundColor: '#f8fafc',
+    borderColor: Colors.borderLight,
+    backgroundColor: Colors.backgroundLight,
   },
   mediaImage: {
     width: '100%',
@@ -192,12 +190,12 @@ const styles = StyleSheet.create({
     height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f8fafc',
+    backgroundColor: Colors.backgroundLight,
   },
   mapText: {
     marginTop: 8,
     fontSize: 14,
-    color: '#94a3b8',
+    color: Colors.textTertiary,
     fontWeight: '500',
   },
   verifiedBadge: {
@@ -206,27 +204,27 @@ const styles = StyleSheet.create({
     left: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: getColorWithOpacity(Colors.white, 0.9),
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
     gap: 6,
     borderWidth: 1,
-    borderColor: 'rgba(59, 130, 246, 0.2)',
+    borderColor: getColorWithOpacity(Colors.primary, 0.2),
   },
   verifiedText: {
     fontSize: 10,
     fontWeight: 'bold',
-    color: '#3b82f6',
+    color: Colors.primary,
     textTransform: 'uppercase',
   },
   statsCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.surface,
     borderRadius: 32,
     padding: 24,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
-    shadowColor: '#000',
+    borderColor: Colors.borderLight,
+    shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
@@ -241,29 +239,29 @@ const styles = StyleSheet.create({
   statsLabel: {
     fontSize: 10,
     fontWeight: 'bold',
-    color: '#94a3b8',
+    color: Colors.textTertiary,
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
   upi: {
     fontSize: 32,
     fontWeight: '800',
-    color: '#0f172a',
+    color: Colors.textPrimary,
     letterSpacing: 1,
   },
   blockchainBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    backgroundColor: getColorWithOpacity(Colors.primary, 0.1),
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(59, 130, 246, 0.2)',
+    borderColor: getColorWithOpacity(Colors.primary, 0.2),
   },
   blockchainText: {
     fontSize: 10,
     fontWeight: 'bold',
-    color: '#3b82f6',
+    color: Colors.primary,
   },
   statsGrid: {
     flexDirection: 'row',
@@ -271,57 +269,57 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.surface,
     padding: 16,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: Colors.borderLight,
     gap: 8,
   },
   statLabel: {
     fontSize: 8,
     fontWeight: 'bold',
-    color: '#94a3b8',
+    color: Colors.textTertiary,
     textTransform: 'uppercase',
   },
   statValue: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#0f172a',
+    color: Colors.textPrimary,
   },
   downloadButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#3b82f6',
+    backgroundColor: Colors.primary,
     paddingVertical: 16,
     borderRadius: 16,
     gap: 12,
-    shadowColor: '#3b82f6',
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
   },
   downloadText: {
-    color: '#ffffff',
+    color: Colors.white,
     fontSize: 16,
     fontWeight: 'bold',
   },
   anomalyCard: {
     flexDirection: 'row',
-    backgroundColor: '#fffbeb',
+    backgroundColor: Colors.accentLight,
     borderRadius: 24,
     padding: 24,
     borderWidth: 1,
-    borderColor: '#fef3c7',
+    borderColor: getColorWithOpacity(Colors.accent, 0.2),
     gap: 20,
   },
   anomalyIcon: {
     width: 48,
     height: 48,
     borderRadius: 16,
-    backgroundColor: '#fef3c7',
+    backgroundColor: getColorWithOpacity(Colors.accent, 0.2),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -332,28 +330,29 @@ const styles = StyleSheet.create({
   anomalyTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#0f172a',
+    color: Colors.textPrimary,
   },
   anomalyText: {
     fontSize: 12,
-    color: '#475569',
+    color: Colors.textSecondary,
     lineHeight: 18,
   },
   anomalyButton: {
     alignSelf: 'flex-start',
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.white,
     paddingHorizontal: 24,
     paddingVertical: 10,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#fde68a',
+    borderColor: getColorWithOpacity(Colors.accent, 0.3),
     marginTop: 8,
   },
   anomalyButtonText: {
     fontSize: 12,
     fontWeight: 'bold',
-    color: '#d97706',
+    color: Colors.accentDark,
   },
+
 });
 
 export default ParcelDetailScreen;

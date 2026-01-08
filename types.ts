@@ -16,7 +16,9 @@ export type Screen =
   | 'verification'
   | 'dispute-list'
   | 'dispute-detail'
-  | 'mediation-room';
+  | 'mediation-room'
+  | 'settings'
+  | 'tax-payment';
 
 export type Language = 'RW' | 'EN';
 

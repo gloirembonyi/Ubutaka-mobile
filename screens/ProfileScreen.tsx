@@ -1,9 +1,12 @@
 
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Image, Switch } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Image, ImageBackground } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Screen } from '../types';
 import { MOCK_USER } from '../constants';
+import { Colors, getColorWithOpacity } from '../styles/colors';
+import { GlobalStyles } from '../styles/globalStyles';
 
 interface ProfileScreenProps {
   onNavigate: (screen: Screen) => void;
@@ -11,230 +14,407 @@ interface ProfileScreenProps {
   toggleTheme: () => void;
 }
 
-const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme, toggleTheme }) => {
-  return (
-    <ScrollView style={[styles.container, theme === 'dark' && styles.containerDark]} showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
-        <Text style={[styles.headerTitle, theme === 'dark' && styles.textDark]}>Profile & Settings</Text>
-      </View>
+const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme }) => {
+  const isDark = theme === 'dark';
 
-      <View style={styles.content}>
-        {/* Profile Header */}
-        <View style={styles.profileHeader}>
-          <View style={styles.avatarContainer}>
-            <Image source={{ uri: MOCK_USER.avatar }} style={styles.avatar} />
-            <Pressable style={styles.editButton}>
-              <MaterialIcons name="edit" size={16} color="#ffffff" />
+  return (
+    <View style={[GlobalStyles.container, isDark && styles.containerDark]}>
+      <ImageBackground 
+        source={{ uri: 'https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=2000&auto=format&fit=crop' }}
+        style={styles.headerBackground}
+        imageStyle={{ opacity: 0.15 }}
+      >
+        <SafeAreaView edges={['top']} style={styles.safeHeader}>
+          <View style={styles.topBar}>
+            <Text style={[styles.headerTitle, isDark && styles.textDark]}>My Profile</Text>
+            <Pressable 
+              onPress={() => onNavigate('settings')}
+              style={[styles.settingsButton, isDark && styles.settingsButtonDark]}
+            >
+              <MaterialIcons name="settings" size={24} color={isDark ? Colors.white : Colors.textPrimary} />
             </Pressable>
           </View>
-          <Text style={[styles.name, theme === 'dark' && styles.textDark]}>{MOCK_USER.name}</Text>
-          <View style={styles.verifiedBadge}>
-            <MaterialIcons name="verified" size={18} color="#3b82f6" />
-            <Text style={styles.verifiedText}>Verified Citizen</Text>
+          
+          <View style={styles.profileCard}>
+            <View style={styles.avatarSection}>
+              <View style={styles.avatarContainer}>
+                <Image source={{ uri: MOCK_USER.avatar }} style={styles.avatar} />
+                <View style={styles.verifiedBadge}>
+                  <MaterialIcons name="verified" size={16} color={Colors.white} />
+                </View>
+              </View>
+              <View style={styles.nameSection}>
+                <Text style={[styles.name, isDark && styles.textDark]}>{MOCK_USER.name}</Text>
+                <Text style={styles.idText}>NID: {MOCK_USER.nationalId}</Text>
+              </View>
+            </View>
+
+            <View style={styles.statsRow}>
+              <View style={styles.statItem}>
+                <Text style={[styles.statValue, isDark && styles.textDark]}>3</Text>
+                <Text style={styles.statLabel}>Properties</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={[styles.statValue, isDark && styles.textDark]}>12</Text>
+                <Text style={styles.statLabel}>Transactions</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={[styles.statValue, isDark && styles.textDark]}>4.8</Text>
+                <Text style={styles.statLabel}>Rating</Text>
+              </View>
+            </View>
+          </View>
+        </SafeAreaView>
+      </ImageBackground>
+
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 }]}
+      >
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, isDark && styles.textDark]}>Digital Identity</Text>
+        </View>
+
+        {/* Digital ID Card */}
+        <View style={styles.idCard}>
+          <View style={styles.idCardHeader}>
+            <Image 
+              source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/17/Coat_of_arms_of_Rwanda.svg/1200px-Coat_of_arms_of_Rwanda.svg.png' }}
+              style={styles.coatOfArms}
+              resizeMode="contain"
+            />
+            <View>
+              <Text style={styles.republicText}>REPUBLIC OF RWANDA</Text>
+              <Text style={styles.idTitle}>NATIONAL ID CARD</Text>
+            </View>
+          </View>
+          <View style={styles.idCardContent}>
+            <Image source={{ uri: MOCK_USER.avatar }} style={styles.idAvatar} />
+            <View style={styles.idDetails}>
+              <View>
+                <Text style={styles.idLabel}>Names</Text>
+                <Text style={styles.idValue}>{MOCK_USER.name}</Text>
+              </View>
+              <View>
+                <Text style={styles.idLabel}>National ID No</Text>
+                <Text style={styles.idValue}>{MOCK_USER.nationalId}</Text>
+              </View>
+              <View style={styles.idRow}>
+                <View>
+                  <Text style={styles.idLabel}>Sex</Text>
+                  <Text style={styles.idValue}>M</Text>
+                </View>
+                <View>
+                  <Text style={styles.idLabel}>Date of Birth</Text>
+                  <Text style={styles.idValue}>12/04/1990</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+          <View style={styles.idCardFooter}>
+            <View style={styles.activeStatus}>
+              <View style={styles.statusDot} />
+              <Text style={styles.statusText}>ACTIVE</Text>
+            </View>
+            <MaterialIcons name="qr-code" size={24} color={Colors.textPrimary} />
           </View>
         </View>
 
-        {/* ID Card */}
-        <View style={[styles.card, theme === 'dark' && styles.cardDark]}>
-          <View style={styles.cardHeader}>
-            <View style={styles.cardIconContainer}>
-              <MaterialIcons name="badge" size={24} color="#3b82f6" />
+        <View style={styles.menuGrid}>
+          <Pressable style={[styles.menuItem, isDark && styles.menuItemDark]}>
+            <View style={[styles.menuIcon, { backgroundColor: getColorWithOpacity(Colors.primary, 0.1) }]}>
+              <MaterialIcons name="folder-shared" size={24} color={Colors.primary} />
             </View>
-            <View style={styles.cardText}>
-              <Text style={styles.cardLabel}>National ID (NID)</Text>
-              <Text style={styles.cardSub}>Rwanda Identification Agency</Text>
+            <Text style={[styles.menuLabel, isDark && styles.textDark]}>My Documents</Text>
+          </Pressable>
+          <Pressable style={[styles.menuItem, isDark && styles.menuItemDark]}>
+            <View style={[styles.menuIcon, { backgroundColor: getColorWithOpacity(Colors.success, 0.1) }]}>
+              <MaterialIcons name="history" size={24} color={Colors.success} />
             </View>
-            <View style={styles.activeBadge}>
-              <Text style={styles.activeText}>Active</Text>
+            <Text style={[styles.menuLabel, isDark && styles.textDark]}>History</Text>
+          </Pressable>
+          <Pressable style={[styles.menuItem, isDark && styles.menuItemDark]}>
+            <View style={[styles.menuIcon, { backgroundColor: getColorWithOpacity(Colors.warning, 0.1) }]}>
+              <MaterialIcons name="security" size={24} color={Colors.warning} />
             </View>
-          </View>
-          <Text style={[styles.idNumber, theme === 'dark' && styles.textDark]}>{MOCK_USER.nationalId}</Text>
+            <Text style={[styles.menuLabel, isDark && styles.textDark]}>Security</Text>
+          </Pressable>
+          <Pressable 
+            onPress={() => onNavigate('settings')}
+            style={[styles.menuItem, isDark && styles.menuItemDark]}
+          >
+            <View style={[styles.menuIcon, { backgroundColor: getColorWithOpacity(Colors.textSecondary, 0.1) }]}>
+              <MaterialIcons name="settings" size={24} color={Colors.textSecondary} />
+            </View>
+            <Text style={[styles.menuLabel, isDark && styles.textDark]}>Settings</Text>
+          </Pressable>
         </View>
 
-        {/* Settings */}
-        <View style={styles.settingsSection}>
-          <Text style={[styles.sectionTitle, theme === 'dark' && styles.textDark]}>Preferences</Text>
-          <View style={[styles.settingItem, theme === 'dark' && styles.settingItemDark]}>
-            <View style={styles.settingLeft}>
-              <MaterialIcons name="dark-mode" size={24} color="#64748b" />
-              <Text style={[styles.settingLabel, theme === 'dark' && styles.textDark]}>Dark Mode</Text>
-            </View>
-            <Switch value={theme === 'dark'} onValueChange={toggleTheme} />
-          </View>
-        </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
   containerDark: {
-    backgroundColor: '#0a0f1a',
+    backgroundColor: Colors.backgroundDark,
   },
-  header: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+  headerBackground: {
+    paddingBottom: 24,
+    backgroundColor: Colors.surface,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+    overflow: 'hidden',
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  safeHeader: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+  },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    color: '#0f172a',
+    fontSize: 24,
+    fontWeight: '900',
+    color: Colors.textPrimary,
   },
-  content: {
-    padding: 20,
-    gap: 24,
+  textDark: {
+    color: Colors.white,
   },
-  profileHeader: {
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  avatarContainer: {
-    position: 'relative',
-    marginBottom: 16,
-  },
-  avatar: {
-    width: 112,
-    height: 112,
-    borderRadius: 56,
-    borderWidth: 4,
-    borderColor: '#ffffff',
-  },
-  editButton: {
-    position: 'absolute',
-    bottom: 4,
-    right: 4,
-    backgroundColor: '#3b82f6',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#ffffff',
-    shadowColor: '#000',
+  settingsButton: {
+    padding: 8,
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 4,
   },
-  name: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#0f172a',
-    marginBottom: 8,
+  settingsButtonDark: {
+    backgroundColor: getColorWithOpacity(Colors.white, 0.1),
+  },
+  profileCard: {
+    alignItems: 'center',
+  },
+  avatarSection: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  avatarContainer: {
+    position: 'relative',
+    marginBottom: 12,
+  },
+  avatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 4,
+    borderColor: Colors.white,
   },
   verifiedBadge: {
-    flexDirection: 'row',
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: Colors.primary,
+    padding: 6,
+    borderRadius: 12,
+    borderWidth: 3,
+    borderColor: Colors.white,
+  },
+  nameSection: {
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
-  verifiedText: {
-    fontSize: 14,
+  name: {
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#3b82f6',
+    color: Colors.textPrimary,
   },
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#f1f5f9',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  cardDark: {
-    backgroundColor: '#1e293b',
-    borderColor: '#334155',
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  cardIconContainer: {
-    padding: 8,
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-    borderRadius: 8,
-  },
-  cardText: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  cardLabel: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: '#64748b',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  cardSub: {
-    fontSize: 10,
-    color: '#94a3b8',
-  },
-  activeBadge: {
-    backgroundColor: '#dcfce7',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  activeText: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: '#16a34a',
-    textTransform: 'uppercase',
-  },
-  idNumber: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#0f172a',
+  idText: {
+    fontSize: 12,
+    color: Colors.textSecondary,
     fontFamily: 'monospace',
+    letterSpacing: 0.5,
   },
-  settingsSection: {
-    gap: 12,
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: getColorWithOpacity(Colors.background, 0.5),
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 20,
+    width: '100%',
+  },
+  statItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.textPrimary,
+  },
+  statLabel: {
+    fontSize: 10,
+    color: Colors.textSecondary,
+    textTransform: 'uppercase',
+  },
+  statDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: Colors.border,
+  },
+  content: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 24,
+    paddingTop: 32,
+    gap: 24,
+  },
+  sectionHeader: {
+    marginBottom: 8,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#0f172a',
-    marginBottom: 8,
+    color: Colors.textPrimary,
   },
-  settingItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#ffffff',
-    padding: 16,
-    borderRadius: 12,
+  idCard: {
+    backgroundColor: '#E8F5E9',
+    borderRadius: 20,
+    padding: 20,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: '#C8E6C9',
+    gap: 16,
   },
-  settingItemDark: {
-    backgroundColor: '#1e293b',
-    borderColor: '#334155',
-  },
-  settingLeft: {
+  idCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#C8E6C9',
+    paddingBottom: 12,
   },
-  settingLabel: {
+  coatOfArms: {
+    width: 40,
+    height: 40,
+  },
+  republicText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#2E7D32',
+    letterSpacing: 1,
+  },
+  idTitle: {
     fontSize: 16,
-    color: '#0f172a',
+    fontWeight: '900',
+    color: '#1B5E20',
   },
-  textDark: {
-    color: '#ffffff',
+  idCardContent: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  idAvatar: {
+    width: 80,
+    height: 100,
+    borderRadius: 8,
+    backgroundColor: '#C8E6C9',
+  },
+  idDetails: {
+    flex: 1,
+    justifyContent: 'space-between',
+  },
+  idLabel: {
+    fontSize: 10,
+    color: '#388E3C',
+    textTransform: 'uppercase',
+  },
+  idValue: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#1B5E20',
+    marginBottom: 8,
+  },
+  idRow: {
+    flexDirection: 'row',
+    gap: 24,
+  },
+  idCardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  activeStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#C8E6C9',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#2E7D32',
+  },
+  statusText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#2E7D32',
+  },
+  menuGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+  },
+  menuItem: {
+    width: '47%',
+    backgroundColor: Colors.surface,
+    padding: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  menuItemDark: {
+    backgroundColor: Colors.surfaceDark,
+    borderColor: Colors.borderDark,
+  },
+  menuIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuLabel: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: Colors.textPrimary,
   },
 });
 

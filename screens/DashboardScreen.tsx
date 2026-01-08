@@ -5,6 +5,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Screen } from '../types';
 import { MOCK_USER } from '../constants';
+import { Colors, getColorWithOpacity } from '../styles/colors';
+import { GlobalStyles } from '../styles/globalStyles';
 
 interface DashboardScreenProps {
   onNavigate: (screen: Screen) => void;
@@ -15,20 +17,20 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate }) => {
     { icon: 'add-location-alt', label: 'Register Land', screen: 'register-land' },
     { icon: 'shopping-cart', label: 'Buy Land', screen: 'marketplace' },
     { icon: 'sell', label: 'Sell Land', screen: 'sell-land' },
-    { icon: 'family-history', label: 'Inheritance', screen: 'inheritance' }
+    { icon: 'account-tree', label: 'Inheritance', screen: 'inheritance' }
   ];
 
   return (
-    <View style={styles.container}>
-      <SafeAreaView edges={['top']} style={styles.safeArea}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+    <View style={GlobalStyles.container}>
+      <SafeAreaView edges={['top']} style={GlobalStyles.safeArea}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={GlobalStyles.scrollContent}>
           {/* Header */}
           <View style={styles.header}>
         <View style={styles.userInfo}>
           <View style={styles.avatarContainer}>
             <Image source={{ uri: MOCK_USER.avatar }} style={styles.avatar} />
             <View style={styles.verifiedBadge}>
-              <MaterialIcons name="check" size={14} color="#ffffff" />
+              <MaterialIcons name="check" size={14} color={Colors.white} />
             </View>
           </View>
           <View style={styles.userText}>
@@ -37,7 +39,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate }) => {
           </View>
         </View>
         <Pressable style={styles.notificationButton}>
-          <MaterialIcons name="notifications" size={24} color="#475569" />
+          <MaterialIcons name="notifications" size={24} color={Colors.textSecondary} />
           <View style={styles.notificationBadge} />
         </Pressable>
       </View>
@@ -48,19 +50,19 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate }) => {
           onPress={() => onNavigate('verification')}
           style={({ pressed }) => [
             styles.verificationBanner,
-            pressed && styles.pressed
+            pressed && GlobalStyles.pressed
           ]}
         >
           <View style={styles.verificationContent}>
             <View style={styles.verificationIcon}>
-              <MaterialIcons name="fingerprint" size={24} color="#3b82f6" />
+              <MaterialIcons name="fingerprint" size={24} color={Colors.primary} />
             </View>
             <View style={styles.verificationText}>
               <Text style={styles.verificationTitle}>Biometric Identity</Text>
               <Text style={styles.verificationSubtitle}>Active & Verified</Text>
             </View>
           </View>
-          <MaterialIcons name="chevron-right" size={24} color="#cbd5e1" />
+          <MaterialIcons name="chevron-right" size={24} color={Colors.neutral} />
         </Pressable>
 
         {/* Hero Card */}
@@ -68,7 +70,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate }) => {
           onPress={() => onNavigate('parcel-details')}
           style={({ pressed }) => [
             styles.heroCard,
-            pressed && styles.pressed
+            pressed && GlobalStyles.pressed
           ]}
         >
           <Image 
@@ -83,12 +85,12 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate }) => {
                 <Text style={styles.heroLabel}>Total Holdings</Text>
                 <Text style={styles.heroTitle}>3 Parcels</Text>
                 <View style={styles.heroLocation}>
-                  <MaterialIcons name="location-on" size={14} color="#3b82f6" />
+                  <MaterialIcons name="location-on" size={14} color={Colors.accent} />
                   <Text style={styles.heroLocationText}>Karongi & Gasabo Districts</Text>
                 </View>
               </View>
               <View style={styles.heroIconContainer}>
-                <MaterialIcons name="map" size={32} color="#ffffff" />
+                <MaterialIcons name="map" size={32} color={Colors.white} />
               </View>
             </View>
             <View style={styles.heroButtons}>
@@ -115,11 +117,11 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate }) => {
                 onPress={() => onNavigate(action.screen as Screen)}
                 style={({ pressed }) => [
                   styles.actionCard,
-                  pressed && styles.pressed
+                  pressed && GlobalStyles.pressed
                 ]}
               >
                 <View style={styles.actionIcon}>
-                  <MaterialIcons name={action.icon as any} size={28} color="#3b82f6" />
+                  <MaterialIcons name={action.icon as any} size={28} color={Colors.primary} />
                 </View>
                 <View style={styles.actionText}>
                   <Text style={styles.actionLabel}>{action.label}</Text>
@@ -141,7 +143,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate }) => {
           <View style={styles.transactionCard}>
             <View style={styles.transactionContent}>
               <View style={styles.transactionIcon}>
-                <MaterialIcons name="payments" size={20} color="#ea580c" />
+                <MaterialIcons name="payments" size={20} color={Colors.accent} />
               </View>
               <View>
                 <Text style={styles.transactionTitle}>Tax Payment</Text>
@@ -159,16 +161,6 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate }) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
-  safeArea: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 120,
-  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -176,7 +168,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 16,
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.background,
   },
   userInfo: {
     flexDirection: 'row',
@@ -191,17 +183,17 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     borderWidth: 2,
-    borderColor: '#ffffff',
+    borderColor: Colors.white,
   },
   verifiedBadge: {
     position: 'absolute',
     bottom: -2,
     right: -2,
-    backgroundColor: '#3b82f6',
+    backgroundColor: Colors.primary,
     borderRadius: 10,
     padding: 2,
     borderWidth: 2,
-    borderColor: '#ffffff',
+    borderColor: Colors.white,
   },
   userText: {
     flexDirection: 'column',
@@ -209,14 +201,14 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: 10,
     fontWeight: 'bold',
-    color: '#94a3b8',
+    color: Colors.textTertiary,
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
   userName: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#0f172a',
+    color: Colors.textPrimary,
     lineHeight: 24,
   },
   notificationButton: {
@@ -231,9 +223,9 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#ef4444',
+    backgroundColor: Colors.error,
     borderWidth: 2,
-    borderColor: '#ffffff',
+    borderColor: Colors.white,
   },
   content: {
     paddingHorizontal: 24,
@@ -244,9 +236,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#f8fafc',
+    backgroundColor: Colors.backgroundLight,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: Colors.border,
     borderRadius: 16,
     padding: 16,
   },
@@ -259,7 +251,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    backgroundColor: getColorWithOpacity(Colors.primary, 0.1),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -269,11 +261,11 @@ const styles = StyleSheet.create({
   verificationTitle: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#0f172a',
+    color: Colors.textPrimary,
   },
   verificationSubtitle: {
     fontSize: 12,
-    color: '#3b82f6',
+    color: Colors.primary,
     fontWeight: '600',
   },
   heroCard: {
@@ -281,12 +273,12 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     overflow: 'hidden',
     minHeight: 220,
-    shadowColor: '#000',
+    shadowColor: Colors.shadow,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
     shadowRadius: 16,
     elevation: 12,
-    backgroundColor: '#1e293b',
+    backgroundColor: Colors.primaryDark,
   },
   heroImage: {
     position: 'absolute',
@@ -298,7 +290,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: '100%',
     height: '100%',
-    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+    backgroundColor: getColorWithOpacity(Colors.primaryDark, 0.85),
   },
   heroContent: {
     position: 'relative',
@@ -314,7 +306,7 @@ const styles = StyleSheet.create({
   heroLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#94a3b8',
+    color: Colors.textTertiary,
     textTransform: 'uppercase',
     letterSpacing: 1.2,
     marginBottom: 6,
@@ -322,7 +314,7 @@ const styles = StyleSheet.create({
   heroTitle: {
     fontSize: 40,
     fontWeight: '900',
-    color: '#ffffff',
+    color: Colors.white,
     marginBottom: 10,
     letterSpacing: -0.5,
   },
@@ -334,15 +326,15 @@ const styles = StyleSheet.create({
   },
   heroLocationText: {
     fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.75)',
+    color: getColorWithOpacity(Colors.white, 0.75),
     fontWeight: '600',
   },
   heroIconContainer: {
-    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+    backgroundColor: getColorWithOpacity(Colors.primary, 0.2),
     padding: 14,
     borderRadius: 18,
     borderWidth: 1.5,
-    borderColor: 'rgba(59, 130, 246, 0.3)',
+    borderColor: getColorWithOpacity(Colors.primary, 0.3),
   },
   heroButtons: {
     flexDirection: 'row',
@@ -350,35 +342,35 @@ const styles = StyleSheet.create({
   },
   heroButtonPrimary: {
     flex: 1,
-    backgroundColor: '#3b82f6',
+    backgroundColor: Colors.primary,
     paddingVertical: 16,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#3b82f6',
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
     elevation: 6,
   },
   heroButtonText: {
-    color: '#ffffff',
+    color: Colors.white,
     fontSize: 13,
     fontWeight: '700',
     letterSpacing: 0.5,
   },
   heroButtonSecondary: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: getColorWithOpacity(Colors.white, 0.15),
     paddingVertical: 16,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: getColorWithOpacity(Colors.white, 0.2),
   },
   heroButtonSecondaryText: {
-    color: '#ffffff',
+    color: Colors.white,
     fontSize: 13,
     fontWeight: '700',
     letterSpacing: 0.5,
@@ -395,12 +387,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#0f172a',
+    color: Colors.textPrimary,
   },
   sectionLink: {
     fontSize: 12,
     fontWeight: 'bold',
-    color: '#3b82f6',
+    color: Colors.primary,
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
@@ -411,12 +403,12 @@ const styles = StyleSheet.create({
   },
   actionCard: {
     width: '47%',
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.surface,
     padding: 20,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
-    shadowColor: '#000',
+    borderColor: Colors.border,
+    shadowColor: Colors.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
@@ -427,7 +419,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: 'rgba(59, 130, 246, 0.05)',
+    backgroundColor: getColorWithOpacity(Colors.primary, 0.05),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -437,31 +429,31 @@ const styles = StyleSheet.create({
   actionLabel: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: Colors.textPrimary,
   },
   actionSub: {
     fontSize: 10,
     fontWeight: 'bold',
-    color: '#94a3b8',
+    color: Colors.textTertiary,
     textTransform: 'uppercase',
   },
   transactionsSection: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: Colors.backgroundLight,
     borderRadius: 24,
     padding: 24,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: Colors.border,
     gap: 20,
   },
   transactionCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.surface,
     padding: 12,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: Colors.border,
   },
   transactionContent: {
     flexDirection: 'row',
@@ -472,27 +464,23 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#fff7ed',
+    backgroundColor: getColorWithOpacity(Colors.accent, 0.1),
     alignItems: 'center',
     justifyContent: 'center',
   },
   transactionTitle: {
     fontSize: 12,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: Colors.textPrimary,
   },
   transactionSub: {
     fontSize: 10,
-    color: '#94a3b8',
+    color: Colors.textTertiary,
   },
   transactionDate: {
     fontSize: 10,
     fontWeight: 'bold',
-    color: '#94a3b8',
-  },
-  pressed: {
-    opacity: 0.8,
-    transform: [{ scale: 0.98 }],
+    color: Colors.textTertiary,
   },
 });
 

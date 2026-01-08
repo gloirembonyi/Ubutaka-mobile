@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, Pressable } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Screen } from '../types';
+import { Colors } from '../styles/colors';
+import { GlobalStyles } from '../styles/globalStyles';
 
 interface MediationRoomScreenProps {
   onNavigate: (screen: Screen) => void;
@@ -17,10 +19,10 @@ const MediationRoomScreen: React.FC<MediationRoomScreenProps> = ({ onNavigate, d
   ]);
 
   return (
-    <View style={styles.container}>
+    <View style={GlobalStyles.container}>
       <View style={styles.header}>
         <Pressable onPress={() => onNavigate('dispute-detail')} style={styles.backButton}>
-          <MaterialIcons name="arrow-back" size={24} color="#1e293b" />
+          <MaterialIcons name="arrow-back" size={24} color={Colors.textPrimary} />
         </Pressable>
         <Text style={styles.headerTitle}>Mediation Room</Text>
       </View>
@@ -28,7 +30,7 @@ const MediationRoomScreen: React.FC<MediationRoomScreenProps> = ({ onNavigate, d
         {messages.map((msg) => (
           <View key={msg.id} style={[styles.message, msg.type === 'user' && styles.messageUser]}>
             {msg.type !== 'system' && <Text style={styles.sender}>{msg.sender}</Text>}
-            <Text style={styles.messageText}>{msg.text}</Text>
+            <Text style={[styles.messageText, msg.type === 'user' && styles.messageTextUser]}>{msg.text}</Text>
           </View>
         ))}
       </ScrollView>
@@ -38,10 +40,10 @@ const MediationRoomScreen: React.FC<MediationRoomScreenProps> = ({ onNavigate, d
           placeholder="Type a message..."
           value={message}
           onChangeText={setMessage}
-          placeholderTextColor="#94a3b8"
+          placeholderTextColor={Colors.textTertiary}
         />
         <Pressable style={styles.sendButton}>
-          <MaterialIcons name="send" size={20} color="#ffffff" />
+          <MaterialIcons name="send" size={20} color={Colors.white} />
         </Pressable>
       </View>
     </View>
@@ -49,18 +51,18 @@ const MediationRoomScreen: React.FC<MediationRoomScreenProps> = ({ onNavigate, d
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#ffffff' },
-  header: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
+  header: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: Colors.borderLight },
   backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { flex: 1, fontSize: 18, fontWeight: 'bold', color: '#0f172a', textAlign: 'center', marginRight: 40 },
+  headerTitle: { flex: 1, fontSize: 18, fontWeight: 'bold', color: Colors.textPrimary, textAlign: 'center', marginRight: 40 },
   messages: { flex: 1, padding: 16, gap: 16 },
-  message: { backgroundColor: '#f8fafc', padding: 12, borderRadius: 12, gap: 4 },
-  messageUser: { backgroundColor: '#3b82f6', alignSelf: 'flex-end' },
-  sender: { fontSize: 8, fontWeight: 'bold', color: '#94a3b8', textTransform: 'uppercase' },
-  messageText: { fontSize: 14, color: '#0f172a' },
-  inputContainer: { flexDirection: 'row', padding: 16, borderTopWidth: 1, borderTopColor: '#f1f5f9', gap: 8 },
-  input: { flex: 1, backgroundColor: '#f8fafc', padding: 12, borderRadius: 12, fontSize: 14 },
-  sendButton: { backgroundColor: '#3b82f6', width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  message: { backgroundColor: Colors.backgroundLight, padding: 12, borderRadius: 12, gap: 4, marginBottom: 12 },
+  messageUser: { backgroundColor: Colors.primary, alignSelf: 'flex-end' },
+  sender: { fontSize: 8, fontWeight: 'bold', color: Colors.textTertiary, textTransform: 'uppercase' },
+  messageText: { fontSize: 14, color: Colors.textPrimary },
+  messageTextUser: { color: Colors.white },
+  inputContainer: { flexDirection: 'row', padding: 16, borderTopWidth: 1, borderTopColor: Colors.borderLight, gap: 8 },
+  input: { flex: 1, backgroundColor: Colors.backgroundLight, padding: 12, borderRadius: 12, fontSize: 14, color: Colors.textPrimary },
+  sendButton: { backgroundColor: Colors.primary, width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
 });
 
 export default MediationRoomScreen;

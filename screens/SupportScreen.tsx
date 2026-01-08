@@ -3,6 +3,8 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Image } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Screen } from '../types';
+import { Colors, getColorWithOpacity } from '../styles/colors';
+import { GlobalStyles } from '../styles/globalStyles';
 
 interface SupportScreenProps {
   onNavigate: (screen: Screen) => void;
@@ -10,14 +12,14 @@ interface SupportScreenProps {
 
 const SupportScreen: React.FC<SupportScreenProps> = ({ onNavigate }) => {
   const guides = [
-    { icon: 'swap-horiz', title: 'Transfer Title', sub: 'Step-by-step land transfer', color: '#3b82f6' },
-    { icon: 'description', title: 'Read Documents', sub: 'Understand your rights', color: '#8b5cf6' },
-    { icon: 'security', title: 'Security Tips', sub: 'Protect your property', color: '#10b981' },
-    { icon: 'help', title: 'FAQ', sub: 'Common questions', color: '#f59e0b' }
+    { icon: 'swap-horiz', title: 'Transfer Title', sub: 'Step-by-step land transfer', color: Colors.primary },
+    { icon: 'description', title: 'Read Documents', sub: 'Understand your rights', color: Colors.info },
+    { icon: 'security', title: 'Security Tips', sub: 'Protect your property', color: Colors.success },
+    { icon: 'help', title: 'FAQ', sub: 'Common questions', color: Colors.accent }
   ];
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={GlobalStyles.container} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
       <View style={styles.header}>
         <View>
           <Text style={styles.headerTitle}>Support & Learning</Text>
@@ -30,19 +32,19 @@ const SupportScreen: React.FC<SupportScreenProps> = ({ onNavigate }) => {
           onPress={() => onNavigate('dispute-list')}
           style={({ pressed }) => [
             styles.disputeCard,
-            pressed && styles.pressed
+            pressed && GlobalStyles.pressed
           ]}
         >
           <View style={styles.disputeContent}>
             <View style={styles.disputeIcon}>
-              <MaterialIcons name="gavel" size={32} color="#d97706" />
+              <MaterialIcons name="gavel" size={32} color={Colors.accentDark} />
             </View>
             <View style={styles.disputeText}>
               <Text style={styles.disputeTitle}>Community Disputes</Text>
               <Text style={styles.disputeSub}>Track mediation & resolution cases</Text>
             </View>
           </View>
-          <MaterialIcons name="arrow-forward" size={24} color="#f59e0b" />
+          <MaterialIcons name="arrow-forward" size={24} color={Colors.accent} />
         </Pressable>
 
         <View style={styles.featuredCard}>
@@ -54,7 +56,7 @@ const SupportScreen: React.FC<SupportScreenProps> = ({ onNavigate }) => {
           <View style={styles.featuredOverlay} />
           <View style={styles.featuredContent}>
             <View style={styles.featuredBadge}>
-              <MaterialIcons name="school" size={14} color="#3d2e0f" />
+              <MaterialIcons name="school" size={14} color={Colors.accentDark} />
               <Text style={styles.featuredBadgeText}>New Guide</Text>
             </View>
             <Text style={styles.featuredTitle}>Master Ubutaka in minutes</Text>
@@ -70,10 +72,10 @@ const SupportScreen: React.FC<SupportScreenProps> = ({ onNavigate }) => {
                 key={idx}
                 style={({ pressed }) => [
                   styles.guideCard,
-                  pressed && styles.pressed
+                  pressed && GlobalStyles.pressed
                 ]}
               >
-                <View style={[styles.guideIcon, { backgroundColor: `${guide.color}15` }]}>
+                <View style={[styles.guideIcon, { backgroundColor: getColorWithOpacity(guide.color, 0.1) }]}>
                   <MaterialIcons name={guide.icon as any} size={24} color={guide.color} />
                 </View>
                 <View style={styles.guideText}>
@@ -90,26 +92,22 @@ const SupportScreen: React.FC<SupportScreenProps> = ({ onNavigate }) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
   header: {
     paddingHorizontal: 24,
     paddingVertical: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    backgroundColor: getColorWithOpacity(Colors.background, 0.95),
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: Colors.borderLight,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#0f172a',
+    color: Colors.textPrimary,
   },
   headerSubtitle: {
     fontSize: 10,
     fontWeight: 'bold',
-    color: '#94a3b8',
+    color: Colors.textTertiary,
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginTop: 2,
@@ -122,11 +120,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#fffbeb',
+    backgroundColor: Colors.accentLight,
     padding: 24,
     borderRadius: 40,
     borderWidth: 1,
-    borderColor: '#fef3c7',
+    borderColor: getColorWithOpacity(Colors.accent, 0.2),
   },
   disputeContent: {
     flexDirection: 'row',
@@ -137,7 +135,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 16,
-    backgroundColor: '#fef3c7',
+    backgroundColor: getColorWithOpacity(Colors.accent, 0.2),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -147,18 +145,18 @@ const styles = StyleSheet.create({
   disputeTitle: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#0f172a',
+    color: Colors.textPrimary,
   },
   disputeSub: {
     fontSize: 10,
-    color: '#64748b',
+    color: Colors.textSecondary,
   },
   featuredCard: {
     position: 'relative',
     height: 256,
     borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#000',
+    shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -174,7 +172,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: '60%',
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    backgroundColor: getColorWithOpacity(Colors.black, 0.7),
   },
   featuredContent: {
     position: 'absolute',
@@ -187,7 +185,7 @@ const styles = StyleSheet.create({
   featuredBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fef3c7',
+    backgroundColor: Colors.accentLight,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
@@ -198,17 +196,17 @@ const styles = StyleSheet.create({
   featuredBadgeText: {
     fontSize: 10,
     fontWeight: 'bold',
-    color: '#3d2e0f',
+    color: Colors.accentDark,
   },
   featuredTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: Colors.white,
     lineHeight: 28,
   },
   featuredSubtitle: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: getColorWithOpacity(Colors.white, 0.8),
     marginTop: 4,
   },
   section: {
@@ -217,7 +215,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#0f172a',
+    color: Colors.textPrimary,
   },
   guidesGrid: {
     flexDirection: 'row',
@@ -226,11 +224,11 @@ const styles = StyleSheet.create({
   },
   guideCard: {
     width: '47%',
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.white,
     padding: 16,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: Colors.borderLight,
     gap: 12,
   },
   guideIcon: {
@@ -246,15 +244,11 @@ const styles = StyleSheet.create({
   guideTitle: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#0f172a',
+    color: Colors.textPrimary,
   },
   guideSub: {
     fontSize: 12,
-    color: '#64748b',
-  },
-  pressed: {
-    opacity: 0.8,
-    transform: [{ scale: 0.98 }],
+    color: Colors.textSecondary,
   },
 });
 

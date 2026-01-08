@@ -1,9 +1,10 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Screen } from '../types';
+import { Colors } from '../styles/colors';
 
 interface BottomNavProps {
   current: Screen;
@@ -11,12 +12,14 @@ interface BottomNavProps {
 }
 
 const BottomNav: React.FC<BottomNavProps> = ({ current, onNavigate }) => {
+  const insets = useSafeAreaInsets();
+  
   const getActiveTab = (screen: Screen): Screen => {
     if (['dashboard', 'parcel-details', 'report-anomaly', 'register-land'].includes(screen)) return 'dashboard';
-    if (['marketplace', 'offline', 'buy-land'].includes(screen)) return 'marketplace';
-    if (['transactions', 'inheritance', 'sell-land'].includes(screen)) return 'transactions';
-    if (['support'].includes(screen)) return 'support';
-    if (['profile'].includes(screen)) return 'profile';
+    if (['marketplace', 'offline', 'buy-land', 'sell-land'].includes(screen)) return 'marketplace';
+    if (['transactions', 'inheritance'].includes(screen)) return 'transactions';
+    if (['support', 'dispute-list', 'dispute-detail', 'mediation-room'].includes(screen)) return 'support';
+    if (['profile', 'settings'].includes(screen)) return 'profile';
     return screen;
   };
 
@@ -25,71 +28,61 @@ const BottomNav: React.FC<BottomNavProps> = ({ current, onNavigate }) => {
   const items = [
     { id: 'dashboard' as Screen, icon: 'home', label: 'Home' },
     { id: 'marketplace' as Screen, icon: 'map', label: 'Market' },
-    { id: 'transactions' as Screen, icon: 'receipt-long', label: 'Actions', center: true },
+    { id: 'transactions' as Screen, icon: 'add', label: 'Actions', center: true },
     { id: 'support' as Screen, icon: 'school', label: 'Learn' },
     { id: 'profile' as Screen, icon: 'person', label: 'Profile' }
   ];
 
   return (
-    <SafeAreaView style={styles.navContainer} edges={['bottom']}>
+    <View style={styles.navContainer}>
       <View style={styles.nav}>
-        {items.map((item) => (
-        item.center ? (
-          <Pressable 
-            key={item.id} 
-            onPress={() => onNavigate(item.id)}
-            style={({ pressed }) => [
-              styles.centerButton,
-              pressed && styles.buttonPressed
-            ]}
-          >
-            <View style={[
-              styles.centerIconContainer,
-              activeTab === item.id ? styles.centerIconActive : styles.centerIconInactive
-            ]}>
-              <MaterialIcons 
-                name={activeTab === item.id ? 'layers' : 'add'} 
-                size={28} 
-                color="#ffffff" 
-              />
-            </View>
-            <Text style={[
-              styles.centerLabel,
-              activeTab === item.id && styles.centerLabelActive
-            ]}>
-              {item.label}
-            </Text>
-          </Pressable>
-        ) : (
-          <Pressable 
-            key={item.id} 
-            onPress={() => onNavigate(item.id)}
-            style={({ pressed }) => [
-              styles.navItem,
-              pressed && styles.buttonPressed
-            ]}
-          >
-            <View style={[
-              styles.iconContainer,
-              activeTab === item.id && styles.iconContainerActive
-            ]}>
+        {items.map((item) => {
+           const isActive = activeTab === item.id;
+           
+           if (item.center) {
+             return (
+              <Pressable 
+                key={item.id} 
+                onPress={() => onNavigate('sell-land')}
+                style={({ pressed }) => [
+                  styles.centerButton,
+                  pressed && styles.buttonPressed
+                ]}
+              >
+                <View style={styles.centerIconContainer}>
+                  <MaterialIcons name="add" size={32} color={Colors.white} />
+                </View>
+                <Text style={[styles.centerLabel, isActive && styles.labelActive]}>
+                  {item.label}
+                </Text>
+              </Pressable>
+             );
+           }
+           
+           return (
+            <Pressable 
+              key={item.id} 
+              onPress={() => onNavigate(item.id)}
+              style={({ pressed }) => [
+                styles.navItem,
+                pressed && styles.buttonPressed
+              ]}
+            >
               <MaterialIcons 
                 name={item.icon as any} 
                 size={24} 
-                color={activeTab === item.id ? '#3b82f6' : '#64748b'} 
+                color={isActive ? Colors.primary : Colors.textTertiary} 
               />
-            </View>
-            <Text style={[
-              styles.label,
-              activeTab === item.id && styles.labelActive
-            ]}>
-              {item.label}
-            </Text>
-          </Pressable>
-        )
-      ))}
+              <Text style={[styles.label, isActive && styles.labelActive]}>
+                {item.label}
+              </Text>
+            </Pressable>
+           );
+        })}
       </View>
-    </SafeAreaView>
+      {/* Spacer for System Navigation (Safe Area) */}
+      <View style={{ backgroundColor: Colors.white, height: insets.bottom }} />
+    </View>
   );
 };
 
@@ -99,83 +92,68 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    zIndex: 50,
+    backgroundColor: 'transparent',
+    zIndex: 100,
+    elevation: 20, // High elevation to sit above other content
   },
   nav: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
-    paddingHorizontal: 24,
-    paddingTop: 8,
-    paddingBottom: 4,
+    backgroundColor: Colors.white,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    height: 70,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
+    shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.05,
-    shadowRadius: 20,
+    shadowRadius: 10,
     elevation: 10,
   },
+  // ... rest of styles remain the same
   navItem: {
-    flexDirection: 'column',
     alignItems: 'center',
-    width: 56,
+    justifyContent: 'center',
+    width: 60,
     gap: 4,
   },
-  iconContainer: {
-    padding: 4,
-    borderRadius: 20,
-  },
-  iconContainerActive: {
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-  },
-  label: {
-    fontSize: 10,
-    fontWeight: '500',
-    color: '#64748b',
-  },
-  labelActive: {
-    fontWeight: 'bold',
-    color: '#3b82f6',
-  },
   centerButton: {
-    flexDirection: 'column',
     alignItems: 'center',
-    marginTop: -32,
+    marginTop: -40,
     gap: 4,
   },
   centerIconContainer: {
     width: 56,
     height: 56,
     borderRadius: 28,
+    backgroundColor: '#0F172A',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 4,
-    borderColor: '#ffffff',
-    shadowColor: '#000',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+    borderWidth: 4,
+    borderColor: Colors.white,
   },
-  centerIconActive: {
-    backgroundColor: '#3b82f6',
-    shadowColor: '#3b82f6',
-  },
-  centerIconInactive: {
-    backgroundColor: '#94a3b8',
-    shadowColor: '#cbd5e1',
+  label: {
+    fontSize: 10,
+    color: Colors.textTertiary,
+    fontWeight: '500',
   },
   centerLabel: {
     fontSize: 10,
+    color: Colors.textTertiary,
     fontWeight: '500',
-    color: '#64748b',
     marginTop: 4,
   },
-  centerLabelActive: {
+  labelActive: {
+    color: Colors.primary,
     fontWeight: 'bold',
-    color: '#3b82f6',
   },
   buttonPressed: {
     opacity: 0.7,

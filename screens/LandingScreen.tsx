@@ -3,6 +3,8 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable, Image, ScrollView } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Screen } from '../types';
+import { Colors, getColorWithOpacity } from '../styles/colors';
+import { GlobalStyles } from '../styles/globalStyles';
 
 interface LandingScreenProps {
   onNavigate: (screen: Screen) => void;
@@ -20,14 +22,14 @@ const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
       {/* Top Floating Logo & Language */}
       <View style={styles.topBar}>
         <View style={styles.logoContainer}>
-          <MaterialIcons name="landscape" size={20} color="#3b82f6" />
+          <MaterialIcons name="landscape" size={20} color={Colors.primary} />
           <Text style={styles.logoText}>Ubutaka</Text>
         </View>
         <Pressable style={styles.languageButton}>
           <Text style={styles.languageTextActive}>RW</Text>
           <View style={styles.languageDivider} />
           <Text style={styles.languageText}>EN</Text>
-          <MaterialIcons name="expand-more" size={18} color="#64748b" />
+          <MaterialIcons name="expand-more" size={18} color={Colors.textSecondary} />
         </Pressable>
       </View>
 
@@ -59,7 +61,7 @@ const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
             {features.map((item, idx) => (
               <View key={idx} style={styles.featureCard}>
                 <View style={styles.featureIconContainer}>
-                  <MaterialIcons name={item.icon as any} size={20} color="#3b82f6" />
+                  <MaterialIcons name={item.icon as any} size={20} color={Colors.primary} />
                 </View>
                 <View style={styles.featureText}>
                   <Text style={styles.featureTitle}>{item.title}</Text>
@@ -74,15 +76,15 @@ const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
               onPress={() => onNavigate('dashboard')}
               style={({ pressed }) => [
                 styles.primaryButton,
-                pressed && styles.buttonPressed
+                pressed && GlobalStyles.pressed
               ]}
             >
               <Text style={styles.primaryButtonText}>Get Started</Text>
-              <MaterialIcons name="arrow-forward" size={20} color="#ffffff" />
+              <MaterialIcons name="arrow-forward" size={20} color={Colors.white} />
             </Pressable>
             <Pressable style={({ pressed }) => [
               styles.secondaryButton,
-              pressed && styles.buttonPressed
+              pressed && GlobalStyles.pressed
             ]}>
               <Text style={styles.secondaryButtonText}>Log In</Text>
             </Pressable>
@@ -97,6 +99,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     position: 'relative',
+    backgroundColor: Colors.background,
   },
   topBar: {
     position: 'absolute',
@@ -114,11 +117,11 @@ const styles = StyleSheet.create({
   logoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: getColorWithOpacity(Colors.white, 0.8),
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    shadowColor: '#000',
+    shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -128,17 +131,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     marginLeft: 8,
-    color: '#1e293b',
+    color: Colors.textPrimary,
   },
   languageButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: getColorWithOpacity(Colors.white, 0.8),
     paddingLeft: 16,
     paddingRight: 12,
     paddingVertical: 8,
     borderRadius: 20,
-    shadowColor: '#000',
+    shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -147,19 +150,19 @@ const styles = StyleSheet.create({
   languageText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#64748b',
+    color: Colors.textSecondary,
     marginLeft: 8,
   },
   languageTextActive: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#3b82f6',
+    color: Colors.primary,
     marginRight: 8,
   },
   languageDivider: {
     width: 1,
     height: 16,
-    backgroundColor: '#e2e8f0',
+    backgroundColor: Colors.border,
   },
   heroContainer: {
     width: '100%',
@@ -173,15 +176,15 @@ const styles = StyleSheet.create({
   heroOverlay: {
     position: 'absolute',
     inset: 0,
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    backgroundColor: getColorWithOpacity(Colors.primary, 0.1),
   },
   bottomSheet: {
     flex: 1,
     marginTop: -40,
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.background,
     borderTopLeftRadius: 40,
     borderTopRightRadius: 40,
-    shadowColor: '#000',
+    shadowColor: Colors.black,
     shadowOffset: { width: 0, height: -10 },
     shadowOpacity: 0.05,
     shadowRadius: 40,
@@ -191,7 +194,7 @@ const styles = StyleSheet.create({
   handle: {
     width: 48,
     height: 6,
-    backgroundColor: '#e2e8f0',
+    backgroundColor: Colors.border,
     borderRadius: 3,
     alignSelf: 'center',
     marginTop: 16,
@@ -210,17 +213,17 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 30,
     fontWeight: '800',
-    color: '#0f172a',
+    color: Colors.textPrimary,
     lineHeight: 34,
     marginBottom: 12,
     textAlign: 'center',
   },
   titleHighlight: {
-    color: '#3b82f6',
+    color: Colors.primary,
   },
   subtitle: {
     fontSize: 16,
-    color: '#64748b',
+    color: Colors.textSecondary,
     lineHeight: 24,
     textAlign: 'center',
     maxWidth: 280,
@@ -231,13 +234,13 @@ const styles = StyleSheet.create({
   featureCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.surface,
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: Colors.borderLight,
     marginBottom: 16,
-    shadowColor: '#000',
+    shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
@@ -247,7 +250,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    backgroundColor: getColorWithOpacity(Colors.primary, 0.1),
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
@@ -258,12 +261,12 @@ const styles = StyleSheet.create({
   featureTitle: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#0f172a',
+    color: Colors.textPrimary,
     marginBottom: 2,
   },
   featureSub: {
     fontSize: 12,
-    color: '#64748b',
+    color: Colors.textSecondary,
   },
   buttonsContainer: {
     marginTop: 'auto',
@@ -271,21 +274,21 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     width: '100%',
-    backgroundColor: '#3b82f6',
+    backgroundColor: Colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 16,
     borderRadius: 12,
-    shadowColor: '#3b82f6',
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.39,
-    shadowRadius: 14,
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
     elevation: 8,
     gap: 8,
   },
   primaryButtonText: {
-    color: '#ffffff',
+    color: Colors.white,
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -296,14 +299,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   secondaryButtonText: {
-    color: '#475569',
+    color: Colors.textSecondary,
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',
-  },
-  buttonPressed: {
-    opacity: 0.8,
-    transform: [{ scale: 0.98 }],
   },
 });
 
