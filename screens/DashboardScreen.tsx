@@ -2,7 +2,6 @@
 import React from 'react';
 import { Screen } from '../types';
 import { MOCK_USER } from '../constants';
-import BottomNav from '../components/BottomNav';
 
 interface DashboardScreenProps {
   onNavigate: (screen: Screen) => void;
@@ -10,13 +9,13 @@ interface DashboardScreenProps {
 
 const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate }) => {
   return (
-    <div className="flex-1 flex flex-col pb-24">
+    <div className="flex-1 flex flex-col overflow-y-auto hide-scrollbar bg-white">
       {/* Header */}
-      <header className="flex items-center justify-between px-6 pt-8 pb-4 sticky top-0 z-20 bg-background-light">
+      <header className="flex items-center justify-between px-6 pt-8 pb-4 sticky top-0 z-20 bg-white/80 backdrop-blur-md">
         <div className="flex items-center gap-3">
           <div className="relative">
             <div 
-              className="size-12 rounded-full bg-slate-200 bg-cover bg-center border-2 border-white shadow-sm" 
+              className="size-12 rounded-full bg-slate-100 bg-cover bg-center border-2 border-white shadow-sm" 
               style={{ backgroundImage: `url('${MOCK_USER.avatar}')` }}
             />
             <div className="absolute -bottom-1 -right-1 bg-primary text-white rounded-full p-0.5 border-2 border-white">
@@ -24,110 +23,125 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate }) => {
             </div>
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-medium text-slate-500">Muraho,</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Muraho,</span>
             <h1 className="text-xl font-bold leading-none text-slate-900">{MOCK_USER.name}</h1>
           </div>
         </div>
-        <button className="relative rounded-full p-2 hover:bg-slate-100 group transition-colors">
+        <button className="relative rounded-full p-2 hover:bg-slate-50 group transition-colors">
           <span className="material-symbols-outlined text-slate-600 group-hover:text-primary">notifications</span>
-          <span className="absolute top-2 right-2 size-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+          <span className="absolute top-2 right-2 size-2 bg-red-500 rounded-full ring-2 ring-white"></span>
         </button>
       </header>
 
-      <main className="px-6 flex flex-col gap-6">
-        {/* Verification Chip */}
-        <div className="flex items-center justify-between bg-primary/5 border border-primary/10 rounded-lg py-2 px-4">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary text-[18px]">verified_user</span>
-            <span className="text-xs font-semibold text-primary tracking-wide">UPI: 1234-5678-9012</span>
+      <main className="px-6 flex flex-col gap-6 pb-8">
+        {/* Verification Status Banner */}
+        <div 
+          onClick={() => onNavigate('verification')}
+          className="flex items-center justify-between bg-slate-50 border border-slate-100 rounded-2xl p-4 cursor-pointer active:scale-[0.98] transition-all"
+        >
+          <div className="flex items-center gap-3">
+            <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+              <span className="material-symbols-outlined">fingerprint</span>
+            </div>
+            <div>
+              <p className="text-sm font-bold text-slate-900">Biometric Identity</p>
+              <p className="text-xs text-primary font-semibold">Active & Verified</p>
+            </div>
           </div>
-          <span className="text-[10px] font-bold bg-primary text-white px-2 py-0.5 rounded uppercase tracking-wider">Verified Owner</span>
+          <span className="material-symbols-outlined text-slate-300">chevron_right</span>
         </div>
 
         {/* Hero Card */}
         <section 
           onClick={() => onNavigate('parcel-details')}
-          className="relative overflow-hidden rounded-2xl bg-white shadow-soft group cursor-pointer active:scale-[0.99] transition-all"
+          className="relative overflow-hidden rounded-[2rem] bg-slate-900 shadow-xl shadow-slate-200 group cursor-pointer active:scale-[0.99] transition-all"
         >
-          <div className="absolute inset-0 z-0 opacity-40 grayscale" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuBg3B2S4GgGnOLWO9G9snLyexmgoP8BoMiJYbNlHRmhhpZt-0LM2yKADDK40N_L83tq28leenpgC-0ZHu32zftdaKAWXOZXHV2FujdyWeNC3DVte7JcpPM9SphFSyhqaqVLT3u1uZ1NuGYlH4Ecd1klMuQZiEXqpiR2tvUH7LY3xiA_QmawIgGFRj2MlPoO1rWZyBb0Bx-ZctaP-MC0TRnujB-CfwWoi-0VYqeaLZw985AbeB37zg5cevXUbaF0lVUPs-Ra-rZdBGR3')", backgroundSize: 'cover', backgroundPosition: 'center' }}></div>
-          <div className="absolute inset-0 z-0 bg-gradient-to-r from-white via-white/80 to-transparent"></div>
-          <div className="relative z-10 p-5 flex flex-col gap-4">
+          <div className="absolute inset-0 z-0 opacity-40 grayscale group-hover:grayscale-0 transition-all duration-500" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuBg3B2S4GgGnOLWO9G9snLyexmgoP8BoMiJYbNlHRmhhpZt-0LM2yKADDK40N_L83tq28leenpgC-0ZHu32zftdaKAWXOZXHV2FujdyWeNC3DVte7JcpPM9SphFSyhqaqVLT3u1uZ1NuGYlH4Ecd1klMuQZiEXqpiR2tvUH7LY3xiA_QmawIgGFRj2MlPoO1rWZyBb0Bx-ZctaP-MC0TRnujB-CfwWoi-0VYqeaLZw985AbeB37zg5cevXUbaF0lVUPs-Ra-rZdBGR3')", backgroundSize: 'cover', backgroundPosition: 'center' }}></div>
+          <div className="absolute inset-0 z-0 bg-gradient-to-tr from-slate-950/80 to-transparent"></div>
+          <div className="relative z-10 p-6 flex flex-col gap-6">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-sm font-medium text-slate-500 mb-1">Total Holdings</p>
-                <h2 className="text-3xl font-extrabold text-slate-900">3 Parcels</h2>
-                <p className="text-xs text-primary font-semibold mt-1 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[16px]">location_on</span>
-                  Karongi District
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Holdings</p>
+                <h2 className="text-4xl font-extrabold text-white">3 Parcels</h2>
+                <p className="text-xs text-white/60 font-medium mt-2 flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-sm text-primary">location_on</span>
+                  Karongi & Gasabo Districts
                 </p>
               </div>
-              <div className="bg-white/80 backdrop-blur-sm p-2 rounded-lg border border-slate-100 shadow-sm">
-                <span className="material-symbols-outlined text-primary text-3xl">map</span>
+              <div className="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/10 shadow-lg">
+                <span className="material-symbols-outlined text-white text-3xl">map</span>
               </div>
             </div>
-            <button className="w-full bg-primary hover:bg-primary-dark text-white text-sm font-semibold py-2.5 px-4 rounded-xl shadow-lg shadow-primary/20 flex items-center justify-center gap-2 transition-all">
-              View Certificates
-              <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-            </button>
+            <div className="flex gap-2">
+              <button className="flex-1 bg-primary text-white text-xs font-bold py-3.5 rounded-xl transition-all active:scale-95 shadow-lg shadow-primary/20">
+                Land Certificates
+              </button>
+              <button 
+                onClick={(e) => { e.stopPropagation(); onNavigate('register-land'); }}
+                className="flex-1 bg-white/10 text-white text-xs font-bold py-3.5 rounded-xl border border-white/10 backdrop-blur-md active:scale-95"
+              >
+                Register New
+              </button>
+            </div>
           </div>
         </section>
 
-        {/* Quick Actions */}
+        {/* Quick Actions Grid */}
         <section>
-          <h3 className="text-lg font-bold text-slate-900 mb-4">Quick Actions</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-slate-900">Land Actions</h3>
+          </div>
           <div className="grid grid-cols-2 gap-4">
             {[
-              { icon: 'handshake', label: 'Sell or Transfer', color: 'blue', screen: 'transactions' },
-              { icon: 'balance', label: 'Dispute Resolution', color: 'orange', screen: 'support' },
-              { icon: 'report_problem', label: 'Report Anomaly', color: 'red', screen: 'report-anomaly' },
-              { icon: 'receipt_long', label: 'Land Taxes', color: 'teal', screen: 'dashboard' }
+              { icon: 'add_location_alt', label: 'Register Land', color: 'primary', screen: 'register-land' },
+              { icon: 'shopping_cart', label: 'Buy Land', color: 'primary', screen: 'marketplace' },
+              { icon: 'sell', label: 'Sell Land', color: 'primary', screen: 'sell-land' },
+              { icon: 'family_history', label: 'Inheritance', color: 'primary', screen: 'inheritance' }
             ].map((action, idx) => (
               <button 
                 key={idx} 
                 onClick={() => onNavigate(action.screen as Screen)}
-                className="bg-white p-4 rounded-2xl shadow-card hover:shadow-soft transition-all text-left flex flex-col gap-3 group active:scale-95 border border-transparent"
+                className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all text-left flex flex-col gap-4 group active:scale-95"
               >
-                <div className={`size-10 rounded-xl bg-${action.color}-50 text-${action.color}-600 flex items-center justify-center group-hover:bg-${action.color}-600 group-hover:text-white transition-colors`}>
-                  <span className="material-symbols-outlined">{action.icon}</span>
+                <div className={`size-12 rounded-2xl bg-${action.color}/5 text-${action.color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                  <span className="material-symbols-outlined text-2xl">{action.icon}</span>
                 </div>
-                <span className="font-bold text-sm text-slate-700">{action.label}</span>
+                <div>
+                  <span className="font-bold text-sm text-slate-800 block">{action.label}</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">Paperless Flow</span>
+                </div>
               </button>
             ))}
           </div>
         </section>
 
-        {/* Recent Activity */}
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-slate-900">Recent Activity</h3>
-            <button className="text-primary text-sm font-semibold hover:underline">See All</button>
+        {/* Recent Transactions Snippet */}
+        <section className="bg-slate-50 rounded-3xl p-6 border border-slate-100">
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="text-lg font-bold text-slate-900">Recent Services</h3>
+            <button 
+              onClick={() => onNavigate('transactions')}
+              className="text-primary text-xs font-bold uppercase tracking-wider"
+            >
+              History
+            </button>
           </div>
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center bg-white p-3 rounded-xl shadow-card border border-slate-50">
-              <div className="size-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-green-600 text-xl">check_circle</span>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 bg-white rounded-2xl border border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="size-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center">
+                  <span className="material-symbols-outlined">payments</span>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-800">Tax Payment</p>
+                  <p className="text-[10px] text-slate-400">Parcel 5/03/...111</p>
+                </div>
               </div>
-              <div className="ml-3 flex-1 min-w-0">
-                <p className="text-sm font-bold text-slate-900 truncate">Parcel #552 Survey Completed</p>
-                <p className="text-xs text-slate-500">Approved by District Land Officer</p>
-              </div>
-              <span className="text-xs font-medium text-slate-400">2h ago</span>
-            </div>
-            <div className="flex items-center bg-white p-3 rounded-xl shadow-card border border-slate-50 opacity-80">
-              <div className="size-10 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-slate-500 text-xl">history_edu</span>
-              </div>
-              <div className="ml-3 flex-1 min-w-0">
-                <p className="text-sm font-bold text-slate-900 truncate">Transfer Request Draft</p>
-                <p className="text-xs text-slate-500">Continued from saved session</p>
-              </div>
-              <span className="text-xs font-medium text-slate-400">Yesterday</span>
+              <span className="text-[10px] font-bold text-slate-400">Oct 24</span>
             </div>
           </div>
         </section>
       </main>
-
-      <BottomNav current="dashboard" onNavigate={onNavigate} />
     </div>
   );
 };

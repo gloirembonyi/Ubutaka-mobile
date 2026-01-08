@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { Screen } from '../types';
-import BottomNav from '../components/BottomNav';
 
 interface SupportScreenProps {
   onNavigate: (screen: Screen) => void;
@@ -9,7 +8,7 @@ interface SupportScreenProps {
 
 const SupportScreen: React.FC<SupportScreenProps> = ({ onNavigate }) => {
   return (
-    <div className="flex-1 flex flex-col pb-24 bg-background-light">
+    <div className="flex-1 flex flex-col bg-background-light overflow-y-auto hide-scrollbar">
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md px-6 py-4 border-b border-slate-100 flex justify-between items-center">
         <div>
           <h1 className="text-xl font-bold">Support & Learning</h1>
@@ -21,7 +20,7 @@ const SupportScreen: React.FC<SupportScreenProps> = ({ onNavigate }) => {
         </button>
       </header>
 
-      <main className="flex-1 overflow-y-auto hide-scrollbar">
+      <main className="flex-1 pb-8">
         {/* Featured Card */}
         <div className="px-6 mt-6">
           <div className="relative h-64 rounded-2xl overflow-hidden shadow-sm group">
@@ -100,8 +99,6 @@ const SupportScreen: React.FC<SupportScreenProps> = ({ onNavigate }) => {
           </div>
         </div>
       </main>
-
-      <BottomNav current="support" onNavigate={onNavigate} />
     </div>
   );
 };

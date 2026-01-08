@@ -2,7 +2,6 @@
 import React from 'react';
 import { Screen } from '../types';
 import { MOCK_TRANSACTIONS } from '../constants';
-import BottomNav from '../components/BottomNav';
 
 interface TransactionScreenProps {
   onNavigate: (screen: Screen) => void;
@@ -10,7 +9,7 @@ interface TransactionScreenProps {
 
 const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate }) => {
   return (
-    <div className="flex-1 flex flex-col pb-24 bg-background-light">
+    <div className="flex-1 flex flex-col bg-background-light overflow-y-auto hide-scrollbar">
       <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md px-5 py-4 border-b border-slate-100">
         <div className="flex items-center justify-between">
           <button className="size-10 flex items-center justify-center rounded-full hover:bg-slate-100">
@@ -24,7 +23,7 @@ const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate }) => 
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto hide-scrollbar">
+      <main className="flex-1 pb-8">
         <div className="px-6 pt-6 pb-2">
           <h1 className="text-3xl font-extrabold tracking-tight">Manage Your Land</h1>
           <p className="text-slate-500 text-sm mt-2">Secure, paperless transactions powered by smart contracts.</p>
@@ -111,8 +110,6 @@ const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate }) => 
           </div>
         </section>
       </main>
-
-      <BottomNav current="transactions" onNavigate={onNavigate} />
     </div>
   );
 };

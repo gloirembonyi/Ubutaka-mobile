@@ -2,7 +2,6 @@
 import React from 'react';
 import { Screen } from '../types';
 import { MOCK_USER } from '../constants';
-import BottomNav from '../components/BottomNav';
 
 interface ProfileScreenProps {
   onNavigate: (screen: Screen) => void;
@@ -10,12 +9,12 @@ interface ProfileScreenProps {
 
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate }) => {
   return (
-    <div className="flex-1 flex flex-col pb-24 bg-background-light">
+    <div className="flex-1 flex flex-col bg-background-light overflow-y-auto hide-scrollbar">
       <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md px-4 py-4 border-b border-slate-100 text-center">
         <h2 className="text-lg font-bold">Profile & Settings</h2>
       </header>
 
-      <main className="flex-1 overflow-y-auto px-5 pt-8 hide-scrollbar">
+      <main className="flex-1 px-5 pt-8 pb-8">
         {/* Profile Header */}
         <div className="flex flex-col items-center mb-8">
           <div className="relative">
@@ -103,8 +102,6 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate }) => {
           Sign Out
         </button>
       </main>
-
-      <BottomNav current="profile" onNavigate={onNavigate} />
     </div>
   );
 };

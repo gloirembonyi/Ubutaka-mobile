@@ -1,5 +1,19 @@
 
-export type Screen = 'landing' | 'dashboard' | 'parcel-details' | 'transactions' | 'marketplace' | 'support' | 'profile' | 'offline' | 'report-anomaly' | 'inheritance';
+export type Screen = 
+  | 'landing' 
+  | 'dashboard' 
+  | 'parcel-details' 
+  | 'transactions' 
+  | 'marketplace' 
+  | 'support' 
+  | 'profile' 
+  | 'offline' 
+  | 'report-anomaly' 
+  | 'inheritance'
+  | 'register-land'
+  | 'sell-land'
+  | 'buy-land'
+  | 'verification';
 
 export interface User {
   id: string;
