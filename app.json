@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "Ubutaka",
+    "slug": "ubutaka",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "backgroundColor": "#3b82f6",
+      "resizeMode": "contain"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ubutaka.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#3b82f6"
+      },
+      "package": "com.ubutaka.app"
+    },
+    "web": {},
+    "scheme": "ubutaka"
+  }
+}

@@ -1,5 +1,8 @@
 
 import React from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { MaterialIcons } from '@expo/vector-icons';
 import { Screen } from '../types';
 import { MOCK_USER } from '../constants';
 
@@ -8,142 +11,489 @@ interface DashboardScreenProps {
 }
 
 const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate }) => {
-  return (
-    <div className="flex-1 flex flex-col overflow-y-auto hide-scrollbar bg-white">
-      {/* Header */}
-      <header className="flex items-center justify-between px-6 pt-8 pb-4 sticky top-0 z-20 bg-white/80 backdrop-blur-md">
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <div 
-              className="size-12 rounded-full bg-slate-100 bg-cover bg-center border-2 border-white shadow-sm" 
-              style={{ backgroundImage: `url('${MOCK_USER.avatar}')` }}
-            />
-            <div className="absolute -bottom-1 -right-1 bg-primary text-white rounded-full p-0.5 border-2 border-white">
-              <span className="material-symbols-outlined text-[14px] font-bold block">check</span>
-            </div>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Muraho,</span>
-            <h1 className="text-xl font-bold leading-none text-slate-900">{MOCK_USER.name}</h1>
-          </div>
-        </div>
-        <button className="relative rounded-full p-2 hover:bg-slate-50 group transition-colors">
-          <span className="material-symbols-outlined text-slate-600 group-hover:text-primary">notifications</span>
-          <span className="absolute top-2 right-2 size-2 bg-red-500 rounded-full ring-2 ring-white"></span>
-        </button>
-      </header>
+  const actions = [
+    { icon: 'add-location-alt', label: 'Register Land', screen: 'register-land' },
+    { icon: 'shopping-cart', label: 'Buy Land', screen: 'marketplace' },
+    { icon: 'sell', label: 'Sell Land', screen: 'sell-land' },
+    { icon: 'family-history', label: 'Inheritance', screen: 'inheritance' }
+  ];
 
-      <main className="px-6 flex flex-col gap-6 pb-8">
+  return (
+    <View style={styles.container}>
+      <SafeAreaView edges={['top']} style={styles.safeArea}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+          {/* Header */}
+          <View style={styles.header}>
+        <View style={styles.userInfo}>
+          <View style={styles.avatarContainer}>
+            <Image source={{ uri: MOCK_USER.avatar }} style={styles.avatar} />
+            <View style={styles.verifiedBadge}>
+              <MaterialIcons name="check" size={14} color="#ffffff" />
+            </View>
+          </View>
+          <View style={styles.userText}>
+            <Text style={styles.greeting}>Muraho,</Text>
+            <Text style={styles.userName}>{MOCK_USER.name}</Text>
+          </View>
+        </View>
+        <Pressable style={styles.notificationButton}>
+          <MaterialIcons name="notifications" size={24} color="#475569" />
+          <View style={styles.notificationBadge} />
+        </Pressable>
+      </View>
+
+      <View style={styles.content}>
         {/* Verification Status Banner */}
-        <div 
-          onClick={() => onNavigate('verification')}
-          className="flex items-center justify-between bg-slate-50 border border-slate-100 rounded-2xl p-4 cursor-pointer active:scale-[0.98] transition-all"
+        <Pressable 
+          onPress={() => onNavigate('verification')}
+          style={({ pressed }) => [
+            styles.verificationBanner,
+            pressed && styles.pressed
+          ]}
         >
-          <div className="flex items-center gap-3">
-            <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-              <span className="material-symbols-outlined">fingerprint</span>
-            </div>
-            <div>
-              <p className="text-sm font-bold text-slate-900">Biometric Identity</p>
-              <p className="text-xs text-primary font-semibold">Active & Verified</p>
-            </div>
-          </div>
-          <span className="material-symbols-outlined text-slate-300">chevron_right</span>
-        </div>
+          <View style={styles.verificationContent}>
+            <View style={styles.verificationIcon}>
+              <MaterialIcons name="fingerprint" size={24} color="#3b82f6" />
+            </View>
+            <View style={styles.verificationText}>
+              <Text style={styles.verificationTitle}>Biometric Identity</Text>
+              <Text style={styles.verificationSubtitle}>Active & Verified</Text>
+            </View>
+          </View>
+          <MaterialIcons name="chevron-right" size={24} color="#cbd5e1" />
+        </Pressable>
 
         {/* Hero Card */}
-        <section 
-          onClick={() => onNavigate('parcel-details')}
-          className="relative overflow-hidden rounded-[2rem] bg-slate-900 shadow-xl shadow-slate-200 group cursor-pointer active:scale-[0.99] transition-all"
+        <Pressable 
+          onPress={() => onNavigate('parcel-details')}
+          style={({ pressed }) => [
+            styles.heroCard,
+            pressed && styles.pressed
+          ]}
         >
-          <div className="absolute inset-0 z-0 opacity-40 grayscale group-hover:grayscale-0 transition-all duration-500" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuBg3B2S4GgGnOLWO9G9snLyexmgoP8BoMiJYbNlHRmhhpZt-0LM2yKADDK40N_L83tq28leenpgC-0ZHu32zftdaKAWXOZXHV2FujdyWeNC3DVte7JcpPM9SphFSyhqaqVLT3u1uZ1NuGYlH4Ecd1klMuQZiEXqpiR2tvUH7LY3xiA_QmawIgGFRj2MlPoO1rWZyBb0Bx-ZctaP-MC0TRnujB-CfwWoi-0VYqeaLZw985AbeB37zg5cevXUbaF0lVUPs-Ra-rZdBGR3')", backgroundSize: 'cover', backgroundPosition: 'center' }}></div>
-          <div className="absolute inset-0 z-0 bg-gradient-to-tr from-slate-950/80 to-transparent"></div>
-          <div className="relative z-10 p-6 flex flex-col gap-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Holdings</p>
-                <h2 className="text-4xl font-extrabold text-white">3 Parcels</h2>
-                <p className="text-xs text-white/60 font-medium mt-2 flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-sm text-primary">location_on</span>
-                  Karongi & Gasabo Districts
-                </p>
-              </div>
-              <div className="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/10 shadow-lg">
-                <span className="material-symbols-outlined text-white text-3xl">map</span>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button className="flex-1 bg-primary text-white text-xs font-bold py-3.5 rounded-xl transition-all active:scale-95 shadow-lg shadow-primary/20">
-                Land Certificates
-              </button>
-              <button 
-                onClick={(e) => { e.stopPropagation(); onNavigate('register-land'); }}
-                className="flex-1 bg-white/10 text-white text-xs font-bold py-3.5 rounded-xl border border-white/10 backdrop-blur-md active:scale-95"
+          <Image 
+            source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBg3B2S4GgGnOLWO9G9snLyexmgoP8BoMiJYbNlHRmhhpZt-0LM2yKADDK40N_L83tq28leenpgC-0ZHu32zftdaKAWXOZXHV2FujdyWeNC3DVte7JcpPM9SphFSyhqaqVLT3u1uZ1NuGYlH4Ecd1klMuQZiEXqpiR2tvUH7LY3xiA_QmawIgGFRj2MlPoO1rWZyBb0Bx-ZctaP-MC0TRnujB-CfwWoi-0VYqeaLZw985AbeB37zg5cevXUbaF0lVUPs-Ra-rZdBGR3' }}
+            style={styles.heroImage}
+            resizeMode="cover"
+          />
+          <View style={styles.heroOverlay} />
+          <View style={styles.heroContent}>
+            <View style={styles.heroHeader}>
+              <View>
+                <Text style={styles.heroLabel}>Total Holdings</Text>
+                <Text style={styles.heroTitle}>3 Parcels</Text>
+                <View style={styles.heroLocation}>
+                  <MaterialIcons name="location-on" size={14} color="#3b82f6" />
+                  <Text style={styles.heroLocationText}>Karongi & Gasabo Districts</Text>
+                </View>
+              </View>
+              <View style={styles.heroIconContainer}>
+                <MaterialIcons name="map" size={32} color="#ffffff" />
+              </View>
+            </View>
+            <View style={styles.heroButtons}>
+              <Pressable style={styles.heroButtonPrimary}>
+                <Text style={styles.heroButtonText}>Land Certificates</Text>
+              </Pressable>
+              <Pressable 
+                onPress={(e) => { e.stopPropagation(); onNavigate('register-land'); }}
+                style={styles.heroButtonSecondary}
               >
-                Register New
-              </button>
-            </div>
-          </div>
-        </section>
+                <Text style={styles.heroButtonSecondaryText}>Register New</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Pressable>
 
         {/* Quick Actions Grid */}
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-slate-900">Land Actions</h3>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            {[
-              { icon: 'add_location_alt', label: 'Register Land', color: 'primary', screen: 'register-land' },
-              { icon: 'shopping_cart', label: 'Buy Land', color: 'primary', screen: 'marketplace' },
-              { icon: 'sell', label: 'Sell Land', color: 'primary', screen: 'sell-land' },
-              { icon: 'family_history', label: 'Inheritance', color: 'primary', screen: 'inheritance' }
-            ].map((action, idx) => (
-              <button 
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Land Actions</Text>
+          <View style={styles.actionsGrid}>
+            {actions.map((action, idx) => (
+              <Pressable 
                 key={idx} 
-                onClick={() => onNavigate(action.screen as Screen)}
-                className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all text-left flex flex-col gap-4 group active:scale-95"
+                onPress={() => onNavigate(action.screen as Screen)}
+                style={({ pressed }) => [
+                  styles.actionCard,
+                  pressed && styles.pressed
+                ]}
               >
-                <div className={`size-12 rounded-2xl bg-${action.color}/5 text-${action.color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                  <span className="material-symbols-outlined text-2xl">{action.icon}</span>
-                </div>
-                <div>
-                  <span className="font-bold text-sm text-slate-800 block">{action.label}</span>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">Paperless Flow</span>
-                </div>
-              </button>
+                <View style={styles.actionIcon}>
+                  <MaterialIcons name={action.icon as any} size={28} color="#3b82f6" />
+                </View>
+                <View style={styles.actionText}>
+                  <Text style={styles.actionLabel}>{action.label}</Text>
+                  <Text style={styles.actionSub}>Paperless Flow</Text>
+                </View>
+              </Pressable>
             ))}
-          </div>
-        </section>
+          </View>
+        </View>
 
-        {/* Recent Transactions Snippet */}
-        <section className="bg-slate-50 rounded-3xl p-6 border border-slate-100">
-          <div className="flex items-center justify-between mb-5">
-            <h3 className="text-lg font-bold text-slate-900">Recent Services</h3>
-            <button 
-              onClick={() => onNavigate('transactions')}
-              className="text-primary text-xs font-bold uppercase tracking-wider"
-            >
-              History
-            </button>
-          </div>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-3 bg-white rounded-2xl border border-slate-100">
-              <div className="flex items-center gap-3">
-                <div className="size-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center">
-                  <span className="material-symbols-outlined">payments</span>
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-800">Tax Payment</p>
-                  <p className="text-[10px] text-slate-400">Parcel 5/03/...111</p>
-                </div>
-              </div>
-              <span className="text-[10px] font-bold text-slate-400">Oct 24</span>
-            </div>
-          </div>
-        </section>
-      </main>
-    </div>
+        {/* Recent Transactions */}
+        <View style={styles.transactionsSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Recent Services</Text>
+            <Pressable onPress={() => onNavigate('transactions')}>
+              <Text style={styles.sectionLink}>History</Text>
+            </Pressable>
+          </View>
+          <View style={styles.transactionCard}>
+            <View style={styles.transactionContent}>
+              <View style={styles.transactionIcon}>
+                <MaterialIcons name="payments" size={20} color="#ea580c" />
+              </View>
+              <View>
+                <Text style={styles.transactionTitle}>Tax Payment</Text>
+                <Text style={styles.transactionSub}>Parcel 5/03/...111</Text>
+              </View>
+            </View>
+            <Text style={styles.transactionDate}>Oct 24</Text>
+          </View>
+        </View>
+      </View>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  safeArea: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 120,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 16,
+    backgroundColor: '#ffffff',
+  },
+  userInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  avatarContainer: {
+    position: 'relative',
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 2,
+    borderColor: '#ffffff',
+  },
+  verifiedBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    backgroundColor: '#3b82f6',
+    borderRadius: 10,
+    padding: 2,
+    borderWidth: 2,
+    borderColor: '#ffffff',
+  },
+  userText: {
+    flexDirection: 'column',
+  },
+  greeting: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#94a3b8',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  userName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#0f172a',
+    lineHeight: 24,
+  },
+  notificationButton: {
+    position: 'relative',
+    padding: 8,
+    borderRadius: 20,
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#ef4444',
+    borderWidth: 2,
+    borderColor: '#ffffff',
+  },
+  content: {
+    paddingHorizontal: 24,
+    paddingBottom: 32,
+    gap: 24,
+  },
+  verificationBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    borderRadius: 16,
+    padding: 16,
+  },
+  verificationContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  verificationIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  verificationText: {
+    flexDirection: 'column',
+  },
+  verificationTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#0f172a',
+  },
+  verificationSubtitle: {
+    fontSize: 12,
+    color: '#3b82f6',
+    fontWeight: '600',
+  },
+  heroCard: {
+    position: 'relative',
+    borderRadius: 24,
+    overflow: 'hidden',
+    minHeight: 220,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 12,
+    backgroundColor: '#1e293b',
+  },
+  heroImage: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    opacity: 0.15,
+  },
+  heroOverlay: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+  },
+  heroContent: {
+    position: 'relative',
+    zIndex: 10,
+    padding: 24,
+    gap: 20,
+  },
+  heroHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  heroLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#94a3b8',
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+    marginBottom: 6,
+  },
+  heroTitle: {
+    fontSize: 40,
+    fontWeight: '900',
+    color: '#ffffff',
+    marginBottom: 10,
+    letterSpacing: -0.5,
+  },
+  heroLocation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 4,
+  },
+  heroLocationText: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.75)',
+    fontWeight: '600',
+  },
+  heroIconContainer: {
+    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+    padding: 14,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: 'rgba(59, 130, 246, 0.3)',
+  },
+  heroButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  heroButtonPrimary: {
+    flex: 1,
+    backgroundColor: '#3b82f6',
+    paddingVertical: 16,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#3b82f6',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  heroButtonText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  heroButtonSecondary: {
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    paddingVertical: 16,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  heroButtonSecondaryText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  section: {
+    gap: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#0f172a',
+  },
+  sectionLink: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#3b82f6',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  actionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+  },
+  actionCard: {
+    width: '47%',
+    backgroundColor: '#ffffff',
+    padding: 20,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+    gap: 16,
+  },
+  actionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: 'rgba(59, 130, 246, 0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionText: {
+    gap: 4,
+  },
+  actionLabel: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#1e293b',
+  },
+  actionSub: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#94a3b8',
+    textTransform: 'uppercase',
+  },
+  transactionsSection: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 24,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    gap: 20,
+  },
+  transactionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#ffffff',
+    padding: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+  },
+  transactionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  transactionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#fff7ed',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  transactionTitle: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#1e293b',
+  },
+  transactionSub: {
+    fontSize: 10,
+    color: '#94a3b8',
+  },
+  transactionDate: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#94a3b8',
+  },
+  pressed: {
+    opacity: 0.8,
+    transform: [{ scale: 0.98 }],
+  },
+});
 
 export default DashboardScreen;

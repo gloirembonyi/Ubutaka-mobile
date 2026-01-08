@@ -1,5 +1,7 @@
 
-import React from 'react';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, Image, TextInput } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { Screen } from '../types';
 import { MOCK_PARCELS } from '../constants';
 
@@ -8,99 +10,235 @@ interface MarketplaceScreenProps {
 }
 
 const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ onNavigate }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+
   return (
-    <div className="flex-1 flex flex-col bg-white overflow-y-auto hide-scrollbar">
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-100">
-        <div className="flex items-center justify-between px-5 pt-4 pb-2">
-          <button className="size-10 flex items-center justify-center rounded-full hover:bg-slate-50">
-            <span className="material-symbols-outlined">sort</span>
-          </button>
-          <div className="flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-primary text-[24px] material-symbols-filled">landscape</span>
-            <h1 className="text-lg font-bold">Land Market</h1>
-          </div>
-          <button className="size-10 flex items-center justify-center bg-slate-50 rounded-full">
-            <span className="material-symbols-outlined">filter_list</span>
-          </button>
-        </div>
-        <div className="px-5 py-3">
-          <div className="relative group">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-primary transition-colors">search</span>
-            <input 
-              className="w-full pl-10 pr-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all" 
-              placeholder="Search Districts, UPI..." 
-              type="text" 
-            />
-          </div>
-        </div>
-      </header>
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <View style={styles.headerTop}>
+          <Pressable style={styles.headerButton}>
+            <MaterialIcons name="sort" size={24} color="#475569" />
+          </Pressable>
+          <View style={styles.headerTitle}>
+            <MaterialIcons name="landscape" size={24} color="#3b82f6" />
+            <Text style={styles.headerTitleText}>Land Market</Text>
+          </View>
+          <Pressable style={styles.headerButton}>
+            <MaterialIcons name="filter-list" size={24} color="#475569" />
+          </Pressable>
+        </View>
+        <View style={styles.searchContainer}>
+          <MaterialIcons name="search" size={20} color="#cbd5e1" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search Districts, UPI..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholderTextColor="#94a3b8"
+          />
+        </View>
+      </View>
 
-      <main className="px-5 py-6 space-y-8 flex-1">
-        <div>
-          <div className="flex justify-between items-center mb-4">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Available Parcels</p>
-            <span className="text-xs font-bold text-slate-300">128 Results</span>
-          </div>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionLabel}>Available Parcels</Text>
+            <Text style={styles.sectionCount}>128 Results</Text>
+          </View>
 
-          <div className="space-y-6">
-            {MOCK_PARCELS.map((parcel, idx) => (
-              <article 
-                key={idx} 
-                onClick={() => onNavigate('buy-land')}
-                className="group bg-white rounded-[2.5rem] p-3 shadow-sm hover:shadow-xl hover:shadow-slate-100 transition-all duration-300 cursor-pointer border border-slate-50"
-              >
-                <div className="relative aspect-[16/10] rounded-[2rem] overflow-hidden mb-4">
-                  <img src={parcel.imageUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt="" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent"></div>
-                  
-                  <div className="absolute top-4 left-4 bg-white/95 px-3 py-1.5 rounded-full shadow-lg flex items-center gap-2">
-                    <span className="material-symbols-outlined text-primary text-sm material-symbols-filled">verified</span>
-                    <span className="text-[10px] font-bold text-slate-900 uppercase">Registry Verified</span>
-                  </div>
-
-                  <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end text-white">
-                    <div>
-                      <p className="text-xs font-bold text-white/80 uppercase mb-1">{parcel.district}</p>
-                      <h3 className="text-xl font-bold leading-none">{parcel.location}</h3>
-                    </div>
-                    <div className="bg-primary px-4 py-2 rounded-2xl shadow-lg">
-                      <p className="text-sm font-bold">RWF {parcel.price?.split(',')[0]}M</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="px-3 pb-2 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-slate-300 text-lg">square_foot</span>
-                      <span className="text-[11px] font-bold text-slate-600">{parcel.size}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-slate-300 text-lg">home_work</span>
-                      <span className="text-[11px] font-bold text-slate-600">{parcel.use}</span>
-                    </div>
-                  </div>
-                  <div className="size-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 group-hover:text-primary group-hover:bg-primary/5 transition-all">
-                    <span className="material-symbols-outlined text-xl">favorite</span>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-        </div>
-      </main>
-
-      <div className="fixed bottom-24 right-6 z-40">
-        <button 
-          onClick={() => onNavigate('sell-land')}
-          className="bg-primary text-white px-6 py-4 rounded-3xl font-bold shadow-2xl shadow-primary/30 flex items-center gap-2 active:scale-95 transition-transform"
-        >
-          <span className="material-symbols-outlined">sell</span>
-          Sell Yours
-        </button>
-      </div>
-    </div>
+          {MOCK_PARCELS.map((parcel, idx) => (
+            <Pressable
+              key={idx}
+              onPress={() => onNavigate('buy-land')}
+              style={({ pressed }) => [
+                styles.parcelCard,
+                pressed && styles.pressed
+              ]}
+            >
+              <View style={styles.parcelImageContainer}>
+                <Image source={{ uri: parcel.imageUrl }} style={styles.parcelImage} resizeMode="cover" />
+                <View style={styles.parcelOverlay} />
+                <View style={styles.verifiedBadge}>
+                  <MaterialIcons name="verified" size={14} color="#3b82f6" />
+                  <Text style={styles.verifiedText}>Registry Verified</Text>
+                </View>
+              </View>
+              <View style={styles.parcelInfo}>
+                <Text style={styles.parcelLocation}>{parcel.location}</Text>
+                <Text style={styles.parcelDetails}>UPI: {parcel.upi} • {parcel.size}</Text>
+                <Text style={styles.parcelPrice}>RWF {parcel.price}</Text>
+              </View>
+            </Pressable>
+          ))}
+        </View>
+      </ScrollView>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  header: {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+    paddingTop: 16,
+    paddingBottom: 12,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 12,
+  },
+  headerButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 20,
+  },
+  headerTitle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  headerTitleText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#0f172a',
+  },
+  searchContainer: {
+    position: 'relative',
+    paddingHorizontal: 20,
+  },
+  searchIcon: {
+    position: 'absolute',
+    left: 28,
+    top: 14,
+    zIndex: 1,
+  },
+  searchInput: {
+    width: '100%',
+    paddingLeft: 40,
+    paddingRight: 16,
+    paddingVertical: 12,
+    backgroundColor: '#f8fafc',
+    borderRadius: 16,
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#0f172a',
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 32,
+  },
+  section: {
+    gap: 24,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sectionLabel: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#94a3b8',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  sectionCount: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#cbd5e1',
+  },
+  parcelCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 40,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#f8fafc',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+    marginBottom: 16,
+  },
+  parcelImageContainer: {
+    position: 'relative',
+    width: '100%',
+    aspectRatio: 16 / 10,
+    borderRadius: 32,
+    overflow: 'hidden',
+    marginBottom: 16,
+  },
+  parcelImage: {
+    width: '100%',
+    height: '100%',
+  },
+  parcelOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '60%',
+    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+  },
+  verifiedBadge: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  verifiedText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#0f172a',
+    textTransform: 'uppercase',
+  },
+  parcelInfo: {
+    gap: 4,
+  },
+  parcelLocation: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#0f172a',
+  },
+  parcelDetails: {
+    fontSize: 12,
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  parcelPrice: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#3b82f6',
+    marginTop: 4,
+  },
+  pressed: {
+    opacity: 0.8,
+    transform: [{ scale: 0.98 }],
+  },
+});
 
 export default MarketplaceScreen;

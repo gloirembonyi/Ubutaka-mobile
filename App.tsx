@@ -1,5 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, Text, Pressable, useColorScheme, StatusBar } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Screen, Language } from './types';
 import LandingScreen from './screens/LandingScreen';
 import DashboardScreen from './screens/DashboardScreen';
@@ -21,35 +24,30 @@ import MediationRoomScreen from './screens/MediationRoomScreen';
 import BottomNav from './components/BottomNav';
 
 const App: React.FC = () => {
+  const systemColorScheme = useColorScheme();
   const [currentScreen, setCurrentScreen] = useState<Screen>('landing');
   const [language, setLanguage] = useState<Language>('RW');
   const [selectedDisputeId, setSelectedDisputeId] = useState<string | null>(null);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('theme');
-      if (saved === 'light' || saved === 'dark') return saved;
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    }
-    return 'light';
+    // Default to system preference, will be updated from AsyncStorage
+    return systemColorScheme === 'dark' ? 'dark' : 'light';
   });
 
   useEffect(() => {
-    const root = window.document.documentElement;
-    root.classList.remove('light', 'dark');
-    root.classList.add(theme);
-    localStorage.setItem('theme', theme);
-  }, [theme]);
+    // Load theme from AsyncStorage
+    AsyncStorage.getItem('theme').then((saved: string | null) => {
+      if (saved === 'light' || saved === 'dark') {
+        setTheme(saved);
+      } else {
+        setTheme(systemColorScheme === 'dark' ? 'dark' : 'light');
+      }
+    });
+  }, []);
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (e: MediaQueryListEvent) => {
-      if (!localStorage.getItem('theme')) {
-        setTheme(e.matches ? 'dark' : 'light');
-      }
-    };
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
+    // Save theme to AsyncStorage
+    AsyncStorage.setItem('theme', theme);
+  }, [theme]);
 
   const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
   const toggleLanguage = () => setLanguage(prev => prev === 'RW' ? 'EN' : 'RW');
@@ -84,35 +82,107 @@ const App: React.FC = () => {
 
   const showNav = currentScreen !== 'landing' && currentScreen !== 'verification' && currentScreen !== 'mediation-room';
 
+  const backgroundColor = theme === 'dark' ? '#020617' : '#f1f5f9';
+  const containerBg = theme === 'dark' ? '#0a0f1a' : '#ffffff';
+
   return (
-    <div className="flex justify-center bg-slate-100 dark:bg-slate-950 min-h-screen transition-colors duration-300">
-      <div className="w-full max-w-md bg-white dark:bg-background-dark min-h-screen relative shadow-2xl overflow-x-hidden flex flex-col font-display transition-colors duration-300">
+    <SafeAreaView style={[styles.container, { backgroundColor }]} edges={['top', 'left', 'right']}>
+      <StatusBar 
+        barStyle={theme === 'dark' ? 'light-content' : 'dark-content'} 
+        backgroundColor={backgroundColor}
+        translucent={false}
+      />
+      <View style={[styles.appContainer, { backgroundColor: containerBg }]}>
         
         {/* Floating Language Switcher */}
         {showNav && (
-          <div className="fixed top-6 right-6 z-[60] flex justify-end pointer-events-none w-full max-w-md">
-            <button 
-              onClick={toggleLanguage}
-              className="pointer-events-auto flex items-center gap-2 bg-white/90 dark:bg-surface-dark/90 backdrop-blur-md px-4 py-2 rounded-full shadow-lg border border-slate-100 dark:border-slate-800 group active:scale-95 transition-all mr-6"
+          <SafeAreaView style={styles.languageSwitcher} edges={['top']}>
+            <Pressable 
+              onPress={toggleLanguage}
+              style={({ pressed }) => [
+                styles.languageButton,
+                { opacity: pressed ? 0.7 : 1 }
+              ]}
             >
-              <span className={`text-[10px] font-bold transition-colors ${language === 'RW' ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`}>RW</span>
-              <div className="h-3 w-[1px] bg-slate-200 dark:bg-slate-700"></div>
-              <span className={`text-[10px] font-bold transition-colors ${language === 'EN' ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`}>EN</span>
-              <span className="material-symbols-outlined text-[16px] text-slate-400 group-hover:text-primary">translate</span>
-            </button>
-          </div>
+              <Text style={[styles.languageText, language === 'RW' && styles.languageTextActive, { marginRight: 8 }]}>RW</Text>
+              <View style={styles.languageDivider} />
+              <Text style={[styles.languageText, language === 'EN' && styles.languageTextActive, { marginLeft: 8, marginRight: 8 }]}>EN</Text>
+              <Text style={styles.translateIcon}>🌐</Text>
+            </Pressable>
+          </SafeAreaView>
         )}
 
-        <div className={`flex-1 flex flex-col ${showNav ? 'pb-24' : ''}`}>
+        <View style={[styles.screenContainer, showNav && styles.screenContainerWithNav]}>
           {renderScreen()}
-        </div>
+        </View>
         
         {showNav && (
           <BottomNav current={currentScreen} onNavigate={setCurrentScreen} />
         )}
-      </div>
-    </div>
+      </View>
+    </SafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  appContainer: {
+    width: '100%',
+    maxWidth: 400,
+    flex: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  languageSwitcher: {
+    position: 'absolute',
+    top: 0,
+    right: 24,
+    zIndex: 60,
+    alignItems: 'flex-end',
+    paddingTop: 8,
+  },
+  languageButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  languageText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#64748b',
+  },
+  languageTextActive: {
+    color: '#3b82f6',
+  },
+  languageDivider: {
+    width: 1,
+    height: 12,
+    backgroundColor: '#e2e8f0',
+  },
+  translateIcon: {
+    fontSize: 16,
+  },
+  screenContainer: {
+    flex: 1,
+  },
+  screenContainerWithNav: {
+    paddingBottom: 96,
+  },
+});
 
 export default App;

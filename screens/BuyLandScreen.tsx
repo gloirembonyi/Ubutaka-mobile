@@ -1,5 +1,7 @@
 
 import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, Image } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { Screen } from '../types';
 import { MOCK_PARCELS } from '../constants';
 
@@ -8,79 +10,54 @@ interface BuyLandScreenProps {
 }
 
 const BuyLandScreen: React.FC<BuyLandScreenProps> = ({ onNavigate }) => {
-  const parcel = MOCK_PARCELS[0];
   const [agreed, setAgreed] = useState(false);
+  const parcel = MOCK_PARCELS[0];
 
   return (
-    <div className="flex-1 flex flex-col bg-white">
-      <header className="sticky top-0 z-30 bg-white p-4 border-b border-slate-100 flex items-center">
-        <button onClick={() => onNavigate('marketplace')} className="size-10 flex items-center justify-center rounded-full hover:bg-slate-50">
-          <span className="material-symbols-outlined">arrow_back</span>
-        </button>
-        <h2 className="text-lg font-bold flex-1 text-center pr-10">Confirm Purchase</h2>
-      </header>
-
-      <main className="flex-1 p-6 overflow-y-auto space-y-6">
-        <div className="rounded-3xl overflow-hidden shadow-sm aspect-video mb-4">
-          <img src={parcel.imageUrl} className="w-full h-full object-cover" alt="" />
-        </div>
-
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold text-slate-900">{parcel.location} Parcel</h1>
-          <p className="text-slate-500 font-medium">UPI: {parcel.upi} • {parcel.size}</p>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100 space-y-3">
-          <div className="flex justify-between items-center">
-            <span className="text-sm font-bold text-slate-500">Price</span>
-            <span className="text-lg font-extrabold text-slate-900">RWF {parcel.price}</span>
-          </div>
-          <div className="flex justify-between items-center pt-2 border-t border-slate-200">
-            <span className="text-xs font-bold text-slate-400">Transfer Tax (5%)</span>
-            <span className="text-sm font-bold">RWF 2,250,000</span>
-          </div>
-          <div className="flex justify-between items-center pt-2">
-            <span className="text-xs font-bold text-slate-400">Registration Fee</span>
-            <span className="text-sm font-bold">RWF 27,500</span>
-          </div>
-        </div>
-
-        <section className="space-y-4">
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Verification Status</h3>
-          <div className="flex items-center gap-3 p-3 bg-green-50 rounded-xl border border-green-100">
-            <span className="material-symbols-outlined text-green-600">verified</span>
-            <div>
-              <p className="text-xs font-bold text-green-800 uppercase">Registry Verified</p>
-              <p className="text-[10px] text-green-700">No active disputes recorded for this UPI.</p>
-            </div>
-          </div>
-        </section>
-
-        <label className="flex gap-3 cursor-pointer p-2">
-          <input 
-            type="checkbox" 
-            className="rounded text-primary focus:ring-primary size-5" 
-            checked={agreed}
-            onChange={() => setAgreed(!agreed)}
-          />
-          <span className="text-xs text-slate-500 leading-relaxed font-medium">
-            I agree to the electronic transfer of ownership and the digital signing of the sales agreement via my biometric ID.
-          </span>
-        </label>
-      </main>
-
-      <footer className="p-4 border-t border-slate-100 bg-white">
-        <button 
-          disabled={!agreed}
-          onClick={() => onNavigate('verification')}
-          className={`w-full h-14 font-bold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 ${agreed ? 'bg-primary text-white shadow-primary/20 active:scale-95' : 'bg-slate-100 text-slate-400'}`}
-        >
-          Secure Buy Now
-          <span className="material-symbols-outlined">lock</span>
-        </button>
-      </footer>
-    </div>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <View style={styles.header}>
+        <Pressable onPress={() => onNavigate('marketplace')} style={styles.backButton}>
+          <MaterialIcons name="arrow-back" size={24} color="#1e293b" />
+        </Pressable>
+        <Text style={styles.headerTitle}>Confirm Purchase</Text>
+      </View>
+      <View style={styles.content}>
+        <Image source={{ uri: parcel.imageUrl }} style={styles.image} resizeMode="cover" />
+        <Text style={styles.title}>{parcel.location} Parcel</Text>
+        <Text style={styles.details}>UPI: {parcel.upi} • {parcel.size}</Text>
+        <View style={styles.priceCard}>
+          <Text style={styles.priceLabel}>Total Price</Text>
+          <Text style={styles.price}>RWF {parcel.price}</Text>
+        </View>
+        <Pressable style={styles.checkbox} onPress={() => setAgreed(!agreed)}>
+          <MaterialIcons name={agreed ? 'check-box' : 'check-box-outline-blank'} size={24} color={agreed ? '#3b82f6' : '#94a3b8'} />
+          <Text style={styles.checkboxText}>I agree to the terms and conditions</Text>
+        </Pressable>
+        <Pressable style={[styles.button, !agreed && styles.buttonDisabled]}>
+          <Text style={styles.buttonText}>Complete Purchase</Text>
+        </Pressable>
+      </View>
+    </ScrollView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#ffffff' },
+  header: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
+  backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { flex: 1, fontSize: 18, fontWeight: 'bold', color: '#0f172a', textAlign: 'center', marginRight: 40 },
+  content: { padding: 24, gap: 16 },
+  image: { width: '100%', aspectRatio: 16 / 9, borderRadius: 16, marginBottom: 16 },
+  title: { fontSize: 24, fontWeight: 'bold', color: '#0f172a' },
+  details: { fontSize: 14, color: '#64748b' },
+  priceCard: { backgroundColor: '#f8fafc', padding: 20, borderRadius: 16, gap: 8 },
+  priceLabel: { fontSize: 12, color: '#64748b' },
+  price: { fontSize: 28, fontWeight: 'bold', color: '#3b82f6' },
+  checkbox: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  checkboxText: { fontSize: 14, color: '#475569' },
+  button: { backgroundColor: '#3b82f6', padding: 16, borderRadius: 12, alignItems: 'center' },
+  buttonDisabled: { opacity: 0.5 },
+  buttonText: { color: '#ffffff', fontSize: 16, fontWeight: 'bold' },
+});
 
 export default BuyLandScreen;

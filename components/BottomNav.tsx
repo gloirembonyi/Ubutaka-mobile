@@ -1,5 +1,8 @@
 
 import React from 'react';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { MaterialIcons } from '@expo/vector-icons';
 import { Screen } from '../types';
 
 interface BottomNavProps {
@@ -22,48 +25,162 @@ const BottomNav: React.FC<BottomNavProps> = ({ current, onNavigate }) => {
   const items = [
     { id: 'dashboard' as Screen, icon: 'home', label: 'Home' },
     { id: 'marketplace' as Screen, icon: 'map', label: 'Market' },
-    { id: 'transactions' as Screen, icon: 'receipt_long', label: 'Actions', center: true },
+    { id: 'transactions' as Screen, icon: 'receipt-long', label: 'Actions', center: true },
     { id: 'support' as Screen, icon: 'school', label: 'Learn' },
     { id: 'profile' as Screen, icon: 'person', label: 'Profile' }
   ];
 
   return (
-    <nav className="fixed bottom-0 w-full max-w-md bg-white/95 backdrop-blur-lg border-t border-slate-100 px-6 py-2 flex justify-between items-end z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-      {items.map((item) => (
+    <SafeAreaView style={styles.navContainer} edges={['bottom']}>
+      <View style={styles.nav}>
+        {items.map((item) => (
         item.center ? (
-          <button 
+          <Pressable 
             key={item.id} 
-            onClick={() => onNavigate(item.id)}
-            className="flex flex-col items-center justify-end -mt-8 active:scale-95 transition-transform"
+            onPress={() => onNavigate(item.id)}
+            style={({ pressed }) => [
+              styles.centerButton,
+              pressed && styles.buttonPressed
+            ]}
           >
-            <div className={`size-14 rounded-full shadow-lg flex items-center justify-center border-4 border-white transition-all ${activeTab === item.id ? 'bg-primary shadow-primary/30' : 'bg-slate-400 shadow-slate-200'}`}>
-              <span className="material-symbols-outlined text-[28px] text-white">
-                {activeTab === item.id ? 'layers' : 'add'}
-              </span>
-            </div>
-            <span className={`text-[10px] font-bold mt-1 transition-colors ${activeTab === item.id ? 'text-primary' : 'text-slate-400'}`}>
+            <View style={[
+              styles.centerIconContainer,
+              activeTab === item.id ? styles.centerIconActive : styles.centerIconInactive
+            ]}>
+              <MaterialIcons 
+                name={activeTab === item.id ? 'layers' : 'add'} 
+                size={28} 
+                color="#ffffff" 
+              />
+            </View>
+            <Text style={[
+              styles.centerLabel,
+              activeTab === item.id && styles.centerLabelActive
+            ]}>
               {item.label}
-            </span>
-          </button>
+            </Text>
+          </Pressable>
         ) : (
-          <button 
+          <Pressable 
             key={item.id} 
-            onClick={() => onNavigate(item.id)}
-            className={`flex flex-col items-center gap-1 group w-14 transition-colors ${activeTab === item.id ? 'text-primary' : 'text-slate-400'}`}
+            onPress={() => onNavigate(item.id)}
+            style={({ pressed }) => [
+              styles.navItem,
+              pressed && styles.buttonPressed
+            ]}
           >
-            <div className={`p-1 rounded-full transition-colors ${activeTab === item.id ? 'bg-primary/10' : 'group-hover:bg-slate-50'}`}>
-              <span className={`material-symbols-outlined ${activeTab === item.id ? 'font-bold material-symbols-filled' : 'font-medium'}`}>
-                {item.icon}
-              </span>
-            </div>
-            <span className={`text-[10px] transition-all ${activeTab === item.id ? 'font-bold' : 'font-medium'}`}>
+            <View style={[
+              styles.iconContainer,
+              activeTab === item.id && styles.iconContainerActive
+            ]}>
+              <MaterialIcons 
+                name={item.icon as any} 
+                size={24} 
+                color={activeTab === item.id ? '#3b82f6' : '#64748b'} 
+              />
+            </View>
+            <Text style={[
+              styles.label,
+              activeTab === item.id && styles.labelActive
+            ]}>
               {item.label}
-            </span>
-          </button>
+            </Text>
+          </Pressable>
         )
       ))}
-    </nav>
+      </View>
+    </SafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  navContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 50,
+  },
+  nav: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    paddingBottom: 4,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  navItem: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    width: 56,
+    gap: 4,
+  },
+  iconContainer: {
+    padding: 4,
+    borderRadius: 20,
+  },
+  iconContainerActive: {
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+  },
+  label: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: '#64748b',
+  },
+  labelActive: {
+    fontWeight: 'bold',
+    color: '#3b82f6',
+  },
+  centerButton: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    marginTop: -32,
+    gap: 4,
+  },
+  centerIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 4,
+    borderColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  centerIconActive: {
+    backgroundColor: '#3b82f6',
+    shadowColor: '#3b82f6',
+  },
+  centerIconInactive: {
+    backgroundColor: '#94a3b8',
+    shadowColor: '#cbd5e1',
+  },
+  centerLabel: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: '#64748b',
+    marginTop: 4,
+  },
+  centerLabelActive: {
+    fontWeight: 'bold',
+    color: '#3b82f6',
+  },
+  buttonPressed: {
+    opacity: 0.7,
+    transform: [{ scale: 0.95 }],
+  },
+});
 
 export default BottomNav;

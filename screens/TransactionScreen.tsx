@@ -1,5 +1,7 @@
 
 import React from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { Screen } from '../types';
 import { MOCK_TRANSACTIONS } from '../constants';
 
@@ -8,110 +10,323 @@ interface TransactionScreenProps {
 }
 
 const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate }) => {
+  const actions = [
+    { icon: 'payments', title: 'Voluntary Sale', sub: 'Securely sell land', screen: 'transactions' },
+    { icon: 'family-history', title: 'Inheritance', sub: 'Transfer to heirs', screen: 'inheritance' },
+    { icon: 'account-balance', title: 'Mortgage', sub: 'Register collateral', screen: 'transactions' },
+    { icon: 'gavel', title: 'Lease', sub: 'Rental agreement', screen: 'transactions' }
+  ];
+
   return (
-    <div className="flex-1 flex flex-col bg-background-light overflow-y-auto hide-scrollbar">
-      <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md px-5 py-4 border-b border-slate-100">
-        <div className="flex items-center justify-between">
-          <button className="size-10 flex items-center justify-center rounded-full hover:bg-slate-100">
-            <span className="material-symbols-outlined">menu</span>
-          </button>
-          <h2 className="text-lg font-bold">Land Services</h2>
-          <button className="size-10 flex items-center justify-center relative">
-            <span className="material-symbols-outlined text-primary">notifications</span>
-            <span className="absolute top-2 right-2 size-2.5 bg-red-500 rounded-full border-2 border-white"></span>
-          </button>
-        </div>
-      </header>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <View style={styles.header}>
+        <Pressable style={styles.headerButton}>
+          <MaterialIcons name="menu" size={24} color="#475569" />
+        </Pressable>
+        <Text style={styles.headerTitle}>Land Services</Text>
+        <Pressable style={styles.headerButton}>
+          <MaterialIcons name="notifications" size={24} color="#3b82f6" />
+          <View style={styles.notificationBadge} />
+        </Pressable>
+      </View>
 
-      <main className="flex-1 pb-8">
-        <div className="px-6 pt-6 pb-2">
-          <h1 className="text-3xl font-extrabold tracking-tight">Manage Your Land</h1>
-          <p className="text-slate-500 text-sm mt-2">Secure, paperless transactions powered by smart contracts.</p>
-        </div>
+      <View style={styles.content}>
+        <View style={styles.hero}>
+          <Text style={styles.heroTitle}>Manage Your Land</Text>
+          <Text style={styles.heroSubtitle}>Secure, paperless transactions powered by smart contracts.</Text>
+        </View>
 
-        {/* Action Panel */}
-        <div className="p-4">
-          <div className="bg-white rounded-2xl p-5 border border-primary/10 shadow-soft relative overflow-hidden flex flex-col gap-4 group cursor-pointer active:scale-[0.99] transition-all">
-            <div className="flex items-start justify-between z-10">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="material-symbols-outlined text-primary">verified_user</span>
-                  <h3 className="font-bold">Link Digital ID</h3>
-                </div>
-                <p className="text-slate-500 text-xs leading-relaxed">Ensure your Irembo ID is linked for faster processing.</p>
-              </div>
-              <button className="bg-primary text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm">Link Now</button>
-            </div>
-            <div className="absolute top-0 right-0 -mt-4 -mr-4 size-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-all"></div>
-          </div>
-        </div>
+        <View style={styles.actionPanel}>
+          <View style={styles.actionCard}>
+            <View style={styles.actionContent}>
+              <View style={styles.actionText}>
+                <View style={styles.actionHeader}>
+                  <MaterialIcons name="verified-user" size={20} color="#3b82f6" />
+                  <Text style={styles.actionTitle}>Link Digital ID</Text>
+                </View>
+                <Text style={styles.actionDescription}>Ensure your Irembo ID is linked for faster processing.</Text>
+              </View>
+              <Pressable style={styles.linkButton}>
+                <Text style={styles.linkButtonText}>Link Now</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
 
-        {/* In Progress */}
-        <section className="mb-6">
-          <div className="flex items-center justify-between px-6 mb-4">
-            <h3 className="text-lg font-bold">In Progress</h3>
-            <button className="text-primary text-xs font-bold">View All</button>
-          </div>
-          <div className="flex overflow-x-auto px-6 pb-2 gap-4 hide-scrollbar">
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>In Progress</Text>
+            <Pressable>
+              <Text style={styles.sectionLink}>View All</Text>
+            </Pressable>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.transactionsList}>
             {MOCK_TRANSACTIONS.map((tx) => (
-              <div key={tx.id} className="shrink-0 w-[85%] bg-white rounded-2xl border border-slate-100 p-5 shadow-sm space-y-4">
-                <div className="flex justify-between items-start">
-                  <div className="flex gap-3 items-center">
-                    <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                      <span className="material-symbols-outlined">{tx.title === 'Voluntary Sale' ? 'handshake' : 'account_balance'}</span>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-slate-500 font-bold uppercase">{tx.title}</p>
-                      <p className="text-sm font-bold">Plot UPI {tx.upi}</p>
-                    </div>
-                  </div>
-                  {tx.status === 'action_required' && (
-                    <span className="bg-yellow-100 text-yellow-700 text-[8px] font-bold px-2 py-1 rounded-full uppercase">Action Required</span>
-                  )}
-                </div>
-                <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-primary rounded-full" style={{ width: `${tx.progress}%` }}></div>
-                </div>
-                <div className="flex justify-between items-end">
-                  <div>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase">Current Step</p>
-                    <p className="text-xs font-bold text-slate-700 mt-0.5">{tx.step}</p>
-                  </div>
-                </div>
-              </div>
+              <View key={tx.id} style={styles.transactionCard}>
+                <View style={styles.transactionHeader}>
+                  <View style={styles.transactionIcon}>
+                    <MaterialIcons name="receipt-long" size={20} color="#3b82f6" />
+                  </View>
+                  <View style={styles.transactionInfo}>
+                    <Text style={styles.transactionTitle}>{tx.title}</Text>
+                    <Text style={styles.transactionId}>{tx.id}</Text>
+                  </View>
+                </View>
+                <View style={styles.progressBar}>
+                  <View style={[styles.progressFill, { width: `${tx.progress}%` }]} />
+                </View>
+                <Text style={styles.progressText}>{tx.step}</Text>
+              </View>
             ))}
-          </div>
-        </section>
+          </ScrollView>
+        </View>
 
-        {/* New Transactions Grid */}
-        <section className="px-6 mb-8">
-          <h3 className="text-lg font-bold mb-4">New Transaction</h3>
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { icon: 'payments', title: 'Voluntary Sale', sub: 'Securely sell land', screen: 'transactions' },
-              { icon: 'family_history', title: 'Inheritance', sub: 'Transfer to heirs', screen: 'inheritance' },
-              { icon: 'account_balance', title: 'Mortgage', sub: 'Register collateral', screen: 'transactions' },
-              { icon: 'gavel', title: 'Lease', sub: 'Rental agreement', screen: 'transactions' }
-            ].map((item, idx) => (
-              <button 
-                key={idx} 
-                onClick={() => onNavigate(item.screen as Screen)}
-                className="flex flex-col items-start gap-3 p-4 rounded-xl bg-white border border-slate-50 shadow-sm active:scale-95 transition-all text-left"
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>New Transaction</Text>
+          <View style={styles.actionsGrid}>
+            {actions.map((action, idx) => (
+              <Pressable
+                key={idx}
+                onPress={() => onNavigate(action.screen as Screen)}
+                style={({ pressed }) => [
+                  styles.actionItem,
+                  pressed && styles.pressed
+                ]}
               >
-                <div className="size-10 rounded-lg bg-slate-50 flex items-center justify-center text-slate-600">
-                  <span className="material-symbols-outlined">{item.icon}</span>
-                </div>
-                <div>
-                  <h4 className="font-bold text-sm">{item.title}</h4>
-                  <p className="text-[10px] text-slate-500">{item.sub}</p>
-                </div>
-              </button>
+                <View style={styles.actionItemIcon}>
+                  <MaterialIcons name={action.icon as any} size={24} color="#475569" />
+                </View>
+                <View style={styles.actionItemText}>
+                  <Text style={styles.actionItemTitle}>{action.title}</Text>
+                  <Text style={styles.actionItemSub}>{action.sub}</Text>
+                </View>
+              </Pressable>
             ))}
-          </div>
-        </section>
-      </main>
-    </div>
+          </View>
+        </View>
+      </View>
+    </ScrollView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  headerButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 20,
+    position: 'relative',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#0f172a',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#ef4444',
+    borderWidth: 2,
+    borderColor: '#ffffff',
+  },
+  content: {
+    padding: 20,
+    gap: 24,
+  },
+  hero: {
+    gap: 8,
+  },
+  heroTitle: {
+    fontSize: 30,
+    fontWeight: '800',
+    color: '#0f172a',
+  },
+  heroSubtitle: {
+    fontSize: 14,
+    color: '#64748b',
+  },
+  actionPanel: {
+    padding: 16,
+  },
+  actionCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  actionContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 16,
+  },
+  actionText: {
+    flex: 1,
+    gap: 4,
+  },
+  actionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  actionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#0f172a',
+  },
+  actionDescription: {
+    fontSize: 12,
+    color: '#64748b',
+    lineHeight: 18,
+  },
+  linkButton: {
+    backgroundColor: '#3b82f6',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  linkButtonText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  section: {
+    gap: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#0f172a',
+  },
+  sectionLink: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#3b82f6',
+  },
+  transactionsList: {
+    marginHorizontal: -20,
+    paddingHorizontal: 20,
+  },
+  transactionCard: {
+    width: 340,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    marginRight: 16,
+    gap: 12,
+  },
+  transactionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  transactionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  transactionInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  transactionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#0f172a',
+  },
+  transactionId: {
+    fontSize: 12,
+    color: '#64748b',
+  },
+  progressBar: {
+    height: 4,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#3b82f6',
+  },
+  progressText: {
+    fontSize: 12,
+    color: '#64748b',
+  },
+  actionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  actionItem: {
+    width: '47%',
+    backgroundColor: '#ffffff',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#f8fafc',
+    gap: 12,
+  },
+  actionItemIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: '#f8fafc',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionItemText: {
+    gap: 4,
+  },
+  actionItemTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#0f172a',
+  },
+  actionItemSub: {
+    fontSize: 10,
+    color: '#64748b',
+  },
+  pressed: {
+    opacity: 0.8,
+    transform: [{ scale: 0.95 }],
+  },
+});
 
 export default TransactionScreen;
