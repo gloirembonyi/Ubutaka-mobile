@@ -1,5 +1,5 @@
 
-import { User, Parcel, Transaction } from './types';
+import { User, Parcel, Transaction, Dispute } from './types';
 
 export const MOCK_USER: User = {
   id: "USR-1",
@@ -52,5 +52,28 @@ export const MOCK_TRANSACTIONS: Transaction[] = [
     date: "Oct 20, 2023",
     step: "Bank Verification",
     progress: 20
+  }
+];
+
+export const MOCK_DISPUTES: Dispute[] = [
+  {
+    id: "DSP-102",
+    upi: "1/02/03/04/555",
+    type: "Boundary",
+    status: "Mediation",
+    dateOpened: "Nov 12, 2023",
+    parties: ["Jean-Claude M.", "Neighbor X"],
+    description: "Discrepancy in the north-western fence line after latest survey.",
+    location: "Kacyiru, Gasabo"
+  },
+  {
+    id: "DSP-098",
+    upi: "4/12/01/01/992",
+    type: "Ownership",
+    status: "Resolved",
+    dateOpened: "Sep 05, 2023",
+    parties: ["Family Council", "Buyer Z"],
+    description: "Inheritance claim conflicting with recent sale agreement.",
+    location: "Nyamata, Bugesera"
   }
 ];

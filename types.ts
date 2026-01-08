@@ -13,7 +13,12 @@ export type Screen =
   | 'register-land'
   | 'sell-land'
   | 'buy-land'
-  | 'verification';
+  | 'verification'
+  | 'dispute-list'
+  | 'dispute-detail'
+  | 'mediation-room';
+
+export type Language = 'RW' | 'EN';
 
 export interface User {
   id: string;
@@ -43,4 +48,15 @@ export interface Transaction {
   date: string;
   step: string;
   progress: number;
+}
+
+export interface Dispute {
+  id: string;
+  upi: string;
+  type: 'Boundary' | 'Ownership' | 'Encroachment';
+  status: 'Investigation' | 'Mediation' | 'Resolved';
+  dateOpened: string;
+  parties: string[];
+  description: string;
+  location: string;
 }
