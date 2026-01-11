@@ -2,9 +2,12 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Image, TextInput } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Screen } from '../types';
+import { Screen, User } from '../types';
 import { Colors, getColorWithOpacity } from '../styles/colors';
 import { GlobalStyles } from '../styles/globalStyles';
+import MainHeader from '../components/MainHeader';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEffect } from 'react';
 
 interface MarketplaceScreenProps {
   onNavigate: (screen: Screen) => void;
@@ -13,6 +16,15 @@ interface MarketplaceScreenProps {
 const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ onNavigate }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const savedUser = await AsyncStorage.getItem('user');
+      if (savedUser) setUser(JSON.parse(savedUser));
+    };
+    loadUser();
+  }, []);
 
   const filters = ['All', 'Price', 'Size', 'Location', 'Type'];
 
@@ -58,25 +70,8 @@ const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ onNavigate }) => 
 
   return (
     <View style={GlobalStyles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <Pressable style={styles.menuButton}>
-             <MaterialIcons name="menu" size={24} color={Colors.textPrimary} />
-          </Pressable>
-
-          <View style={styles.brandContainer}>
-            <Text style={styles.brandStart}>landscape</Text>
-            <Text style={styles.brandEnd}>Land Market</Text>
-          </View>
-
-          <View style={styles.headerActions}>
-            <Text style={styles.langText}>RW</Text>
-            <Text style={styles.langDivider}>|</Text>
-            <Text style={styles.langTextActive}>EN</Text>
-            <MaterialIcons name="language" size={20} color={Colors.primary} />
-          </View>
-        </View>
-
+      <MainHeader user={user} title="Marketplace" />
+      <View style={styles.filterSection}>
         <View style={styles.searchRow}>
           <View style={styles.searchContainer}>
             <MaterialIcons name="search" size={20} color={Colors.textTertiary} style={styles.searchIcon} />
@@ -212,62 +207,19 @@ const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ onNavigate }) => 
 };
 
 const styles = StyleSheet.create({
-  header: {
+  filterSection: {
     backgroundColor: Colors.white,
     paddingTop: 16,
     paddingBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 16,
-  },
-  menuButton: {
-    padding: 4,
-  },
-  brandContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  brandStart: {
-    fontSize: 16,
-    color: Colors.primary,
-    fontWeight: '400',
-  },
-  brandEnd: {
-    fontSize: 16,
-    color: '#0F172A',
-    fontWeight: '900',
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  langText: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: Colors.textTertiary,
-  },
-  langDivider: {
-    fontSize: 10,
-    color: Colors.border,
-  },
-  langTextActive: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: Colors.textPrimary,
-  },
   searchRow: {
     flexDirection: 'row',
     paddingHorizontal: 20,
     gap: 12,
     marginBottom: 16,
+    marginTop: 8,
   },
   searchContainer: {
     flex: 1,

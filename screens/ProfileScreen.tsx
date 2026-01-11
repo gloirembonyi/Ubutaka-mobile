@@ -3,7 +3,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Image, ImageBackground } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Screen } from '../types';
+import { Screen, User } from '../types';
 import { MOCK_USER } from '../constants';
 import { Colors, getColorWithOpacity } from '../styles/colors';
 import { GlobalStyles } from '../styles/globalStyles';
@@ -12,9 +12,14 @@ interface ProfileScreenProps {
   onNavigate: (screen: Screen) => void;
   theme: 'light' | 'dark';
   toggleTheme: () => void;
+  onLogout: () => void | Promise<void>;
+  user: User | null;
 }
 
-const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme }) => {
+const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?background=0D8ABC&color=fff&name=';
+
+const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme, onLogout, user }) => {
+  const displayUser = user || MOCK_USER;
   const isDark = theme === 'dark';
 
   return (
@@ -38,14 +43,17 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme }) => {
           <View style={styles.profileCard}>
             <View style={styles.avatarSection}>
               <View style={styles.avatarContainer}>
-                <Image source={{ uri: MOCK_USER.avatar }} style={styles.avatar} />
+                <Image 
+                  source={{ uri: displayUser.avatar || `${DEFAULT_AVATAR}${encodeURIComponent(displayUser.name)}` }} 
+                  style={styles.avatar} 
+                />
                 <View style={styles.verifiedBadge}>
                   <MaterialIcons name="verified" size={16} color={Colors.white} />
                 </View>
               </View>
               <View style={styles.nameSection}>
-                <Text style={[styles.name, isDark && styles.textDark]}>{MOCK_USER.name}</Text>
-                <Text style={styles.idText}>NID: {MOCK_USER.nationalId}</Text>
+                <Text style={[styles.name, isDark && styles.textDark]}>{displayUser.name}</Text>
+                <Text style={styles.idText}>NID: {displayUser.nationalId}</Text>
               </View>
             </View>
 
@@ -72,7 +80,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme }) => {
       <ScrollView 
         style={styles.content} 
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 160 }]}
       >
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, isDark && styles.textDark]}>Digital Identity</Text>
@@ -92,15 +100,18 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme }) => {
             </View>
           </View>
           <View style={styles.idCardContent}>
-            <Image source={{ uri: MOCK_USER.avatar }} style={styles.idAvatar} />
+            <Image 
+              source={{ uri: displayUser.avatar || `${DEFAULT_AVATAR}${encodeURIComponent(displayUser.name)}` }} 
+              style={styles.idAvatar} 
+            />
             <View style={styles.idDetails}>
               <View>
                 <Text style={styles.idLabel}>Names</Text>
-                <Text style={styles.idValue}>{MOCK_USER.name}</Text>
+                <Text style={styles.idValue}>{displayUser.name}</Text>
               </View>
               <View>
                 <Text style={styles.idLabel}>National ID No</Text>
-                <Text style={styles.idValue}>{MOCK_USER.nationalId}</Text>
+                <Text style={styles.idValue}>{displayUser.nationalId}</Text>
               </View>
               <View style={styles.idRow}>
                 <View>
@@ -143,13 +154,13 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme }) => {
             <Text style={[styles.menuLabel, isDark && styles.textDark]}>Security</Text>
           </Pressable>
           <Pressable 
-            onPress={() => onNavigate('settings')}
+            onPress={onLogout}
             style={[styles.menuItem, isDark && styles.menuItemDark]}
           >
-            <View style={[styles.menuIcon, { backgroundColor: getColorWithOpacity(Colors.textSecondary, 0.1) }]}>
-              <MaterialIcons name="settings" size={24} color={Colors.textSecondary} />
+            <View style={[styles.menuIcon, { backgroundColor: getColorWithOpacity(Colors.error, 0.1) }]}>
+              <MaterialIcons name="logout" size={24} color={Colors.error} />
             </View>
-            <Text style={[styles.menuLabel, isDark && styles.textDark]}>Settings</Text>
+            <Text style={[styles.menuLabel, isDark && styles.textDark, { color: Colors.error }]}>Logout</Text>
           </Pressable>
         </View>
 
@@ -222,6 +233,7 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     borderWidth: 4,
     borderColor: Colors.white,
+    backgroundColor: Colors.border,
   },
   verifiedBadge: {
     position: 'absolute',

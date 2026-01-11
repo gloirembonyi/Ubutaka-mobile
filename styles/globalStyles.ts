@@ -27,7 +27,7 @@ export const GlobalStyles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 120,
+    paddingBottom: 160,
   },
   
   // Header Styles

@@ -1,11 +1,14 @@
-
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Image, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { Screen } from '../types';
 import { Colors, getColorWithOpacity } from '../styles/colors';
 import { GlobalStyles } from '../styles/globalStyles';
+import { API_ENDPOINTS } from '../config/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import MainHeader from '../components/MainHeader';
+import { User } from '../types';
 
 interface RegisterLandScreenProps {
   onNavigate: (screen: Screen) => void;
@@ -13,7 +16,9 @@ interface RegisterLandScreenProps {
 
 const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) => {
   const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
+    // Step 1: Parcel
     province: 'Kigali City',
     district: 'Gasabo',
     sector: 'Remera',
@@ -21,8 +26,29 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
     upi: '',
     landUse: 'Residential (R1)',
     size: '',
-    ownership: 'Freehold'
+    ownership: 'Freehold',
+    
+    // Step 2: Owner
+    ownerName: '',
+    ownerId: '',
+    ownerPhone: '',
+    ownerEmail: '',
+    
+    // Step 3: Docs
+    hasIdCopy: false,
+    hasSaleAgreement: false,
+    hasTaxClearance: false,
   });
+
+  const [user, setUser] = useState<User | null>(null);
+
+  React.useEffect(() => {
+    const loadUser = async () => {
+      const savedUser = await AsyncStorage.getItem('user');
+      if (savedUser) setUser(JSON.parse(savedUser));
+    };
+    loadUser();
+  }, []);
 
   const steps = ['PARCEL', 'OWNER', 'DOCS', 'REVIEW'];
 
@@ -56,18 +82,77 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
     );
   };
 
+  const handleSubmit = async () => {
+    // Validation
+    if (!formData.upi || !formData.size) {
+      Alert.alert('Error', 'Please fill in all required fields (UPI and Size)');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Get current user (already loaded in effect)
+      if (!user) {
+        Alert.alert('Error', 'Please login first');
+        return;
+      }
+
+      // Prepare parcel data
+      const parcelData = {
+        upi: formData.upi,
+        size: `${formData.size} sqm`,
+        use: formData.landUse,
+        district: formData.district,
+        location: `${formData.sector}, ${formData.cell}, ${formData.province}`,
+        status: 'pending', // Set to pending for review
+        ownerName: formData.ownerName || user.name,
+        imageUrl: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800',
+        price: null,
+      };
+
+      const response = await fetch(API_ENDPOINTS.PARCELS, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(parcelData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        Alert.alert('Registration Failed', data.error || 'Failed to register parcel');
+        return;
+      }
+
+      Alert.alert(
+        'Success',
+        `Parcel ${formData.upi} has been registered successfully!`,
+        [
+          { text: 'OK', onPress: () => onNavigate('dashboard') }
+        ]
+      );
+    } catch (error) {
+      console.error('Register land error:', error);
+      Alert.alert(
+        'Connection Error',
+        'Could not connect to server. Please check your network connection.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <View style={GlobalStyles.container}>
       <SafeAreaView edges={['top']} style={GlobalStyles.safeArea}>
-        <View style={styles.header}>
-          <Pressable onPress={() => onNavigate('dashboard')} style={styles.backButton}>
-            <MaterialIcons name="arrow-back" size={24} color={Colors.textPrimary} />
-          </Pressable>
-          <Text style={styles.headerTitle}>Registration</Text>
-          <Pressable style={styles.helpButton}>
-            <MaterialIcons name="help-outline" size={24} color={Colors.textSecondary} />
-          </Pressable>
-        </View>
+        <MainHeader 
+          user={user} 
+          showBack 
+          onBack={() => onNavigate('dashboard')} 
+          title="Registration"
+        />
 
         <View style={styles.stepsIndicator}>
           {steps.map((_, i) => renderStepIcon(i))}
@@ -75,146 +160,347 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           <View style={styles.intro}>
-            <Text style={styles.title}>Parcel Details</Text>
-            <Text style={styles.subtitle}>Step {step} of 4. Please define the geographical boundaries and usage type of the land parcel.</Text>
+            <Text style={styles.title}>
+              {step === 1 ? 'Parcel Details' : 
+               step === 2 ? 'Owner Information' : 
+               step === 3 ? 'Document Upload' : 'Final Review'}
+            </Text>
+            <Text style={styles.subtitle}>Step {step} of 4. {
+              step === 1 ? 'Please define the geographical boundaries and usage type of the land parcel.' :
+              step === 2 ? 'Provide information about the legal owners of this parcel.' :
+              step === 3 ? 'Upload necessary legal documents and survey reports.' :
+              'Review and confirm the information before final submission.'
+            }</Text>
           </View>
 
-          {/* Location Data Section */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionIcon}>
-                <MaterialIcons name="map" size={18} color={Colors.primary} />
-              </View>
-              <Text style={styles.sectionTitle}>Location Data</Text>
-            </View>
-            
-            <View style={styles.row}>
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>PROVINCE</Text>
-                <View style={styles.selectInput}>
-                  <Text style={styles.inputText}>{formData.province}</Text>
-                  <MaterialIcons name="expand-more" size={20} color={Colors.textSecondary} />
+          {step === 1 && (
+            <>
+              {/* Location Data Section */}
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <View style={styles.sectionIcon}>
+                    <MaterialIcons name="map" size={18} color={Colors.primary} />
+                  </View>
+                  <Text style={styles.sectionTitle}>Location Data</Text>
+                </View>
+                
+                <View style={styles.row}>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>PROVINCE</Text>
+                    <TextInput 
+                      style={styles.selectInput}
+                      value={formData.province}
+                      onChangeText={(text) => setFormData({...formData, province: text})}
+                    />
+                  </View>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>DISTRICT</Text>
+                    <TextInput 
+                      style={styles.selectInput}
+                      value={formData.district}
+                      onChangeText={(text) => setFormData({...formData, district: text})}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.row}>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>SECTOR</Text>
+                    <TextInput 
+                      style={styles.selectInput}
+                      value={formData.sector}
+                      onChangeText={(text) => setFormData({...formData, sector: text})}
+                    />
+                  </View>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>CELL</Text>
+                    <TextInput 
+                      style={styles.selectInput}
+                      value={formData.cell}
+                      onChangeText={(text) => setFormData({...formData, cell: text})}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <View style={styles.labelRow}>
+                    <Text style={styles.inputLabel}>UPI NUMBER</Text>
+                    <Pressable><Text style={styles.generateText}>Generate New</Text></Pressable>
+                  </View>
+                  <View style={styles.upiInput}>
+                    <Text style={styles.upiPrefix}>UPI - </Text>
+                    <TextInput 
+                      style={styles.textInput}
+                      placeholder="X/XX/XX/XX/XXXX"
+                      placeholderTextColor={Colors.textTertiary}
+                      value={formData.upi}
+                      onChangeText={(text) => setFormData({...formData, upi: text})}
+                    />
+                    <MaterialIcons name="qr-code-scanner" size={20} color={Colors.textTertiary} />
+                  </View>
+                  <Text style={styles.inputHint}>Leave blank if the parcel is not yet surveyed.</Text>
                 </View>
               </View>
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>DISTRICT</Text>
-                <View style={styles.selectInput}>
-                  <Text style={styles.inputText}>{formData.district}</Text>
-                  <MaterialIcons name="expand-more" size={20} color={Colors.textSecondary} />
+
+              {/* Boundaries Section */}
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <View style={styles.sectionIcon}>
+                    <MaterialIcons name="share" size={18} color={Colors.success} />
+                  </View>
+                  <Text style={styles.sectionTitle}>Boundaries</Text>
                 </View>
+                
+                <Pressable style={styles.mapPlaceholder}>
+                  <View style={styles.mapIcon}>
+                    <MaterialIcons name="location-on" size={24} color={Colors.primary} />
+                  </View>
+                  <Text style={styles.mapText}>Set Boundaries on Map</Text>
+                  <Text style={styles.mapSubtext}>Tap to open GIS tool</Text>
+                </Pressable>
               </View>
-            </View>
 
-            <View style={styles.row}>
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>SECTOR</Text>
-                <View style={styles.selectInput}>
-                  <Text style={styles.inputText}>{formData.sector}</Text>
-                  <MaterialIcons name="expand-more" size={20} color={Colors.textSecondary} />
+              {/* Specs Section */}
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <View style={styles.sectionIcon}>
+                    <MaterialIcons name="view-quilt" size={18} color={Colors.accent} />
+                  </View>
+                  <Text style={styles.sectionTitle}>Specs</Text>
                 </View>
-              </View>
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>CELL</Text>
-                <View style={styles.selectInput}>
-                  <Text style={styles.inputText}>{formData.cell}</Text>
-                  <MaterialIcons name="expand-more" size={20} color={Colors.textSecondary} />
-                </View>
-              </View>
-            </View>
 
-            <View style={styles.inputGroup}>
-              <View style={styles.labelRow}>
-                <Text style={styles.inputLabel}>UPI NUMBER</Text>
-                <Pressable><Text style={styles.generateText}>Generate New</Text></Pressable>
-              </View>
-              <View style={styles.upiInput}>
-                <Text style={styles.upiPrefix}>UPI - </Text>
-                <TextInput 
-                  style={styles.textInput}
-                  placeholder="X/XX/XX/XX/XXXX"
-                  placeholderTextColor={Colors.textTertiary}
-                  value={formData.upi}
-                  onChangeText={(text) => setFormData({...formData, upi: text})}
-                />
-                <MaterialIcons name="qr-code-scanner" size={20} color={Colors.textTertiary} />
-              </View>
-              <Text style={styles.inputHint}>Leave blank if the parcel is not yet surveyed.</Text>
-            </View>
-          </View>
-
-          {/* Boundaries Section */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionIcon}>
-                <MaterialIcons name="share" size={18} color={Colors.success} />
-              </View>
-              <Text style={styles.sectionTitle}>Boundaries</Text>
-            </View>
-            
-            <Pressable style={styles.mapPlaceholder}>
-              <View style={styles.mapIcon}>
-                <MaterialIcons name="location-on" size={24} color={Colors.primary} />
-              </View>
-              <Text style={styles.mapText}>Set Boundaries on Map</Text>
-              <Text style={styles.mapSubtext}>Tap to open GIS tool</Text>
-            </Pressable>
-          </View>
-
-          {/* Specs Section */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionIcon}>
-                <MaterialIcons name="view-quilt" size={18} color={Colors.accent} />
-              </View>
-              <Text style={styles.sectionTitle}>Specs</Text>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>LAND USE CATEGORY</Text>
-              <View style={styles.selectInput}>
-                <Text style={styles.inputText}>{formData.landUse}</Text>
-                <MaterialIcons name="expand-more" size={20} color={Colors.textSecondary} />
-              </View>
-            </View>
-
-            <View style={styles.row}>
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>APPROX SIZE</Text>
-                <View style={styles.sizeInput}>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>LAND USE CATEGORY</Text>
                   <TextInput 
-                    style={styles.textInput}
-                    placeholder="0"
-                    keyboardType="numeric"
-                    value={formData.size}
-                    onChangeText={(text) => setFormData({...formData, size: text})}
+                    style={styles.selectInput}
+                    value={formData.landUse}
+                    onChangeText={(text) => setFormData({...formData, landUse: text})}
                   />
-                  <Text style={styles.unitText}>m²</Text>
+                </View>
+
+                <View style={styles.row}>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>APPROX SIZE</Text>
+                    <View style={styles.sizeInput}>
+                      <TextInput 
+                        style={styles.textInput}
+                        placeholder="0"
+                        keyboardType="numeric"
+                        value={formData.size}
+                        onChangeText={(text) => setFormData({...formData, size: text})}
+                      />
+                      <Text style={styles.unitText}>m²</Text>
+                    </View>
+                  </View>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>OWNERSHIP TYPE</Text>
+                    <TextInput 
+                      style={styles.selectInput}
+                      value={formData.ownership}
+                      onChangeText={(text) => setFormData({...formData, ownership: text})}
+                    />
+                  </View>
                 </View>
               </View>
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>OWNERSHIP TYPE</Text>
-                <View style={styles.selectInput}>
-                  <Text style={styles.inputText}>{formData.ownership}</Text>
-                  <MaterialIcons name="expand-more" size={20} color={Colors.textSecondary} />
+            </>
+          )}
+
+          {step === 2 && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionIcon}>
+                  <MaterialIcons name="person" size={18} color={Colors.primary} />
                 </View>
+                <Text style={styles.sectionTitle}>Primary Owner Information</Text>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>FULL LEGAL NAME</Text>
+                <TextInput 
+                  style={styles.selectInput}
+                  placeholder="Enter full name as on ID"
+                  value={formData.ownerName}
+                  onChangeText={(text) => setFormData({...formData, ownerName: text})}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>NATIONAL ID NUMBER</Text>
+                <TextInput 
+                  style={styles.selectInput}
+                  placeholder="1 1990 8 0000000 0 00"
+                  keyboardType="numeric"
+                  value={formData.ownerId}
+                  onChangeText={(text) => setFormData({...formData, ownerId: text})}
+                />
+              </View>
+
+              <View style={styles.row}>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>PHONE NUMBER</Text>
+                  <TextInput 
+                    style={styles.selectInput}
+                    placeholder="+250..."
+                    keyboardType="phone-pad"
+                    value={formData.ownerPhone}
+                    onChangeText={(text) => setFormData({...formData, ownerPhone: text})}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>EMAIL ADDRESS (OPTIONAL)</Text>
+                <TextInput 
+                  style={styles.selectInput}
+                  placeholder="example@mail.com"
+                  keyboardType="email-address"
+                  value={formData.ownerEmail}
+                  onChangeText={(text) => setFormData({...formData, ownerEmail: text})}
+                />
               </View>
             </View>
-          </View>
+          )}
+
+          {step === 3 && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionIcon}>
+                  <MaterialIcons name="cloud-upload" size={18} color={Colors.primary} />
+                </View>
+                <Text style={styles.sectionTitle}>Required Documents</Text>
+              </View>
+
+              <Pressable 
+                style={[styles.docItem, formData.hasIdCopy && styles.docItemActive]}
+                onPress={() => setFormData({...formData, hasIdCopy: !formData.hasIdCopy})}
+              >
+                <View style={styles.docInfo}>
+                  <MaterialIcons name="badge" size={24} color={formData.hasIdCopy ? Colors.primary : Colors.textTertiary} />
+                  <View>
+                    <Text style={styles.docName}>National ID Copy</Text>
+                    <Text style={styles.docStatus}>{formData.hasIdCopy ? 'Uploaded' : 'Not uploaded'}</Text>
+                  </View>
+                </View>
+                <MaterialIcons name={formData.hasIdCopy ? "check-circle" : "add-circle-outline"} size={24} color={formData.hasIdCopy ? Colors.success : Colors.border} />
+              </Pressable>
+
+              <Pressable 
+                style={[styles.docItem, formData.hasSaleAgreement && styles.docItemActive]}
+                onPress={() => setFormData({...formData, hasSaleAgreement: !formData.hasSaleAgreement})}
+              >
+                <View style={styles.docInfo}>
+                  <MaterialIcons name="gavel" size={24} color={formData.hasSaleAgreement ? Colors.primary : Colors.textTertiary} />
+                  <View>
+                    <Text style={styles.docName}>Sale Agreement</Text>
+                    <Text style={styles.docStatus}>{formData.hasSaleAgreement ? 'Uploaded' : 'Not uploaded'}</Text>
+                  </View>
+                </View>
+                <MaterialIcons name={formData.hasSaleAgreement ? "check-circle" : "add-circle-outline"} size={24} color={formData.hasSaleAgreement ? Colors.success : Colors.border} />
+              </Pressable>
+
+              <Pressable 
+                style={[styles.docItem, formData.hasTaxClearance && styles.docItemActive]}
+                onPress={() => setFormData({...formData, hasTaxClearance: !formData.hasTaxClearance})}
+              >
+                <View style={styles.docInfo}>
+                  <MaterialIcons name="receipt-long" size={24} color={formData.hasTaxClearance ? Colors.primary : Colors.textTertiary} />
+                  <View>
+                    <Text style={styles.docName}>Tax Clearance Certificate</Text>
+                    <Text style={styles.docStatus}>{formData.hasTaxClearance ? 'Uploaded' : 'Not uploaded'}</Text>
+                  </View>
+                </View>
+                <MaterialIcons name={formData.hasTaxClearance ? "check-circle" : "add-circle-outline"} size={24} color={formData.hasTaxClearance ? Colors.success : Colors.border} />
+              </Pressable>
+            </View>
+          )}
+
+          {step === 4 && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionIcon}>
+                  <MaterialIcons name="fact-check" size={18} color={Colors.primary} />
+                </View>
+                <Text style={styles.sectionTitle}>Summary Review</Text>
+              </View>
+
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryLabel}>UPI NUMBER</Text>
+                <Text style={styles.summaryValue}>{formData.upi}</Text>
+              </View>
+
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryLabel}>LOCATION</Text>
+                <Text style={styles.summaryValue}>{formData.sector}, {formData.cell}, {formData.district}</Text>
+              </View>
+
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryLabel}>SIZE & USE</Text>
+                <Text style={styles.summaryValue}>{formData.size} m² | {formData.landUse}</Text>
+              </View>
+
+              <View style={styles.summaryDivider} />
+
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryLabel}>OWNER</Text>
+                <Text style={styles.summaryValue}>{formData.ownerName || 'Not provided'}</Text>
+              </View>
+
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryLabel}>ID NUMBER</Text>
+                <Text style={styles.summaryValue}>{formData.ownerId || 'Not provided'}</Text>
+              </View>
+
+              <View style={styles.summaryDivider} />
+
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryLabel}>DOCUMENTS</Text>
+                <Text style={styles.summaryValue}>
+                  {[
+                    formData.hasIdCopy && 'ID',
+                    formData.hasSaleAgreement && 'Sale Agreement',
+                    formData.hasTaxClearance && 'Tax'
+                  ].filter(Boolean).join(', ') || 'None provided'}
+                </Text>
+              </View>
+            </View>
+          )}
         </ScrollView>
 
         <View style={styles.footer}>
           <Pressable 
-            onPress={() => onNavigate('dashboard')}
+            onPress={() => step > 1 ? setStep(step - 1) : onNavigate('dashboard')}
             style={styles.cancelButton}
           >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
+            <Text style={styles.cancelButtonText}>{step > 1 ? 'Back' : 'Cancel'}</Text>
           </Pressable>
           <Pressable 
-            onPress={() => onNavigate('verification')}
-            style={styles.nextButton}
+            onPress={() => {
+              // Standard step validation
+              if (step < 4) {
+                if (step === 1 && (!formData.upi || !formData.size)) {
+                  Alert.alert('Error', 'Please fill in all required fields (UPI and Size)');
+                  return;
+                }
+                if (step === 2 && (!formData.ownerName || !formData.ownerId)) {
+                  Alert.alert('Error', 'Please provide owner details (Name and ID)');
+                  return;
+                }
+                setStep(step + 1);
+              } else {
+                handleSubmit();
+              }
+            }}
+            disabled={loading}
+            style={[styles.nextButton, loading && { opacity: 0.6 }]}
           >
-            <Text style={styles.nextButtonText}>Next: Owner Info</Text>
-            <MaterialIcons name="arrow-forward" size={20} color={Colors.white} />
+            {loading ? (
+              <ActivityIndicator color={Colors.white} />
+            ) : (
+              <>
+                <Text style={styles.nextButtonText}>{step < 4 ? 'Continue' : 'Register Parcel'}</Text>
+                <MaterialIcons name={step < 4 ? "arrow-forward" : "check"} size={20} color={Colors.white} />
+              </>
+            )}
           </Pressable>
         </View>
       </SafeAreaView>
@@ -295,6 +581,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.borderLight,
     gap: 20,
+    marginBottom: 30,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -434,6 +721,7 @@ const styles = StyleSheet.create({
   
   footer: {
     position: 'absolute',
+    marginBottom: 50,
     bottom: 0,
     left: 0,
     right: 0,
@@ -443,7 +731,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: Colors.borderLight,
     gap: 16,
-    paddingBottom: 40,
+    paddingBottom: 50,
   },
   cancelButton: {
     flex: 1,
@@ -473,6 +761,60 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: Colors.white,
+  },
+  
+  // Document styles
+  docItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Colors.backgroundLight,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: 12,
+  },
+  docItemActive: {
+    borderColor: Colors.primary,
+    backgroundColor: getColorWithOpacity(Colors.primary, 0.05),
+  },
+  docInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  docName: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: Colors.textPrimary,
+  },
+  docStatus: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  
+  // Summary styles
+  summaryItem: {
+    marginBottom: 16,
+  },
+  summaryLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.textTertiary,
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  summaryValue: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+  },
+  summaryDivider: {
+    height: 1,
+    backgroundColor: Colors.borderLight,
+    marginVertical: 16,
   },
 });
 

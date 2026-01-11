@@ -1,0 +1,60 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String   @id @default(cuid())
+  name       String
+  email      String   @unique
+  password   String
+  nationalId String   @unique
+  isVerified Boolean  @default(false)
+  avatar     String?
+  role       String   @default("USER")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Parcel {
+  upi       String   @id
+  size      String
+  use       String
+  district  String
+  location  String
+  status    String
+  ownerName String
+  imageUrl  String
+  price     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Transaction {
+  id        String   @id @default(cuid())
+  title     String
+  upi       String
+  status    String
+  date      String
+  step      String
+  progress  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Dispute {
+  id          String   @id @default(cuid())
+  upi         String
+  type        String
+  status      String
+  dateOpened  String
+  parties     String
+  description String
+  location    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

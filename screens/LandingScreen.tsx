@@ -49,11 +49,11 @@ const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
             <Text style={styles.title}>
-              Secure Land,{'\n'}
-              <Text style={styles.titleHighlight}>Peaceful Future</Text>
+              Rwanda&apos;s Digital Land{'\n'}
+              <Text style={styles.titleHighlight}>Transformation for Peace</Text>
             </Text>
             <Text style={styles.subtitle}>
-              Rwanda's secure, paperless platform for land management and citizen services.
+              Secure, paperless, and transparent land administration streamlining transactions and preventing fraud.
             </Text>
           </View>
 
@@ -73,21 +73,24 @@ const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
 
           <View style={styles.buttonsContainer}>
             <Pressable 
-              onPress={() => onNavigate('dashboard')}
+              onPress={() => onNavigate('signup')}
               style={({ pressed }) => [
                 styles.primaryButton,
                 pressed && GlobalStyles.pressed
               ]}
             >
-              <Text style={styles.primaryButtonText}>Get Started</Text>
+              <Text style={styles.primaryButtonText}>Start Transformation</Text>
               <MaterialIcons name="arrow-forward" size={20} color={Colors.white} />
             </Pressable>
-            <Pressable style={({ pressed }) => [
-              styles.secondaryButton,
-              pressed && GlobalStyles.pressed
-            ]}>
-              <Text style={styles.secondaryButtonText}>Log In</Text>
-            </Pressable>
+            
+            <View style={styles.secondaryActions}>
+              <Pressable 
+                onPress={() => onNavigate('login')}
+                style={styles.loginLink}
+              >
+                <Text style={styles.loginText}>Already have an account? <Text style={styles.loginHighlight}>Log In</Text></Text>
+              </Pressable>
+            </View>
           </View>
         </ScrollView>
       </View>
@@ -180,7 +183,8 @@ const styles = StyleSheet.create({
   },
   bottomSheet: {
     flex: 1,
-    marginTop: -40,
+    marginTop: -60,
+    marginBottom: 0,
     backgroundColor: Colors.background,
     borderTopLeftRadius: 40,
     borderTopRightRadius: 40,
@@ -303,6 +307,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',
+  },
+  secondaryActions: {
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  loginLink: {
+    padding: 8,
+  },
+  loginText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    fontWeight: '500',
+  },
+  loginHighlight: {
+    color: Colors.primary,
+    fontWeight: 'bold',
   },
 });
 

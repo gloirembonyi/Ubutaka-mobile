@@ -43,7 +43,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ current, onNavigate }) => {
              return (
               <Pressable 
                 key={item.id} 
-                onPress={() => onNavigate('sell-land')}
+                onPress={() => onNavigate('register-land')}
                 style={({ pressed }) => [
                   styles.centerButton,
                   pressed && styles.buttonPressed

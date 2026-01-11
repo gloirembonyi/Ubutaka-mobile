@@ -13,6 +13,7 @@ interface SettingsScreenProps {
   toggleTheme: () => void;
   language: 'RW' | 'EN';
   toggleLanguage: () => void;
+  onLogout: () => void | Promise<void>;
 }
 
 const SettingsScreen: React.FC<SettingsScreenProps> = ({ 
@@ -20,7 +21,8 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
   theme, 
   toggleTheme,
   language,
-  toggleLanguage 
+  toggleLanguage,
+  onLogout
 }) => {
   const isDark = theme === 'dark';
   const [notifications, setNotifications] = useState(true);
@@ -169,7 +171,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
             />
           </Section>
 
-          <Pressable style={styles.logoutButton}>
+          <Pressable style={styles.logoutButton} onPress={onLogout}>
             <MaterialIcons name="logout" size={20} color={Colors.error} />
             <Text style={styles.logoutText}>Log Out</Text>
           </Pressable>

@@ -4,9 +4,11 @@ import { User, Parcel, Transaction, Dispute } from './types';
 export const MOCK_USER: User = {
   id: "USR-1",
   name: "Jean-Claude",
+  email: "jean@example.rw",
   nationalId: "1 1990 8 0000000 0 00",
   isVerified: true,
-  avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuAX2-oYcDzmZi-qvf-lv-z862dI8DBVWzEVtc_VwpaiPKqZl1YDS5IA9c-k1wmq3xanWSuWOZq_3j8pL5mn-vq4Eg-CpWKvSokVUvO-oAOBhOoy8mWQ8FLdvt_rd3x5Viab4edytN-Xz8NjfIMj47gOb-N65uOIsVXrAIUfm8QYD6Li4Dq580sxoRRKJJYDvs0NYy1aAYaDUMG3xWpZkI9Yhnsza3c4vQnc6puLPHoNaLHRq1MXNEllF17WN3koZs0vahAbaEhnqcsj"
+  avatar: "https://ui-avatars.com/api/?background=0D8ABC&color=fff&name=Jean+Claude",
+  role: "CITIZEN"
 };
 
 export const MOCK_PARCELS: Parcel[] = [
@@ -77,3 +79,4 @@ export const MOCK_DISPUTES: Dispute[] = [
     location: "Nyamata, Bugesera"
   }
 ];
+export const API_BASE_URL = "http://10.175.113.252:3000/api";

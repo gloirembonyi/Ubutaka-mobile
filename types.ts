@@ -17,6 +17,8 @@ export type Screen =
   | 'dispute-list'
   | 'dispute-detail'
   | 'mediation-room'
+  | 'login'
+  | 'signup'
   | 'settings'
   | 'tax-payment';
 
@@ -25,9 +27,11 @@ export type Language = 'RW' | 'EN';
 export interface User {
   id: string;
   name: string;
+  email: string;
   nationalId: string;
   isVerified: boolean;
   avatar: string;
+  role: 'CITIZEN' | 'ABUNZI' | 'ADMIN';
 }
 
 export interface Parcel {

@@ -1,69 +1,129 @@
 
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, Image, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Screen } from '../types';
+import { Screen, User, Parcel } from '../types';
 import { MOCK_USER } from '../constants';
 import { Colors, getColorWithOpacity } from '../styles/colors';
 import { GlobalStyles } from '../styles/globalStyles';
+import { API_ENDPOINTS } from '../config/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import MainHeader from '../components/MainHeader';
 
 interface DashboardScreenProps {
   onNavigate: (screen: Screen) => void;
+  user: User | null;
+  onRefreshUser?: () => void;
 }
 
-const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate }) => {
+const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?background=0D8ABC&color=fff&bold=true&name=';
+
+const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onRefreshUser }) => {
+  const [parcels, setParcels] = useState<Parcel[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [verifying, setVerifying] = useState(false);
+  
+  const displayUser = user || MOCK_USER;
+
+  useEffect(() => {
+    fetchParcels();
+  }, [user]);
+
+  const fetchParcels = async () => {
+    if (!displayUser.name) return;
+    try {
+      const resp = await fetch(`${API_ENDPOINTS.PARCELS}?ownerName=${encodeURIComponent(displayUser.name)}`);
+      if (resp.ok) {
+        const data = await resp.json();
+        setParcels(data);
+      }
+    } catch (err) {
+      console.error('Fetch parcels error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBiometricVerify = async () => {
+    if (displayUser.isVerified) return;
+    
+    setVerifying(true);
+    // Simulate biometric scan delay
+    setTimeout(async () => {
+      try {
+        const resp = await fetch(`${API_ENDPOINTS.USERS}/${displayUser.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ isVerified: true })
+        });
+        
+        if (resp.ok) {
+          const updatedUser = await resp.json();
+          // Update AsyncStorage
+          await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+          // Notify parent to refresh state
+          if (onRefreshUser) onRefreshUser();
+          
+          Alert.alert("Success", "Biometric Identity Verified successfully!");
+        } else {
+          Alert.alert("Error", "Failed to verify identity. Please try again.");
+        }
+      } catch (err) {
+        console.error('Verify error:', err);
+        Alert.alert("Error", "Network error during verification.");
+      } finally {
+        setVerifying(false);
+      }
+    }, 2000);
+  };
+
   const actions = [
     { icon: 'add-location-alt', label: 'Register Land', screen: 'register-land' },
     { icon: 'shopping-cart', label: 'Buy Land', screen: 'marketplace' },
     { icon: 'sell', label: 'Sell Land', screen: 'sell-land' },
+    { icon: 'wifi-off', label: 'Offline Access', screen: 'offline' },
+    { icon: 'report-problem', label: 'Report Anomaly', screen: 'report-anomaly' },
     { icon: 'account-tree', label: 'Inheritance', screen: 'inheritance' }
   ];
 
   return (
     <View style={GlobalStyles.container}>
       <SafeAreaView edges={['top']} style={GlobalStyles.safeArea}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={GlobalStyles.scrollContent}>
-          {/* Header */}
-          <View style={styles.header}>
-        <View style={styles.userInfo}>
-          <View style={styles.avatarContainer}>
-            <Image source={{ uri: MOCK_USER.avatar }} style={styles.avatar} />
-            <View style={styles.verifiedBadge}>
-              <MaterialIcons name="check" size={14} color={Colors.white} />
-            </View>
-          </View>
-          <View style={styles.userText}>
-            <Text style={styles.greeting}>Muraho,</Text>
-            <Text style={styles.userName}>{MOCK_USER.name}</Text>
-          </View>
-        </View>
-        <Pressable style={styles.notificationButton}>
-          <MaterialIcons name="notifications" size={24} color={Colors.textSecondary} />
-          <View style={styles.notificationBadge} />
-        </Pressable>
-      </View>
+        <MainHeader user={displayUser} />
 
-      <View style={styles.content}>
-        {/* Verification Status Banner */}
-        <Pressable 
-          onPress={() => onNavigate('verification')}
-          style={({ pressed }) => [
-            styles.verificationBanner,
-            pressed && GlobalStyles.pressed
-          ]}
-        >
-          <View style={styles.verificationContent}>
-            <View style={styles.verificationIcon}>
-              <MaterialIcons name="fingerprint" size={24} color={Colors.primary} />
-            </View>
-            <View style={styles.verificationText}>
-              <Text style={styles.verificationTitle}>Biometric Identity</Text>
-              <Text style={styles.verificationSubtitle}>Active & Verified</Text>
-            </View>
-          </View>
-          <MaterialIcons name="chevron-right" size={24} color={Colors.neutral} />
-        </Pressable>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+          <View style={styles.content}>
+            {/* Verification Status Banner */}
+            <Pressable 
+              onPress={handleBiometricVerify}
+              style={({ pressed }) => [
+                styles.verificationBanner,
+                pressed && GlobalStyles.pressed,
+                displayUser.isVerified && styles.verificationBannerActive
+              ]}
+            >
+              <View style={styles.verificationContent}>
+                <View style={[styles.verificationIcon, displayUser.isVerified && styles.verificationIconActive]}>
+                  <MaterialIcons 
+                    name="fingerprint" 
+                    size={24} 
+                    color={displayUser.isVerified ? Colors.success : Colors.primary} 
+                  />
+                </View>
+                <View style={styles.verificationText}>
+                  <Text style={styles.verificationTitle}>Biometric Identity</Text>
+                  <Text style={[styles.verificationSubtitle, displayUser.isVerified && { color: Colors.success }]}>
+                    {displayUser.isVerified ? "Active & Verified" : "Action Required: Tap to Verify"}
+                  </Text>
+                </View>
+              </View>
+              <MaterialIcons 
+                name={displayUser.isVerified ? "check-circle" : "chevron-right"} 
+                size={24} 
+                color={displayUser.isVerified ? Colors.success : Colors.neutral} 
+              />
+            </Pressable>
 
         {/* Hero Card */}
         <Pressable 
@@ -83,10 +143,14 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate }) => {
             <View style={styles.heroHeader}>
               <View>
                 <Text style={styles.heroLabel}>Total Holdings</Text>
-                <Text style={styles.heroTitle}>3 Parcels</Text>
+                <Text style={styles.heroTitle}>{loading ? '...' : `${parcels.length} ${parcels.length === 1 ? 'Parcel' : 'Parcels'}`}</Text>
                 <View style={styles.heroLocation}>
                   <MaterialIcons name="location-on" size={14} color={Colors.accent} />
-                  <Text style={styles.heroLocationText}>Karongi & Gasabo Districts</Text>
+                  <Text style={styles.heroLocationText}>
+                    {loading ? 'Fetching location...' : 
+                     parcels.length > 0 ? Array.from(new Set(parcels.map(p => p.district))).join(' & ') + ' Districts' : 
+                     'No parcels registered'}
+                  </Text>
                 </View>
               </View>
               <View style={styles.heroIconContainer}>
@@ -156,6 +220,22 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate }) => {
       </View>
         </ScrollView>
       </SafeAreaView>
+
+      {/* Verification Overlay */}
+      {verifying && (
+        <View style={styles.overlay}>
+           <View style={styles.scanModal}>
+              <View style={styles.scanCircle}>
+                 <MaterialIcons name="fingerprint" size={80} color={Colors.primary} />
+                 {/* This would be an animation in a real app */}
+                 <View style={styles.scanLine} />
+              </View>
+              <Text style={styles.scanTitle}>Identity Verification</Text>
+              <Text style={styles.scanSubtitle}>Scanning fingerprint or face...</Text>
+              <ActivityIndicator color={Colors.primary} style={{marginTop: 20}} />
+           </View>
+        </View>
+      )}
     </View>
   );
 };
@@ -166,9 +246,45 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 16,
-    backgroundColor: Colors.background,
+    paddingVertical: 20,
+    backgroundColor: Colors.white,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  langContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.backgroundLight,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  langText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: Colors.textTertiary,
+  },
+  langTextActive: {
+    fontSize: 10,
+    fontWeight: 'black',
+    color: Colors.textPrimary,
+  },
+  langDivider: {
+    width: 1,
+    height: 10,
+    backgroundColor: Colors.border,
+    marginHorizontal: 8,
+  },
+  globeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: getColorWithOpacity(Colors.primary, 0.05),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   userInfo: {
     flexDirection: 'row',
@@ -179,11 +295,10 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 2,
-    borderColor: Colors.white,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.border,
   },
   verifiedBadge: {
     position: 'absolute',
@@ -202,34 +317,21 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: 'bold',
     color: Colors.textTertiary,
-    textTransform: 'uppercase',
     letterSpacing: 1,
   },
   userName: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: 'black',
     color: Colors.textPrimary,
-    lineHeight: 24,
+    lineHeight: 22,
+    maxWidth: 150,
   },
-  notificationButton: {
-    position: 'relative',
-    padding: 8,
-    borderRadius: 20,
-  },
-  notificationBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.error,
-    borderWidth: 2,
-    borderColor: Colors.white,
+  scrollContent: {
+    paddingBottom: 150,
   },
   content: {
     paddingHorizontal: 24,
-    paddingBottom: 32,
+    paddingTop: 10,
     gap: 24,
   },
   verificationBanner: {
@@ -267,6 +369,64 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.primary,
     fontWeight: '600',
+  },
+  verificationBannerActive: {
+    borderColor: Colors.success,
+    backgroundColor: getColorWithOpacity(Colors.success, 0.05),
+  },
+  verificationIconActive: {
+    backgroundColor: getColorWithOpacity(Colors.success, 0.1),
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  scanModal: {
+    width: 280,
+    backgroundColor: Colors.white,
+    borderRadius: 32,
+    padding: 32,
+    alignItems: 'center',
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+  },
+  scanCircle: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: getColorWithOpacity(Colors.primary, 0.05),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  scanLine: {
+    position: 'absolute',
+    top: 0,
+    width: '100%',
+    height: 2,
+    backgroundColor: Colors.primary,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+  },
+  scanTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.textPrimary,
+    marginBottom: 8,
+  },
+  scanSubtitle: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
   },
   heroCard: {
     position: 'relative',
