@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, Pressable, KeyboardAvoidingView, Platform, ScrollView, Alert, ActivityIndicator } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { Screen, User } from '../types';
 import { Colors, getColorWithOpacity } from '../styles/colors';
 import { GlobalStyles } from '../styles/globalStyles';
-import { API_ENDPOINTS } from '../config/api';
+import { AuthService } from '../services/authService';
+import { useAuthStore } from '../store/authStore';
+import { mockNidaVerification } from '../services/mockNida';
 
 interface AuthScreenProps {
   onNavigate: (screen: Screen) => void;
@@ -20,6 +22,77 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onNavigate, onLogin, type: init
   const [nationalId, setNationalId] = useState('');
   const [role, setRole] = useState<'CITIZEN' | 'ABUNZI'>('CITIZEN');
   const [loading, setLoading] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+
+  // Store actions
+  const login = useAuthStore(state => state.login);
+  const setBiometricStatus = useAuthStore(state => state.setBiometricStatus);
+
+  useEffect(() => {
+    checkBiometrics();
+    checkStoredCredentials();
+  }, []);
+
+  const checkBiometrics = async () => {
+    const { hasHardware, isEnrolled } = await AuthService.checkBiometricAvailability();
+    setBiometricAvailable(hasHardware && isEnrolled);
+  };
+
+  const checkStoredCredentials = async () => {
+    const stored = await AuthService.getStoredBiometricCredentials();
+    if (stored && type === 'login') {
+      // Allow quick fill or auto-prompt
+      setEmail(stored.email);
+    }
+  };
+
+  const handleBiometricLogin = async () => {
+    const stored = await AuthService.getStoredBiometricCredentials();
+    if (!stored) {
+      Alert.alert('Biometrics Not Set', 'Please login with password first to enable biometrics.');
+      return;
+    }
+
+    const success = await AuthService.authenticateWithBiometrics();
+    if (success) {
+      setLoading(true);
+      try {
+        // Authenticate with stored token/credentials
+        // Ideally we verify the token is still valid or refresh it
+        // For now, we simulate a login or use the token directly if API supports it
+        // Since we don't have the password, we might need a special "refresh" or "biometric-login" endpoint
+        // simplified: We assume stored.token is valid or we just pass simulated success if it's a demo
+        
+        // Use stored token to start session (In real app, validate token with backend)
+        const response = await AuthService.login({ email: stored.email, biometricToken: stored.token });
+        
+        login(response.user, response.token);
+        onLogin(response.user);
+      } catch (error) {
+        console.error('Biometric login failed:', error);
+        Alert.alert('Error', 'Biometric login failed. Please use password.');
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const verifyNida = async () => {
+    setLoading(true);
+    try {
+      const result = await mockNidaVerification(nationalId);
+      if (!result.isValid) {
+        Alert.alert('Verification Failed', result.error || 'Invalid National ID');
+        return false;
+      }
+      return true;
+    } catch (error) {
+      Alert.alert('Error', 'NIDA verification failed');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async () => {
     // Validation
@@ -33,62 +106,63 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onNavigate, onLogin, type: init
       return;
     }
 
+    if (type === 'signup') {
+      const isNidaValid = await verifyNida();
+      if (!isNidaValid) return;
+    }
+
     setLoading(true);
 
     try {
       if (type === 'login') {
-        // Login
-        const response = await fetch(API_ENDPOINTS.LOGIN, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ email, password }),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          Alert.alert('Login Failed', data.error || 'Invalid email or password');
-          return;
+        const response = await AuthService.login({ email, password });
+        
+        login(response.user, response.token);
+        
+        // Ask to enable biometrics if available
+        if (biometricAvailable) {
+          Alert.alert(
+            'Enable Biometrics',
+            'Would you like to enable fingerprint/face login for next time?',
+            [
+              { text: 'No', style: 'cancel', onPress: () => onLogin(response.user) },
+              { 
+                text: 'Yes', 
+                onPress: async () => {
+                  const success = await AuthService.enableBiometrics(email, response.token);
+                  if (success) {
+                    setBiometricStatus(true, true);
+                    Alert.alert('Success', 'Biometrics enabled');
+                  }
+                  onLogin(response.user);
+                }
+              }
+            ]
+          );
+        } else {
+          onLogin(response.user);
         }
 
-        // Success - call onLogin with user data
-        onLogin(data as User);
       } else {
         // Register
-        const response = await fetch(API_ENDPOINTS.REGISTER, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            name,
-            email,
-            password,
-            nationalId,
-            role: role === 'ABUNZI' ? 'ABUNZI' : 'USER',
-          }),
+        const response = await AuthService.register({
+          name,
+          email,
+          password,
+          nationalId,
+          role: role === 'ABUNZI' ? 'ABUNZI' : 'USER',
         });
 
-        const data = await response.json();
-
-        if (!response.ok) {
-          Alert.alert('Registration Failed', data.error || 'Failed to create account');
-          return;
-        }
-
-        // Success - call onLogin with user data
         Alert.alert('Success', 'Account created successfully!', [
-          { text: 'OK', onPress: () => onLogin(data as User) }
+          { text: 'OK', onPress: () => {
+            login(response.user, response.token);
+            onLogin(response.user);
+          }}
         ]);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Auth error:', error);
-      Alert.alert(
-        'Connection Error',
-        'Could not connect to server. Please make sure the backend server is running and check your network connection.'
-      );
+      Alert.alert('Error', error.message || 'Authentication failed');
     } finally {
       setLoading(false);
     }
@@ -212,6 +286,19 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onNavigate, onLogin, type: init
               </Text>
             )}
           </Pressable>
+
+          {type === 'login' && biometricAvailable && (
+            <Pressable 
+              onPress={handleBiometricLogin}
+              style={({ pressed }) => [
+                styles.biometricButton,
+                pressed && GlobalStyles.pressed
+              ]}
+            >
+              <Ionicons name="finger-print-outline" size={28} color={Colors.primary} />
+              <Text style={styles.biometricText}>Login with Biometrics</Text>
+            </Pressable>
+          )}
 
           <Pressable 
             onPress={() => setType(type === 'login' ? 'signup' : 'login')}
@@ -338,6 +425,21 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  biometricButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 16,
+    backgroundColor: getColorWithOpacity(Colors.primary, 0.1),
+    borderRadius: 16,
+    marginTop: 8,
+  },
+  biometricText: {
+    color: Colors.primary,
+    fontWeight: '600',
+    fontSize: 16,
   },
   switchButton: {
     alignItems: 'center',

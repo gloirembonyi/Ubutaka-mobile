@@ -82,8 +82,8 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onR
     { icon: 'add-location-alt', label: 'Register Land', screen: 'register-land' },
     { icon: 'shopping-cart', label: 'Buy Land', screen: 'marketplace' },
     { icon: 'sell', label: 'Sell Land', screen: 'sell-land' },
-    { icon: 'wifi-off', label: 'Offline Access', screen: 'offline' },
-    { icon: 'report-problem', label: 'Report Anomaly', screen: 'report-anomaly' },
+    { icon: 'qr-code-scanner', label: 'Verify Title', screen: 'qr-scanner' },
+    { icon: 'receipt-long', label: 'Transactions', screen: 'transactions' },
     { icon: 'account-tree', label: 'Inheritance', screen: 'inheritance' }
   ];
 
@@ -158,7 +158,10 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onR
               </View>
             </View>
             <View style={styles.heroButtons}>
-              <Pressable style={styles.heroButtonPrimary}>
+              <Pressable 
+                onPress={(e) => { e.stopPropagation(); onNavigate('certificate'); }}
+                style={styles.heroButtonPrimary}
+              >
                 <Text style={styles.heroButtonText}>Land Certificates</Text>
               </Pressable>
               <Pressable 

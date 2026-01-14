@@ -8,6 +8,7 @@ export const Colors = {
   primary: '#164734',        // Dark green - main brand color
   primaryLight: '#1f5a47',    // Lighter shade of primary
   primaryDark: '#0d2e1f',     // Darker shade of primary
+  secondary: '#FEA603',       // Secondary brand color (Orange)
   
   // Secondary/Neutral Colors
   neutral: '#B8BCC5',         // Light gray - secondary color

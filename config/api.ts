@@ -16,8 +16,8 @@ export const getApiBaseUrl = () => {
   // Auto-detect based on __DEV__ flag
   if (__DEV__) {
     // Updated to use your computer's IP address for physical device/emulator testing
-    // Your backend is running at http://10.175.113.252:3000
-    return 'http://10.175.113.252:3000/api';
+    // Your backend is running at http://172.16.21.53:3000
+    return 'http://172.16.21.53:3000/api';
   }
   
   // Production URL (when app is built)

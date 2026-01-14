@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+
+const JWT_SECRET = process.env.JWT_SECRET || "ubutaka-secret-key-change-this-in-prod";
 
 export async function POST(request: Request) {
   try {
@@ -35,10 +38,21 @@ export async function POST(request: Request) {
         password: hashedPassword,
         nationalId,
         isVerified: false,
-        role: role || "USER",
+        role: role || "CITIZEN",
         avatar: `https://api.dicebear.com/7.x/avataaars/png?seed=${encodeURIComponent(name)}`,
       },
     });
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { 
+        userId: user.id, 
+        email: user.email, 
+        role: user.role 
+      },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
 
     // Don't send password back in response
     const userWithoutPassword = {
@@ -51,7 +65,10 @@ export async function POST(request: Request) {
       avatar: user.avatar,
     };
 
-    return NextResponse.json(userWithoutPassword, { status: 201 });
+    return NextResponse.json({
+        user: userWithoutPassword,
+        token
+    }, { status: 201 });
   } catch (error) {
     console.error("POST register error:", error);
     return NextResponse.json(

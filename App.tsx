@@ -25,6 +25,9 @@ import DisputeDetailScreen from './screens/DisputeDetailScreen';
 import MediationRoomScreen from './screens/MediationRoomScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import TaxPaymentScreen from './screens/TaxPaymentScreen';
+import CertificateScreen from './screens/CertificateScreen';
+import QRScannerScreen from './screens/QRScannerScreen';
+import LandMapScreen from './screens/LandMapScreen';
 import BottomNav from './components/BottomNav';
 
 import AuthScreen from './screens/AuthScreen';
@@ -138,6 +141,9 @@ const App: React.FC = () => {
       case 'mediation-room': return <MediationRoomScreen onNavigate={setCurrentScreen} disputeId={selectedDisputeId} />;
       case 'settings': return <SettingsScreen onNavigate={setCurrentScreen} theme={theme} toggleTheme={toggleTheme} language={language} toggleLanguage={toggleLanguage} onLogout={handleLogout} />;
       case 'tax-payment': return <TaxPaymentScreen onNavigate={setCurrentScreen} />;
+      case 'certificate': return <CertificateScreen onNavigate={setCurrentScreen} />;
+      case 'qr-scanner': return <QRScannerScreen onNavigate={setCurrentScreen} />;
+      case 'land-map': return <LandMapScreen onNavigate={setCurrentScreen} />;
       default: return <LandingScreen onNavigate={setCurrentScreen} />;
     }
   };

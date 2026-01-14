@@ -20,7 +20,10 @@ export type Screen =
   | 'login'
   | 'signup'
   | 'settings'
-  | 'tax-payment';
+  | 'tax-payment'
+  | 'certificate'
+  | 'qr-scanner'
+  | 'land-map';
 
 export type Language = 'RW' | 'EN';
 
