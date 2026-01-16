@@ -1,45 +1,57 @@
-
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Image, ActivityIndicator } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
-import { Screen, Parcel, User } from '../types';
-import { API_ENDPOINTS } from '../config/api';
-import { Colors, getColorWithOpacity } from '../styles/colors';
-import { GlobalStyles } from '../styles/globalStyles';
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  Image,
+  ActivityIndicator,
+} from "react-native";
+import { MaterialIcons } from "@expo/vector-icons";
+import { Screen, Parcel, User } from "../types";
+import { API_ENDPOINTS } from "../config/api";
+import { Colors, getColorWithOpacity } from "../styles/colors";
+import { GlobalStyles } from "../styles/globalStyles";
 
 interface MyParcelsScreenProps {
   onNavigate: (screen: Screen, params?: any) => void;
   user?: User | null;
 }
 
-const MyParcelsScreen: React.FC<MyParcelsScreenProps> = ({ onNavigate, user }) => {
+const MyParcelsScreen: React.FC<MyParcelsScreenProps> = ({
+  onNavigate,
+  user,
+}) => {
   const [parcels, setParcels] = useState<Parcel[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Mock data as fallback if API doesn't return or for demo
   const MOCK_PARCELS: Parcel[] = [
-      {
-          upi: '1/03/04/05/1230',
-          size: '1200 sqm',
-          use: 'Residential (R1)',
-          district: 'Gasabo',
-          location: 'Kimironko',
-          status: 'registered',
-          ownerName: user?.name || 'MUGAKIHIRE Jean',
-          imageUrl: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
-          price: '15,000,000 RWF'
-      },
-      {
-          upi: '1/03/04/05/1231',
-          size: '2500 sqm',
-          use: 'Agricultural',
-          district: 'Gasabo',
-          location: 'Bumbogo',
-          status: 'registered',
-          ownerName: user?.name || 'MUGAKIHIRE Jean',
-          imageUrl: 'https://images.unsplash.com/photo-1500076656116-558758c991c1?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
-           price: '8,000,000 RWF'
-      }
+    {
+      upi: "1/03/04/05/1230",
+      size: "1200 sqm",
+      use: "Residential (R1)",
+      district: "Gasabo",
+      location: "Kimironko",
+      status: "registered",
+      ownerName: user?.name || "MUGAKIHIRE Jean",
+      imageUrl:
+        "https://images.unsplash.com/photo-1500382017468-9049fed747ef?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
+      price: "15,000,000 RWF",
+    },
+    {
+      upi: "1/03/04/05/1231",
+      size: "2500 sqm",
+      use: "Agricultural",
+      district: "Gasabo",
+      location: "Bumbogo",
+      status: "registered",
+      ownerName: user?.name || "MUGAKIHIRE Jean",
+      imageUrl:
+        "https://images.unsplash.com/photo-1500076656116-558758c991c1?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
+      price: "8,000,000 RWF",
+    },
   ];
 
   useEffect(() => {
@@ -47,81 +59,121 @@ const MyParcelsScreen: React.FC<MyParcelsScreenProps> = ({ onNavigate, user }) =
   }, []);
 
   const fetchParcels = async () => {
-      try {
-        // const resp = await fetch(`${API_ENDPOINTS.PARCELS}?ownerName=${encodeURIComponent(user?.name || '')}`);
-        // if (resp.ok) {
-        //    const data = await resp.json();
-        //    setParcels(data);
-        // } else {
-            setParcels(MOCK_PARCELS);
-        // }
-      } catch (err) {
-        console.error('Fetch parcels error:', err);
-        setParcels(MOCK_PARCELS);
-      } finally {
-        setLoading(false);
-      }
+    try {
+      // const resp = await fetch(`${API_ENDPOINTS.PARCELS}?ownerName=${encodeURIComponent(user?.name || '')}`);
+      // if (resp.ok) {
+      //    const data = await resp.json();
+      //    setParcels(data);
+      // } else {
+      setParcels(MOCK_PARCELS);
+      // }
+    } catch (err) {
+      console.error("Fetch parcels error:", err);
+      setParcels(MOCK_PARCELS);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <View style={GlobalStyles.container}>
       <View style={styles.header}>
-        <Pressable onPress={() => onNavigate('dashboard')} style={styles.backButton}>
-          <MaterialIcons name="arrow-back" size={24} color={Colors.textPrimary} />
+        <Pressable
+          onPress={() => onNavigate("dashboard")}
+          style={styles.backButton}
+        >
+          <MaterialIcons
+            name="arrow-back"
+            size={24}
+            color={Colors.textPrimary}
+          />
         </Pressable>
         <Text style={styles.headerTitle}>My Land Parcels</Text>
         <Pressable style={styles.headerButton}>
-            <MaterialIcons name="add" size={24} color={Colors.primary} />
+          <MaterialIcons name="add" size={24} color={Colors.primary} />
         </Pressable>
       </View>
 
       {loading ? (
         <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={Colors.primary} />
-            <Text style={styles.loadingText}>Loading your holdings...</Text>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={styles.loadingText}>Loading your holdings...</Text>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content}>
-            {parcels.length === 0 ? (
-                <View style={styles.emptyContainer}>
-                    <MaterialIcons name="landscape" size={64} color={Colors.textTertiary} />
-                    <Text style={styles.emptyText}>You have no registered parcels yet.</Text>
-                    <Pressable style={styles.emptyButton} onPress={() => onNavigate('register-land')}>
-                        <Text style={styles.emptyButtonText}>Register Land</Text>
-                    </Pressable>
+          {parcels.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <MaterialIcons
+                name="landscape"
+                size={64}
+                color={Colors.textTertiary}
+              />
+              <Text style={styles.emptyText}>
+                You have no registered parcels yet.
+              </Text>
+              <Pressable
+                style={styles.emptyButton}
+                onPress={() => onNavigate("register-land")}
+              >
+                <Text style={styles.emptyButtonText}>Register Land</Text>
+              </Pressable>
+            </View>
+          ) : (
+            parcels.map((parcel, index) => (
+              <Pressable
+                key={index}
+                style={({ pressed }) => [
+                  styles.parcelCard,
+                  pressed && GlobalStyles.pressed,
+                ]}
+                onPress={() => onNavigate("parcel-details", { parcel })}
+              >
+                <Image
+                  source={{ uri: parcel.imageUrl }}
+                  style={styles.parcelImage}
+                />
+                <View style={styles.parcelInfo}>
+                  <View style={styles.parcelHeader}>
+                    <Text style={styles.parcelUpi}>UPI: {parcel.upi}</Text>
+                    <MaterialIcons
+                      name="verified"
+                      size={16}
+                      color={Colors.success}
+                    />
+                  </View>
+                  <Text style={styles.parcelDistrict}>
+                    {parcel.district}, {parcel.location}
+                  </Text>
+
+                  <View style={styles.parcelDetails}>
+                    <View style={styles.detailItem}>
+                      <MaterialIcons
+                        name="layers"
+                        size={14}
+                        color={Colors.textSecondary}
+                      />
+                      <Text style={styles.detailText}>{parcel.use}</Text>
+                    </View>
+                    <View style={styles.detailItem}>
+                      <MaterialIcons
+                        name="square-foot"
+                        size={14}
+                        color={Colors.textSecondary}
+                      />
+                      <Text style={styles.detailText}>{parcel.size}</Text>
+                    </View>
+                  </View>
                 </View>
-            ) : (
-                parcels.map((parcel, index) => (
-                    <Pressable 
-                        key={index} 
-                        style={({ pressed }) => [styles.parcelCard, pressed && GlobalStyles.pressed]}
-                        onPress={() => onNavigate('parcel-details', { parcel })}
-                    >
-                        <Image source={{ uri: parcel.imageUrl }} style={styles.parcelImage} />
-                        <View style={styles.parcelInfo}>
-                            <View style={styles.parcelHeader}>
-                                <Text style={styles.parcelUpi}>UPI: {parcel.upi}</Text>
-                                <MaterialIcons name="verified" size={16} color={Colors.success} />
-                            </View>
-                            <Text style={styles.parcelDistrict}>{parcel.district}, {parcel.location}</Text>
-                            
-                            <View style={styles.parcelDetails}>
-                                <View style={styles.detailItem}>
-                                    <MaterialIcons name="layers" size={14} color={Colors.textSecondary} />
-                                    <Text style={styles.detailText}>{parcel.use}</Text>
-                                </View>
-                                <View style={styles.detailItem}>
-                                    <MaterialIcons name="square-foot" size={14} color={Colors.textSecondary} />
-                                    <Text style={styles.detailText}>{parcel.size}</Text>
-                                </View>
-                            </View>
-                        </View>
-                        <View style={styles.arrowContainer}>
-                            <MaterialIcons name="chevron-right" size={24} color={Colors.textTertiary} />
-                        </View>
-                    </Pressable>
-                ))
-            )}
+                <View style={styles.arrowContainer}>
+                  <MaterialIcons
+                    name="chevron-right"
+                    size={24}
+                    color={Colors.textTertiary}
+                  />
+                </View>
+              </Pressable>
+            ))
+          )}
         </ScrollView>
       )}
     </View>
@@ -130,111 +182,121 @@ const MyParcelsScreen: React.FC<MyParcelsScreenProps> = ({ onNavigate, user }) =
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: Colors.borderLight,
     backgroundColor: Colors.white,
   },
-  backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: Colors.textPrimary },
+  backButton: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerButton: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerTitle: { fontSize: 18, fontWeight: "bold", color: Colors.textPrimary },
   content: {
     padding: 16,
     gap: 16,
-    paddingBottom: 100
+    paddingBottom: 100,
   },
   loadingContainer: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
   loadingText: {
-      marginTop: 12,
-      color: Colors.textSecondary,
-      fontSize: 14,
+    marginTop: 12,
+    color: Colors.textSecondary,
+    fontSize: 14,
   },
   emptyContainer: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginTop: 60,
-      gap: 16,
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 60,
+    gap: 16,
   },
   emptyText: {
-      fontSize: 16,
-      color: Colors.textSecondary,
+    fontSize: 16,
+    color: Colors.textSecondary,
   },
   emptyButton: {
-      paddingVertical: 12,
-      paddingHorizontal: 24,
-      backgroundColor: Colors.primary,
-      borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    backgroundColor: Colors.primary,
+    borderRadius: 12,
   },
   emptyButtonText: {
-      color: Colors.white,
-      fontWeight: 'bold',
+    color: Colors.white,
+    fontWeight: "bold",
   },
   parcelCard: {
-      flexDirection: 'row',
-      backgroundColor: Colors.white,
-      borderRadius: 16,
-      overflow: 'hidden',
-      borderWidth: 1,
-      borderColor: Colors.borderLight,
-      shadowColor: Colors.black,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.05,
-      shadowRadius: 4,
-      elevation: 2,
-      alignItems: 'center',
-      paddingRight: 12,
+    flexDirection: "row",
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+    alignItems: "center",
+    paddingRight: 12,
   },
   parcelImage: {
-      width: 100,
-      height: 100,
+    width: 100,
+    height: 100,
   },
   parcelInfo: {
-      flex: 1,
-      padding: 12,
-      gap: 4,
+    flex: 1,
+    padding: 12,
+    gap: 4,
   },
   parcelHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   parcelUpi: {
-      fontSize: 14,
-      fontWeight: 'bold',
-      color: Colors.textPrimary,
+    fontSize: 14,
+    fontWeight: "bold",
+    color: Colors.textPrimary,
   },
   parcelDistrict: {
-      fontSize: 12,
-      color: Colors.textSecondary,
-      marginBottom: 4,
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginBottom: 4,
   },
   parcelDetails: {
-      flexDirection: 'row',
-      gap: 12,
+    flexDirection: "row",
+    gap: 12,
   },
   detailItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
   },
   detailText: {
-      fontSize: 11,
-      color: Colors.textTertiary,
-      fontWeight: '500',
+    fontSize: 11,
+    color: Colors.textTertiary,
+    fontWeight: "500",
   },
   arrowContainer: {
-      width: 24,
-      alignItems: 'center',
-  }
+    width: 24,
+    alignItems: "center",
+  },
 });
 
 export default MyParcelsScreen;
