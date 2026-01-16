@@ -38,7 +38,7 @@ export async function POST(request: Request) {
         password: hashedPassword,
         nationalId,
         isVerified: false,
-        role: role || "CITIZEN",
+        role: role || "USER",
         avatar: `https://api.dicebear.com/7.x/avataaars/png?seed=${encodeURIComponent(name)}`,
       },
     });

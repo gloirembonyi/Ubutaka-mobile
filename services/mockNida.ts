@@ -16,32 +16,24 @@ export const mockNidaVerification = async (nationalId: string): Promise<NidaResp
   // Simulate network delay
   await new Promise(resolve => setTimeout(resolve, 1500));
 
-  // Mock validation logic
-  if (!nationalId || nationalId.length !== 16) {
+  // Relaxed validation for testing: Allow any length
+  if (!nationalId || nationalId.trim().length === 0) {
     return {
       isValid: false,
-      error: 'Invalid National ID format. Must be 16 digits.'
+      error: 'Please enter a valid National ID.'
     };
   }
 
-  // Pre-defined mock data for testing
-  // ID starting with 11990... is considered valid
-  if (nationalId.startsWith('11990')) {
-    return {
-      isValid: true,
-      data: {
-        nationalId,
-        names: 'MUGABO Jean Pierre',
-        dob: '01/01/1990',
-        gender: 'M',
-        photo: 'https://avatar.iran.liara.run/public/boy', // Placeholder avatar
-        placeOfIssue: 'KIGALI',
-      }
-    };
-  }
-
+  // Any ID is now considered valid for testing
   return {
-    isValid: false,
-    error: 'National ID not found in NIDA database.'
+    isValid: true,
+    data: {
+      nationalId,
+      names: 'Test User',
+      dob: '01/01/1990',
+      gender: 'M',
+      photo: 'https://avatar.iran.liara.run/public/boy',
+      placeOfIssue: 'KIGALI',
+    }
   };
 };

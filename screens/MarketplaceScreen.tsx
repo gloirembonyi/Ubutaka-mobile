@@ -70,7 +70,7 @@ const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ onNavigate }) => 
 
   return (
     <View style={GlobalStyles.container}>
-      <MainHeader user={user} title="Marketplace" />
+      <MainHeader user={user} />
       <View style={styles.filterSection}>
         <View style={styles.searchRow}>
           <View style={styles.searchContainer}>

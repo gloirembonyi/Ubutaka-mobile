@@ -2,18 +2,30 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Image } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Screen } from '../types';
-import { MOCK_PARCELS } from '../constants';
+import { Screen, Parcel } from '../types';
 import { Colors, getColorWithOpacity } from '../styles/colors';
 import { GlobalStyles } from '../styles/globalStyles';
 
 interface ParcelDetailScreenProps {
-  onNavigate: (screen: Screen) => void;
+  onNavigate: (screen: Screen, params?: any) => void;
+  parcelData?: Parcel;
 }
 
-const ParcelDetailScreen: React.FC<ParcelDetailScreenProps> = ({ onNavigate }) => {
+const ParcelDetailScreen: React.FC<ParcelDetailScreenProps> = ({ onNavigate, parcelData }) => {
   const [viewMode, setViewMode] = useState<'image' | 'map'>('image');
-  const parcel = MOCK_PARCELS[0];
+  
+  // Fallback if no specific parcel passed (should ideally handle gracefully or fetch default)
+  const parcel = parcelData || {
+      id: 'unknown',
+      upi: 'No Parcel Selected',
+      ownerName: 'Unknown',
+      status: 'active',
+      size: 0,
+      use: 'Unknown',
+      district: 'Unknown',
+      imageUrl: 'https://via.placeholder.com/400x300.png?text=No+Image',
+      value: 0
+  };
 
   return (
     <ScrollView style={GlobalStyles.container} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
@@ -94,23 +106,33 @@ const ParcelDetailScreen: React.FC<ParcelDetailScreenProps> = ({ onNavigate }) =
           <Text style={styles.downloadText}>Download Title Deed</Text>
         </Pressable>
 
-        <Pressable
-          onPress={() => onNavigate('report-anomaly')}
-          style={styles.anomalyCard}
-        >
-          <View style={styles.anomalyIcon}>
-            <MaterialIcons name="report-problem" size={32} color={Colors.accent} />
-          </View>
-          <View style={styles.anomalyContent}>
-            <Text style={styles.anomalyTitle}>Data Discrepancy?</Text>
-            <Text style={styles.anomalyText}>
-              If boundary markers or owner information appears incorrect, report an anomaly to the Land Registry.
-            </Text>
-            <Pressable style={styles.anomalyButton}>
-              <Text style={styles.anomalyButtonText}>Start Report</Text>
-            </Pressable>
-          </View>
-        </Pressable>
+        <View style={styles.reportingSection}>
+            <Text style={styles.sectionTitle}>Issues & Disputes</Text>
+            
+            <View style={styles.actionRow}>
+                <Pressable
+                  onPress={() => onNavigate('report-anomaly', { type: 'Dispute', upi: parcel.upi })}
+                  style={[styles.actionButton, styles.disputeButton]}
+                >
+                  <MaterialIcons name="gavel" size={20} color={Colors.white} />
+                  <Text style={styles.disputeButtonText}>Report Dispute</Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => onNavigate('report-anomaly', { type: 'Anomaly', upi: parcel.upi })}
+                  style={[styles.actionButton, styles.anomalyButtonOutline]}
+                >
+                   <MaterialIcons name="report-problem" size={20} color={Colors.accent} />
+                  <Text style={styles.anomalyButtonTextOutline}>Report Anomaly</Text>
+                </Pressable>
+            </View>
+
+            <View style={styles.infoBox}>
+                <Text style={styles.infoText}>
+                    Disputes are handled by Abunzi mediators. Anomalies are data corrections handled by the Land Notary.
+                </Text>
+            </View>
+        </View>
       </View>
     </ScrollView>
   );
@@ -352,7 +374,68 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: Colors.accentDark,
   },
-
+  reportingSection: {
+      marginTop: 24,
+      gap: 16,
+      backgroundColor: Colors.white,
+      padding: 20,
+      borderRadius: 24,
+      borderWidth: 1,
+      borderColor: Colors.borderLight,
+  },
+  sectionTitle: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      color: Colors.textPrimary,
+  },
+  actionRow: {
+      flexDirection: 'row',
+      gap: 12,
+  },
+  actionButton: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 14,
+      paddingHorizontal: 12,
+      borderRadius: 14,
+      gap: 8,
+  },
+  disputeButton: {
+      backgroundColor: Colors.error,
+      shadowColor: Colors.error,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.2,
+      shadowRadius: 6,
+      elevation: 3,
+  },
+  disputeButtonText: {
+      color: Colors.white,
+      fontWeight: 'bold',
+      fontSize: 13,
+  },
+  anomalyButtonOutline: {
+      backgroundColor: Colors.white,
+      borderWidth: 1,
+      borderColor: Colors.accent,
+  },
+  anomalyButtonTextOutline: {
+      color: Colors.accent,
+      fontWeight: 'bold',
+      fontSize: 13,
+  },
+  infoBox: {
+      backgroundColor: Colors.backgroundLight,
+      padding: 12,
+      borderRadius: 12,
+  },
+  infoText: {
+      fontSize: 11,
+      color: Colors.textSecondary,
+      lineHeight: 16,
+      textAlign: 'center',
+  },
 });
 
 export default ParcelDetailScreen;

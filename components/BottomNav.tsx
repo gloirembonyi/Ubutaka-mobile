@@ -3,19 +3,20 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Screen } from '../types';
+import { Screen, User } from '../types';
 import { Colors } from '../styles/colors';
 
 interface BottomNavProps {
   current: Screen;
-  onNavigate: (screen: Screen) => void;
+  onNavigate: (screen: Screen, params?: any) => void;
+  user: User | null;
 }
 
-const BottomNav: React.FC<BottomNavProps> = ({ current, onNavigate }) => {
+const BottomNav: React.FC<BottomNavProps> = ({ current, onNavigate, user }) => {
   const insets = useSafeAreaInsets();
   
   const getActiveTab = (screen: Screen): Screen => {
-    if (['dashboard', 'parcel-details', 'report-anomaly', 'register-land'].includes(screen)) return 'dashboard';
+    if (['dashboard', 'abunzi-dashboard', 'parcel-details', 'report-anomaly', 'register-land'].includes(screen)) return 'dashboard';
     if (['marketplace', 'offline', 'buy-land', 'sell-land'].includes(screen)) return 'marketplace';
     if (['transactions', 'inheritance'].includes(screen)) return 'transactions';
     if (['support', 'dispute-list', 'dispute-detail', 'mediation-room'].includes(screen)) return 'support';
@@ -59,10 +60,16 @@ const BottomNav: React.FC<BottomNavProps> = ({ current, onNavigate }) => {
              );
            }
            
-           return (
+            return (
             <Pressable 
               key={item.id} 
-              onPress={() => onNavigate(item.id)}
+              onPress={() => {
+                if (item.id === 'dashboard' && user?.role === 'ABUNZI') {
+                  onNavigate('abunzi-dashboard');
+                } else {
+                  onNavigate(item.id);
+                }
+              }}
               style={({ pressed }) => [
                 styles.navItem,
                 pressed && styles.buttonPressed

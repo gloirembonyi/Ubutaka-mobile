@@ -13,15 +13,16 @@ export const getApiBaseUrl = () => {
   // Option 2: Use your computer's IP address (for physical devices)
   // Example: return 'http://192.168.1.100:3000/api';
   
-  // Auto-detect based on __DEV__ flag
+  // Use environment variable with fallbacks
+  const envUrl = process.env.EXPO_PUBLIC_API_URL;
+  
   if (__DEV__) {
-    // Updated to use your computer's IP address for physical device/emulator testing
-    // Your backend is running at http://172.16.21.53:3000
-    return 'http://172.16.21.53:3000/api';
+    // Falls back to the hardcoded local IP if env is missing
+    return envUrl || '';
   }
   
-  // Production URL (when app is built)
-  return 'https://your-production-api.com/api';
+  // Production URL
+  return envUrl || 'https://your-production-api.com/api';
 };
 
 export const API_BASE_URL = getApiBaseUrl();

@@ -23,7 +23,9 @@ export type Screen =
   | 'tax-payment'
   | 'certificate'
   | 'qr-scanner'
-  | 'land-map';
+  | 'land-map'
+  | 'abunzi-dashboard'
+  | 'my-parcels';
 
 export type Language = 'RW' | 'EN';
 
@@ -34,7 +36,8 @@ export interface User {
   nationalId: string;
   isVerified: boolean;
   avatar: string;
-  role: 'CITIZEN' | 'ABUNZI' | 'ADMIN';
+  role: 'USER' | 'ABUNZI' | 'ADMIN';
+  district?: string;
 }
 
 export interface Parcel {
@@ -68,4 +71,6 @@ export interface Dispute {
   parties: string[];
   description: string;
   location: string;
+  district?: string;
+  reportedById?: string;
 }

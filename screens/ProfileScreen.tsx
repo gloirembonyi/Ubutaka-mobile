@@ -52,25 +52,42 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme, onLogo
                 </View>
               </View>
               <View style={styles.nameSection}>
-                <Text style={[styles.name, isDark && styles.textDark]}>{displayUser.name}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Text style={[styles.name, isDark && styles.textDark]}>{displayUser.name}</Text>
+                  <View style={[styles.roleBadge, { backgroundColor: displayUser.role === 'ABUNZI' ? Colors.warning : Colors.primary }]}>
+                    <Text style={styles.roleBadgeText}>{displayUser.role}</Text>
+                  </View>
+                </View>
                 <Text style={styles.idText}>NID: {displayUser.nationalId}</Text>
+                {displayUser.district && (
+                  <View style={styles.locationTag}>
+                    <MaterialIcons name="location-on" size={12} color={Colors.textSecondary} />
+                    <Text style={styles.locationTabText}>{displayUser.district}</Text>
+                  </View>
+                )}
               </View>
             </View>
 
             <View style={styles.statsRow}>
               <View style={styles.statItem}>
-                <Text style={[styles.statValue, isDark && styles.textDark]}>3</Text>
-                <Text style={styles.statLabel}>Properties</Text>
+                <Text style={[styles.statValue, isDark && styles.textDark]}>
+                  {displayUser.role === 'ABUNZI' ? '8' : '2'}
+                </Text>
+                <Text style={styles.statLabel}>{displayUser.role === 'ABUNZI' ? 'Cases' : 'Parcels'}</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
-                <Text style={[styles.statValue, isDark && styles.textDark]}>12</Text>
-                <Text style={styles.statLabel}>Transactions</Text>
+                <Text style={[styles.statValue, isDark && styles.textDark]}>
+                  {displayUser.role === 'ABUNZI' ? '96%' : '1'}
+                </Text>
+                <Text style={styles.statLabel}>{displayUser.role === 'ABUNZI' ? 'Success' : 'Pending'}</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
-                <Text style={[styles.statValue, isDark && styles.textDark]}>4.8</Text>
-                <Text style={styles.statLabel}>Rating</Text>
+                <Text style={[styles.statValue, isDark && styles.textDark]}>
+                  {displayUser.role === 'ABUNZI' ? 'Abunzi' : 'Citizen'}
+                </Text>
+                <Text style={styles.statLabel}>Level</Text>
               </View>
             </View>
           </View>
@@ -115,12 +132,12 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme, onLogo
               </View>
               <View style={styles.idRow}>
                 <View>
-                  <Text style={styles.idLabel}>Sex</Text>
-                  <Text style={styles.idValue}>M</Text>
+                  <Text style={styles.idLabel}>Residence</Text>
+                  <Text style={styles.idValue}>{displayUser.district || 'Kigali'}</Text>
                 </View>
                 <View>
-                  <Text style={styles.idLabel}>Date of Birth</Text>
-                  <Text style={styles.idValue}>12/04/1990</Text>
+                  <Text style={styles.idLabel}>Issue Date</Text>
+                  <Text style={styles.idValue}>12/01/2024</Text>
                 </View>
               </View>
             </View>
@@ -259,6 +276,26 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontFamily: 'monospace',
     letterSpacing: 0.5,
+  },
+  roleBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  roleBadgeText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: Colors.white,
+  },
+  locationTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
+  locationTabText: {
+    fontSize: 12,
+    color: Colors.textSecondary,
   },
   statsRow: {
     flexDirection: 'row',

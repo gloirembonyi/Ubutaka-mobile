@@ -1,19 +1,28 @@
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, ActivityIndicator } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Screen } from '../types';
+import { Screen, User } from '../types';
 import { Colors, getColorWithOpacity } from '../styles/colors';
 import { GlobalStyles } from '../styles/globalStyles';
+import { API_ENDPOINTS } from '../config/api';
 
 interface ReportAnomalyScreenProps {
-  onNavigate: (screen: Screen) => void;
+  onNavigate: (screen: Screen, params?: any) => void;
+  user: User | null;
+  params?: {
+    type?: string;
+    upi?: string;
+  };
 }
 
-const ReportAnomalyScreen: React.FC<ReportAnomalyScreenProps> = ({ onNavigate }) => {
+const ReportAnomalyScreen: React.FC<ReportAnomalyScreenProps> = ({ onNavigate, user, params }) => {
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [upi, setUpi] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [upi, setUpi] = useState(params?.upi || '');
   const [description, setDescription] = useState('');
+  const [anomalyType, setAnomalyType] = useState(params?.type || 'Boundary Conflict');
+  const [attachedFile, setAttachedFile] = useState<string | null>(null);
 
   if (isSubmitted) {
     return (
@@ -56,10 +65,13 @@ const ReportAnomalyScreen: React.FC<ReportAnomalyScreenProps> = ({ onNavigate })
   return (
     <View style={GlobalStyles.container}>
       <View style={styles.header}>
-        <Pressable onPress={() => onNavigate('dashboard')} style={styles.backButton}>
+        <Pressable 
+          onPress={() => onNavigate(user?.role === 'ABUNZI' ? 'abunzi-dashboard' : 'dashboard')} 
+          style={styles.backButton}
+        >
           <MaterialIcons name="arrow-back" size={24} color={Colors.textPrimary} />
         </Pressable>
-        <Text style={styles.headerTitle}>Report Anomaly</Text>
+        <Text style={styles.headerTitle}>Report {anomalyType === 'Dispute' ? 'Dispute' : 'Anomaly'}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -128,12 +140,27 @@ const ReportAnomalyScreen: React.FC<ReportAnomalyScreenProps> = ({ onNavigate })
         {/* Step 3: Evidence */}
         <View style={styles.card}>
           <StepCircle step={3} label="Evidence" />
-          <Pressable style={styles.uploadArea}>
-            <View style={styles.uploadIconCircle}>
-              <MaterialIcons name="cloud-upload" size={24} color={Colors.white} />
+          <Pressable 
+            style={[styles.uploadArea, attachedFile ? styles.uploadAreaActive : {}]}
+            onPress={() => {
+                if (attachedFile) {
+                    setAttachedFile(null); // Clear if already selected
+                } else {
+                    // Simulate file picker
+                    const mockFile = 'title_deed_scan.pdf';
+                    setAttachedFile(mockFile);
+                }
+            }}
+          >
+            <View style={[styles.uploadIconCircle, attachedFile ? { backgroundColor: Colors.success } : {}]}>
+              <MaterialIcons name={attachedFile ? "check" : "cloud-upload"} size={24} color={Colors.white} />
             </View>
-            <Text style={styles.uploadTitle}>Click to upload or drag and drop</Text>
-            <Text style={styles.uploadSub}>Photos, Title Deeds, or ID Copies (Max 10MB)</Text>
+            <Text style={styles.uploadTitle}>
+                {attachedFile ? attachedFile : 'Click to upload or drag and drop'}
+            </Text>
+            <Text style={styles.uploadSub}>
+                {attachedFile ? 'Tap again to remove' : 'Photos, Title Deeds, or ID Copies (Max 10MB)'}
+            </Text>
           </Pressable>
         </View>
 
@@ -150,11 +177,51 @@ const ReportAnomalyScreen: React.FC<ReportAnomalyScreenProps> = ({ onNavigate })
 
       <View style={styles.footer}>
         <Pressable 
-          style={styles.submitButton}
-          onPress={() => setIsSubmitted(true)}
+          style={[styles.submitButton, loading && { opacity: 0.7 }]}
+          onPress={async () => {
+            if (!upi || !description) {
+              alert('Please fill in all fields');
+              return;
+            }
+            setLoading(true);
+            try {
+              const response = await fetch(API_ENDPOINTS.DISPUTES, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  upi,
+                  type: anomalyType,
+                  status: 'Investigation',
+                  dateOpened: new Date().toLocaleDateString(),
+                  parties: user?.name || 'Citizen',
+                  description,
+                  location: 'Sector Office', // Default
+                  district: user?.district || 'Kigali',
+                  reportedById: user?.id
+                })
+              });
+              if (response.ok) {
+                setIsSubmitted(true);
+              } else {
+                alert('Failed to submit report. Please try again.');
+              }
+            } catch (err) {
+              console.error('Submit report error:', err);
+              alert('Network error. Please check your connection.');
+            } finally {
+              setLoading(false);
+            }
+          }}
+          disabled={loading}
         >
-          <Text style={styles.submitButtonText}>Submit Report</Text>
-          <MaterialIcons name="send" size={20} color={Colors.white} />
+          {loading ? (
+             <ActivityIndicator color={Colors.white} />
+          ) : (
+            <>
+              <Text style={styles.submitButtonText}>Submit Report</Text>
+              <MaterialIcons name="send" size={20} color={Colors.white} />
+            </>
+          )}
         </Pressable>
       </View>
     </View>
@@ -252,6 +319,11 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: 'center',
     backgroundColor: '#F8FAFC',
+  },
+  uploadAreaActive: {
+      borderColor: Colors.success,
+      backgroundColor: '#F0FDF4',
+      borderStyle: 'solid',
   },
   uploadIconCircle: {
     width: 48,

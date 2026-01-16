@@ -20,7 +20,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onNavigate, onLogin, type: init
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [nationalId, setNationalId] = useState('');
-  const [role, setRole] = useState<'CITIZEN' | 'ABUNZI'>('CITIZEN');
+  const [role, setRole] = useState<'USER' | 'ABUNZI'>('USER');
   const [loading, setLoading] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
 
@@ -252,11 +252,11 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onNavigate, onLogin, type: init
               <Text style={styles.label}>Account Type</Text>
               <View style={styles.roleContainer}>
                 <Pressable 
-                  onPress={() => setRole('CITIZEN')}
-                  style={[styles.roleCard, role === 'CITIZEN' && styles.roleCardActive]}
+                  onPress={() => setRole('USER')}
+                  style={[styles.roleCard, role === 'USER' && styles.roleCardActive]}
                 >
-                  <MaterialIcons name="person" size={24} color={role === 'CITIZEN' ? Colors.primary : Colors.textSecondary} />
-                  <Text style={[styles.roleText, role === 'CITIZEN' && styles.roleTextActive]}>Citizen</Text>
+                  <MaterialIcons name="person" size={24} color={role === 'USER' ? Colors.primary : Colors.textSecondary} />
+                  <Text style={[styles.roleText, role === 'USER' && styles.roleTextActive]}>Citizen</Text>
                 </Pressable>
                 <Pressable 
                   onPress={() => setRole('ABUNZI')}

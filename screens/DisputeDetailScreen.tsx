@@ -2,18 +2,60 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Screen } from '../types';
-import { MOCK_DISPUTES } from '../constants';
 import { Colors } from '../styles/colors';
 import { GlobalStyles } from '../styles/globalStyles';
+
+import { API_ENDPOINTS } from '../config/api';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator } from 'react-native';
+import { User, Dispute, Screen } from '../types';
 
 interface DisputeDetailScreenProps {
   onNavigate: (screen: Screen) => void;
   disputeId: string | null;
+  user: User | null;
 }
 
-const DisputeDetailScreen: React.FC<DisputeDetailScreenProps> = ({ onNavigate, disputeId }) => {
-  const dispute = MOCK_DISPUTES.find(d => d.id === disputeId) || MOCK_DISPUTES[0];
+const DisputeDetailScreen: React.FC<DisputeDetailScreenProps> = ({ onNavigate, disputeId, user }) => {
+  const [dispute, setDispute] = useState<Dispute | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDispute = async () => {
+      if (!disputeId) return;
+      try {
+        const resp = await fetch(API_ENDPOINTS.DISPUTE_BY_ID(disputeId));
+        if (resp.ok) {
+          const data = await resp.json();
+          setDispute(data);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDispute();
+  }, [disputeId]);
+
+  if (loading) {
+    return (
+      <View style={[GlobalStyles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
+
+  if (!dispute) {
+    return (
+      <View style={[GlobalStyles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Text>Dispute not found</Text>
+        <Pressable onPress={() => onNavigate('dispute-list')}>
+          <Text style={{ color: Colors.primary, marginTop: 12 }}>Go back</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={GlobalStyles.container} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
@@ -24,7 +66,7 @@ const DisputeDetailScreen: React.FC<DisputeDetailScreenProps> = ({ onNavigate, d
         <Text style={styles.headerTitle}>Dispute Details</Text>
       </View>
       <View style={styles.content}>
-        <Text style={styles.id}>{dispute.id}</Text>
+        <Text style={styles.id}>#{dispute.id.slice(-6).toUpperCase()}</Text>
         <View style={styles.statusBadge}>
           <Text style={styles.statusText}>{dispute.status}</Text>
         </View>

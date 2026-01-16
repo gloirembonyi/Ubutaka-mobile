@@ -16,6 +16,7 @@ model User {
   isVerified Boolean  @default(false)
   avatar     String?
   role       String   @default("USER")
+  district   String?  @default("Kigali")
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }
@@ -47,14 +48,17 @@ model Transaction {
 }
 
 model Dispute {
-  id          String   @id @default(cuid())
-  upi         String
-  type        String
-  status      String
-  dateOpened  String
-  parties     String
-  description String
-  location    String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(cuid())
+  upi          String
+  type         String
+  status       String
+  dateOpened   String
+  parties      String
+  description  String
+  location     String
+  district     String?  @default("Kigali")
+  reportedById String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
+

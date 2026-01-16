@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Image, Modal, Dimensions } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Screen } from '../types';
 import { Colors, getColorWithOpacity } from '../styles/colors';
@@ -11,11 +11,34 @@ interface SupportScreenProps {
 }
 
 const SupportScreen: React.FC<SupportScreenProps> = ({ onNavigate }) => {
+  const [selectedGuide, setSelectedGuide] = React.useState<any>(null);
+
   const guides = [
-    { icon: 'swap-horiz', title: 'Transfer Title', sub: 'Step-by-step land transfer', color: Colors.primary },
-    { icon: 'description', title: 'Read Documents', sub: 'Understand your rights', color: Colors.info },
-    { icon: 'security', title: 'Security Tips', sub: 'Protect your property', color: Colors.success },
-    { icon: 'help', title: 'FAQ', sub: 'Common questions', color: Colors.accent }
+    { 
+      icon: 'swap-horiz', 
+      title: 'Transfer Title', 
+      sub: 'Step-by-step land transfer', 
+      color: Colors.primary,
+      steps: [
+        { title: 'Identity Verification', desc: 'Securely verify both buyer and seller using National ID and biometrics.' },
+        { title: 'Parcel Selection', desc: 'Select the specific land parcel from your digital registry.' },
+        { title: 'Agreement Execution', desc: 'Digitally sign the transfer agreement witnessed by localized mediators.' },
+        { title: 'Blockchain Finalization', desc: 'The unique hash is generated and recorded on the immutable ledger.' }
+      ]
+    },
+    { 
+      icon: 'description', 
+      title: 'Read Documents', 
+      sub: 'Understand your rights', 
+      color: Colors.info,
+      steps: [
+        { title: 'Registry Access', desc: 'View your digital land certificate (Ubutaka Digital Certificate).' },
+        { title: 'Clause Breakdown', desc: 'AI-assisted explanation of legal terms in your local language.' },
+        { title: 'History Log', desc: 'View every previous transaction and mediation related to the parcel.' }
+      ]
+    },
+    { icon: 'security', title: 'Security Tips', sub: 'Protect your property', color: Colors.success, steps: [] },
+    { icon: 'help', title: 'FAQ', sub: 'Common questions', color: Colors.accent, steps: [] }
   ];
 
   return (
@@ -70,6 +93,7 @@ const SupportScreen: React.FC<SupportScreenProps> = ({ onNavigate }) => {
             {guides.map((guide, idx) => (
               <Pressable
                 key={idx}
+                onPress={() => setSelectedGuide(guide)}
                 style={({ pressed }) => [
                   styles.guideCard,
                   pressed && GlobalStyles.pressed
@@ -87,6 +111,44 @@ const SupportScreen: React.FC<SupportScreenProps> = ({ onNavigate }) => {
           </View>
         </View>
       </View>
+
+      <Modal
+        visible={!!selectedGuide}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setSelectedGuide(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <View style={[styles.guideIcon, { backgroundColor: getColorWithOpacity(selectedGuide?.color || Colors.primary, 0.1) }]}>
+                 <MaterialIcons name={selectedGuide?.icon} size={24} color={selectedGuide?.color} />
+              </View>
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={styles.modalTitle}>{selectedGuide?.title}</Text>
+                <Text style={styles.modalSub}>{selectedGuide?.sub}</Text>
+              </View>
+              <Pressable onPress={() => setSelectedGuide(null)} style={styles.closeButton}>
+                <MaterialIcons name="close" size={24} color={Colors.textSecondary} />
+              </Pressable>
+            </View>
+
+            <ScrollView style={styles.modalSteps} showsVerticalScrollIndicator={false}>
+              {selectedGuide?.steps?.map((step: any, idx: number) => (
+                <View key={idx} style={styles.stepItem}>
+                  <View style={styles.stepNumberContainer}>
+                    <Text style={styles.stepNumberText}>{idx + 1}</Text>
+                  </View>
+                  <View style={styles.stepContent}>
+                    <Text style={styles.stepTitle}>{step.title}</Text>
+                    <Text style={styles.stepDesc}>{step.desc}</Text>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 };
@@ -249,6 +311,72 @@ const styles = StyleSheet.create({
   guideSub: {
     fontSize: 12,
     color: Colors.textSecondary,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    height: '80%',
+    padding: 24,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: Colors.textPrimary,
+  },
+  modalSub: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+  },
+  closeButton: {
+    padding: 8,
+    backgroundColor: Colors.borderLight,
+    borderRadius: 20,
+  },
+  modalSteps: {
+    flex: 1,
+  },
+  stepItem: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 24,
+  },
+  stepNumberContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepNumberText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: Colors.white,
+  },
+  stepContent: {
+    flex: 1,
+    gap: 4,
+  },
+  stepTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: Colors.textPrimary,
+  },
+  stepDesc: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    lineHeight: 20,
   },
 });
 

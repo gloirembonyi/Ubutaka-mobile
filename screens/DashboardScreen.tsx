@@ -12,7 +12,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import MainHeader from '../components/MainHeader';
 
 interface DashboardScreenProps {
-  onNavigate: (screen: Screen) => void;
+  onNavigate: (screen: Screen, params?: any) => void;
   user: User | null;
   onRefreshUser?: () => void;
 }
@@ -84,7 +84,9 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onR
     { icon: 'sell', label: 'Sell Land', screen: 'sell-land' },
     { icon: 'qr-code-scanner', label: 'Verify Title', screen: 'qr-scanner' },
     { icon: 'receipt-long', label: 'Transactions', screen: 'transactions' },
-    { icon: 'account-tree', label: 'Inheritance', screen: 'inheritance' }
+    { icon: 'account-tree', label: 'Inheritance', screen: 'inheritance' },
+    { icon: 'gavel', label: 'Report Dispute', screen: 'report-anomaly', params: { type: 'Dispute' } },
+    { icon: 'report-problem', label: 'Report Anomaly', screen: 'report-anomaly', params: { type: 'Anomaly' } }
   ];
 
   return (
@@ -127,7 +129,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onR
 
         {/* Hero Card */}
         <Pressable 
-          onPress={() => onNavigate('parcel-details')}
+          onPress={() => onNavigate('my-parcels')}
           style={({ pressed }) => [
             styles.heroCard,
             pressed && GlobalStyles.pressed
@@ -181,7 +183,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onR
             {actions.map((action, idx) => (
               <Pressable 
                 key={idx} 
-                onPress={() => onNavigate(action.screen as Screen)}
+                onPress={() => onNavigate(action.screen as Screen, (action as any).params)}
                 style={({ pressed }) => [
                   styles.actionCard,
                   pressed && GlobalStyles.pressed

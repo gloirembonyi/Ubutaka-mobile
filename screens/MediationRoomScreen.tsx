@@ -1,35 +1,89 @@
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, ActivityIndicator } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Screen } from '../types';
+import { User, Screen } from '../types';
 import { Colors } from '../styles/colors';
 import { GlobalStyles } from '../styles/globalStyles';
+import { API_ENDPOINTS } from '../config/api';
 
 interface MediationRoomScreenProps {
   onNavigate: (screen: Screen) => void;
   disputeId: string | null;
+  user: User | null;
 }
 
-const MediationRoomScreen: React.FC<MediationRoomScreenProps> = ({ onNavigate, disputeId }) => {
+const MediationRoomScreen: React.FC<MediationRoomScreenProps> = ({ onNavigate, disputeId, user }) => {
   const [message, setMessage] = useState('');
   const [showResolution, setShowResolution] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [outcome, setOutcome] = useState('');
-  const [messages] = useState([
-    { id: '1', type: 'system', text: 'Mediation session started' },
-    { id: '2', type: 'mediator', text: 'Welcome to the mediation room. Let\'s discuss the dispute.', sender: 'Mediator' },
-    { id: '3', type: 'system', text: 'All parties are now present.' },
+  const [messages, setMessages] = useState([
+    { id: '1', type: 'system', text: 'Mediation session started', time: '10:00' },
+    { id: '2', type: 'mediator', text: 'Welcome to the mediation room. Let\'s discuss the dispute.', sender: 'Official Mediator', time: '10:01' },
+    { id: '3', type: 'system', text: 'All parties are now present.', time: '10:05' },
   ]);
 
-  const handleFormalize = () => {
-    alert("Resolution formally recorded and synced with LAIS/Blockchain.");
-    onNavigate('dispute-list');
+  const handleSendMessage = () => {
+    if (!message.trim()) return;
+    
+    const newMessage = {
+      id: Date.now().toString(),
+      type: 'user',
+      text: message,
+      sender: user?.name || 'You',
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+
+    setMessages([...messages, newMessage]);
+    setMessage('');
+
+    // Simulate auto-reply
+    setTimeout(() => {
+      const reply = {
+        id: (Date.now() + 1).toString(),
+        type: 'mediator',
+        text: 'I am reviewing the documents you provided. Does the other party have anything to add?',
+        sender: 'Official Mediator',
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      setMessages(prev => [...prev, reply]);
+    }, 1500);
+  };
+
+  const handleFormalize = async () => {
+    if (!disputeId) return;
+    setLoading(true);
+    try {
+      const resp = await fetch(API_ENDPOINTS.DISPUTE_BY_ID(disputeId), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'Resolved',
+          description: outcome || 'Resolved through mediation.'
+        })
+      });
+      if (resp.ok) {
+        alert("Resolution formalized and synced with LAIS/Blockchain.");
+        onNavigate(user?.role === 'ABUNZI' ? 'abunzi-dashboard' : 'dashboard');
+      } else {
+        alert("Failed to formalize resolution. Please try again.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Network error.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <View style={GlobalStyles.container}>
       <View style={styles.header}>
-        <Pressable onPress={() => onNavigate('dispute-detail')} style={styles.backButton}>
+        <Pressable 
+          onPress={() => onNavigate(user?.role === 'ABUNZI' ? 'abunzi-dashboard' : 'dispute-detail')} 
+          style={styles.backButton}
+        >
           <MaterialIcons name="arrow-back" size={24} color={Colors.textPrimary} />
         </Pressable>
         <Text style={styles.headerTitle}>Mediation Room</Text>
@@ -63,8 +117,16 @@ const MediationRoomScreen: React.FC<MediationRoomScreenProps> = ({ onNavigate, d
               <Text style={styles.uploadText}>Upload Signed Agreement (PDF/JPEG)</Text>
             </View>
 
-            <Pressable style={styles.submitRes} onPress={handleFormalize}>
-              <Text style={styles.submitResText}>Sign and Sync with LAIS</Text>
+            <Pressable 
+              style={[styles.submitRes, loading && { opacity: 0.7 }]} 
+              onPress={handleFormalize}
+              disabled={loading}
+            >
+              {loading ? (
+                 <ActivityIndicator color={Colors.white} />
+              ) : (
+                 <Text style={styles.submitResText}>Sign and Sync with LAIS</Text>
+              )}
             </Pressable>
           </View>
         </ScrollView>
@@ -82,6 +144,9 @@ const MediationRoomScreen: React.FC<MediationRoomScreenProps> = ({ onNavigate, d
                 msg.type === 'user' && styles.messageTextUser,
                 msg.type === 'system' && styles.messageTextSystem
               ]}>{msg.text}</Text>
+              {(msg.type === 'user' || msg.type === 'mediator') && (
+                <Text style={[styles.timeText, msg.type === 'user' && { color: 'rgba(255,255,255,0.7)' }]}>{msg.time}</Text>
+              )}
             </View>
           ))}
         </ScrollView>
@@ -95,8 +160,9 @@ const MediationRoomScreen: React.FC<MediationRoomScreenProps> = ({ onNavigate, d
             value={message}
             onChangeText={setMessage}
             placeholderTextColor={Colors.textTertiary}
+            onSubmitEditing={handleSendMessage}
           />
-          <Pressable style={styles.sendButton}>
+          <Pressable style={styles.sendButton} onPress={handleSendMessage}>
             <MaterialIcons name="send" size={20} color={Colors.white} />
           </Pressable>
         </View>
@@ -120,6 +186,7 @@ const styles = StyleSheet.create({
   messageText: { fontSize: 14, color: Colors.textPrimary },
   messageTextUser: { color: Colors.white },
   messageTextSystem: { fontSize: 12, fontStyle: 'italic', textAlign: 'center' },
+  timeText: { fontSize: 9, color: Colors.textTertiary, alignSelf: 'flex-end', marginTop: 4 },
   
   inputContainer: { flexDirection: 'row', padding: 16, backgroundColor: Colors.white, borderTopWidth: 1, borderTopColor: Colors.borderLight, gap: 8 },
   input: { flex: 1, backgroundColor: Colors.backgroundLight, padding: 12, borderRadius: 16, fontSize: 14, color: Colors.textPrimary },

@@ -31,6 +31,9 @@ import LandMapScreen from './screens/LandMapScreen';
 import BottomNav from './components/BottomNav';
 
 import AuthScreen from './screens/AuthScreen';
+import AbunziDashboardScreen from './screens/AbunziDashboardScreen';
+import MyParcelsScreen from './screens/MyParcelsScreen';
+
 
 const App: React.FC = () => {
   const systemColorScheme = useColorScheme();
@@ -60,7 +63,11 @@ const App: React.FC = () => {
         if (savedUser) {
           const parsedUser = JSON.parse(savedUser);
           setUser(parsedUser);
-          setCurrentScreen('dashboard');
+          if (parsedUser.role === 'ABUNZI') {
+            setCurrentScreen('abunzi-dashboard');
+          } else {
+            setCurrentScreen('dashboard');
+          }
         }
       } catch (err) {
         console.error('Failed to initialize app:', err);
@@ -78,7 +85,11 @@ const App: React.FC = () => {
   const handleLogin = (userData: User) => {
     setUser(userData);
     AsyncStorage.setItem('user', JSON.stringify(userData));
-    setCurrentScreen('dashboard');
+    if (userData.role === 'ABUNZI') {
+      setCurrentScreen('abunzi-dashboard');
+    } else {
+      setCurrentScreen('dashboard');
+    }
   };
 
   const handleLogout = async () => {
@@ -118,39 +129,66 @@ const App: React.FC = () => {
     setCurrentScreen('dispute-detail');
   };
 
+  const [navParams, setNavParams] = useState<any>(null);
+
+  const handleNavigate = (screen: Screen, params?: any) => {
+    setNavParams(params || null);
+    setCurrentScreen(screen);
+  };
+
   const renderScreen = () => {
     switch (currentScreen) {
-      case 'landing': return <LandingScreen onNavigate={setCurrentScreen} />;
-      case 'login': return <AuthScreen onNavigate={setCurrentScreen} onLogin={handleLogin} type="login" />;
-      case 'signup': return <AuthScreen onNavigate={setCurrentScreen} onLogin={handleLogin} type="signup" />;
-      case 'dashboard': return <DashboardScreen onNavigate={setCurrentScreen} user={user} onRefreshUser={refreshUser} />;
-      case 'parcel-details': return <ParcelDetailScreen onNavigate={setCurrentScreen} />;
-      case 'transactions': return <TransactionScreen onNavigate={setCurrentScreen} />;
-      case 'marketplace': return <MarketplaceScreen onNavigate={setCurrentScreen} />;
-      case 'support': return <SupportScreen onNavigate={setCurrentScreen} />;
-      case 'profile': return <ProfileScreen onNavigate={setCurrentScreen} theme={theme} toggleTheme={toggleTheme} onLogout={handleLogout} user={user} />;
-      case 'offline': return <OfflineManagerScreen onNavigate={setCurrentScreen} />;
-      case 'report-anomaly': return <ReportAnomalyScreen onNavigate={setCurrentScreen} />;
-      case 'inheritance': return <InheritanceScreen onNavigate={setCurrentScreen} />;
-      case 'register-land' : return <RegisterLandScreen onNavigate={setCurrentScreen} />;
-      case 'sell-land': return <SellLandScreen onNavigate={setCurrentScreen} />;
-      case 'buy-land': return <BuyLandScreen onNavigate={setCurrentScreen} />;
-      case 'verification': return <VerificationScreen onNavigate={setCurrentScreen} />;
-      case 'dispute-list': return <DisputeListScreen onNavigate={setCurrentScreen} onSelectDispute={navigateToDispute} />;
-      case 'dispute-detail': return <DisputeDetailScreen onNavigate={setCurrentScreen} disputeId={selectedDisputeId} />;
-      case 'mediation-room': return <MediationRoomScreen onNavigate={setCurrentScreen} disputeId={selectedDisputeId} />;
-      case 'settings': return <SettingsScreen onNavigate={setCurrentScreen} theme={theme} toggleTheme={toggleTheme} language={language} toggleLanguage={toggleLanguage} onLogout={handleLogout} />;
-      case 'tax-payment': return <TaxPaymentScreen onNavigate={setCurrentScreen} />;
-      case 'certificate': return <CertificateScreen onNavigate={setCurrentScreen} />;
-      case 'qr-scanner': return <QRScannerScreen onNavigate={setCurrentScreen} />;
-      case 'land-map': return <LandMapScreen onNavigate={setCurrentScreen} />;
-      default: return <LandingScreen onNavigate={setCurrentScreen} />;
+      case 'landing': return <LandingScreen onNavigate={handleNavigate} />;
+      case 'login': return <AuthScreen onNavigate={handleNavigate} onLogin={handleLogin} type="login" />;
+      case 'signup': return <AuthScreen onNavigate={handleNavigate} onLogin={handleLogin} type="signup" />;
+      case 'dashboard': return <DashboardScreen onNavigate={handleNavigate} user={user} onRefreshUser={refreshUser} />;
+      case 'my-parcels': return <MyParcelsScreen onNavigate={handleNavigate} user={user} />;
+      case 'parcel-details': return <ParcelDetailScreen onNavigate={handleNavigate} parcelData={navParams?.parcel} />;
+      case 'transactions': return <TransactionScreen onNavigate={handleNavigate} user={user} />;
+      case 'marketplace': return <MarketplaceScreen onNavigate={handleNavigate} />;
+      case 'support': return <SupportScreen onNavigate={handleNavigate} />;
+      case 'profile': return <ProfileScreen onNavigate={handleNavigate} theme={theme} toggleTheme={toggleTheme} onLogout={handleLogout} user={user} />;
+      case 'offline': return <OfflineManagerScreen onNavigate={handleNavigate} />;
+      case 'report-anomaly': return <ReportAnomalyScreen onNavigate={handleNavigate} user={user} params={navParams} />;
+      case 'inheritance': return <InheritanceScreen onNavigate={handleNavigate} />;
+      case 'register-land' : return <RegisterLandScreen onNavigate={handleNavigate} />;
+      case 'sell-land': return <SellLandScreen onNavigate={handleNavigate} />;
+      case 'buy-land': return <BuyLandScreen onNavigate={handleNavigate} />;
+      case 'verification': return <VerificationScreen onNavigate={handleNavigate} />;
+      case 'dispute-list': return <DisputeListScreen onNavigate={handleNavigate} onSelectDispute={navigateToDispute} user={user} />;
+      case 'dispute-detail': return <DisputeDetailScreen onNavigate={handleNavigate} disputeId={selectedDisputeId} user={user} />;
+      case 'mediation-room': return <MediationRoomScreen onNavigate={handleNavigate} disputeId={selectedDisputeId} user={user} />;
+      case 'settings': return <SettingsScreen onNavigate={handleNavigate} theme={theme} toggleTheme={toggleTheme} language={language} toggleLanguage={toggleLanguage} onLogout={handleLogout} />;
+      case 'tax-payment': return <TaxPaymentScreen onNavigate={handleNavigate} />;
+      case 'certificate': return <CertificateScreen onNavigate={handleNavigate} />;
+      case 'qr-scanner': return <QRScannerScreen onNavigate={handleNavigate} />;
+      case 'land-map': return <LandMapScreen onNavigate={handleNavigate} />;
+      case 'abunzi-dashboard': return <AbunziDashboardScreen onNavigate={handleNavigate} user={user} />;
+      default: return <LandingScreen onNavigate={handleNavigate} />;
     }
   };
 
-  const showNav = currentScreen !== 'landing' && 
-                  currentScreen !== 'login' && 
-                  currentScreen !== 'signup' && 
+  const isPublicScreen = (screen: Screen) => {
+    return screen === 'landing' || screen === 'login' || screen === 'signup';
+  };
+
+  useEffect(() => {
+    // If user is logged in and tries to access public screens, redirect to dashboard
+    if (user && isPublicScreen(currentScreen)) {
+       if (user.role === 'ABUNZI') {
+        setCurrentScreen('abunzi-dashboard');
+       } else {
+        setCurrentScreen('dashboard');
+       }
+    }
+    
+    // If user is NOT logged in and tries to access private screens, redirect to landing
+    if (!user && !isPublicScreen(currentScreen)) {
+      setCurrentScreen('landing');
+    }
+  }, [user, currentScreen]);
+
+  const showNav = !isPublicScreen(currentScreen) && 
                   currentScreen !== 'verification' && 
                   currentScreen !== 'mediation-room' &&
                   user !== null;
@@ -185,7 +223,8 @@ const App: React.FC = () => {
         {showNav && (
           <BottomNav 
             current={currentScreen} 
-            onNavigate={setCurrentScreen} 
+            onNavigate={handleNavigate} 
+            user={user}
           />
         )}
       </SafeAreaView>

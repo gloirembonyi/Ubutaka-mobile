@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Modal, ActivityIndicator, Linking, Platform } from 'react-native';
 import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
-import { Screen } from '../types';
+import { Screen, User } from '../types';
 import { BlockchainTransaction } from '../types/blockchain';
 import { BlockchainService } from '../services/blockchainService';
 import { Colors, getColorWithOpacity } from '../styles/colors';
@@ -10,10 +10,11 @@ import { GlobalStyles } from '../styles/globalStyles';
 
 interface TransactionScreenProps {
   onNavigate: (screen: Screen) => void;
+  user: User | null;
 }
 
 
-const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate }) => {
+const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate, user }) => {
   const [selectedTx, setSelectedTx] = useState<BlockchainTransaction | null>(null);
   const [verifying, setVerifying] = useState(false);
   
@@ -64,10 +65,10 @@ const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate }) => 
     <ScrollView style={GlobalStyles.container} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable onPress={() => onNavigate('dashboard')} style={styles.headerButton}>
+        <Pressable onPress={() => onNavigate(user?.role === 'ABUNZI' ? 'abunzi-dashboard' : 'dashboard')} style={styles.headerButton}>
           <MaterialIcons name="arrow-back" size={24} color={Colors.textSecondary} />
         </Pressable>
-        <Text style={styles.headerTitle}>Blockchain Registry</Text>
+        <Text style={styles.headerTitle}>{user?.role === 'ABUNZI' ? 'Abunzi Operations' : 'Blockchain Registry'}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -92,21 +93,40 @@ const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate }) => 
 
         {/* Actions */}
         <View style={styles.actionSection}>
-            <Text style={styles.sectionTitle}>Simulate Transaction</Text>
-            <Pressable 
-                onPress={handleCreateMockTx}
-                style={({pressed}) => [styles.simulateButton, pressed && {opacity: 0.8}]}
-                disabled={verifying}
-            >
-                {verifying ? (
-                    <ActivityIndicator color={Colors.white} />
-                ) : (
-                    <>
-                        <MaterialIcons name="add-circle-outline" size={24} color={Colors.white} />
-                        <Text style={styles.simulateText}>Record New Land Transfer</Text>
-                    </>
-                )}
-            </Pressable>
+            <Text style={styles.sectionTitle}>{user?.role === 'ABUNZI' ? 'Job Functions' : 'Simulate Transaction'}</Text>
+            {user?.role === 'ABUNZI' ? (
+              <View style={{ gap: 12 }}>
+                <Pressable 
+                    onPress={() => onNavigate('dispute-list')}
+                    style={({pressed}) => [styles.simulateButton, pressed && {opacity: 0.8}]}
+                >
+                    <MaterialIcons name="fact-check" size={24} color={Colors.white} />
+                    <Text style={styles.simulateText}>Review Pending Disputes</Text>
+                </Pressable>
+                <Pressable 
+                    onPress={() => Alert.alert("Calendar", "Opening mediation desk schedule...")}
+                    style={({pressed}) => [styles.simulateButton, { backgroundColor: Colors.primary }, pressed && {opacity: 0.8}]}
+                >
+                    <MaterialIcons name="event-available" size={24} color={Colors.white} />
+                    <Text style={styles.simulateText}>Manage Mediation Calendar</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable 
+                  onPress={handleCreateMockTx}
+                  style={({pressed}) => [styles.simulateButton, pressed && {opacity: 0.8}]}
+                  disabled={verifying}
+              >
+                  {verifying ? (
+                      <ActivityIndicator color={Colors.white} />
+                  ) : (
+                      <>
+                          <MaterialIcons name="add-circle-outline" size={24} color={Colors.white} />
+                          <Text style={styles.simulateText}>Record New Land Transfer</Text>
+                      </>
+                  )}
+              </Pressable>
+            )}
         </View>
 
         {/* Transaction Legend */}

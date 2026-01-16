@@ -2,28 +2,57 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, TextInput } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Screen } from '../types';
-import { MOCK_DISPUTES } from '../constants';
+import { Screen, User, Dispute } from '../types';
 import { Colors, getColorWithOpacity } from '../styles/colors';
 import { GlobalStyles } from '../styles/globalStyles';
+import { API_ENDPOINTS } from '../config/api';
+import { ActivityIndicator } from 'react-native';
 
 interface DisputeListScreenProps {
   onNavigate: (screen: Screen) => void;
   onSelectDispute: (id: string) => void;
+  user: User | null;
 }
 
-const DisputeListScreen: React.FC<DisputeListScreenProps> = ({ onNavigate, onSelectDispute }) => {
-  const [activeTab, setActiveTab] = useState<'citizen' | 'abunzi'>('abunzi');
+const DisputeListScreen: React.FC<DisputeListScreenProps> = ({ onNavigate, onSelectDispute, user }) => {
+  const [activeTab, setActiveTab] = useState<'citizen' | 'abunzi'>(user?.role === 'ABUNZI' ? 'abunzi' : 'citizen');
+  const [disputes, setDisputes] = useState<Dispute[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const disputes = activeTab === 'citizen' 
-    ? MOCK_DISPUTES.filter(d => d.id === 'Case #4421') // Mock citizen having one case
-    : MOCK_DISPUTES; // Abunzi sees all
+  React.useEffect(() => {
+    const fetchDisputes = async () => {
+      try {
+        const resp = await fetch(API_ENDPOINTS.DISPUTES);
+        if (resp.ok) {
+          const data = await resp.json();
+          setDisputes(data);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDisputes();
+  }, []);
+
+  const filteredDisputes = disputes.filter(d => {
+    if (activeTab === 'citizen') {
+      return d.reportedById === user?.id;
+    } else {
+      // For Abunzi tab, show based on district
+      return d.district?.toLowerCase() === user?.district?.toLowerCase();
+    }
+  });
 
   return (
     <View style={GlobalStyles.container}>
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <Pressable onPress={() => onNavigate('dashboard')} style={styles.backButton}>
+          <Pressable 
+            onPress={() => onNavigate(user?.role === 'ABUNZI' ? 'abunzi-dashboard' : 'dashboard')} 
+            style={styles.backButton}
+          >
              <MaterialIcons name="arrow-back" size={24} color={Colors.textPrimary} />
           </Pressable>
           <Text style={styles.headerTitle}>Dispute Resolution</Text>
@@ -65,7 +94,7 @@ const DisputeListScreen: React.FC<DisputeListScreenProps> = ({ onNavigate, onSel
         )}
 
         {activeTab === 'abunzi' && (
-          <Pressable style={styles.createButton}>
+          <Pressable style={styles.createButton} onPress={() => onNavigate('report-anomaly')}>
              <MaterialIcons name="add" size={20} color={Colors.white} />
              <Text style={styles.createButtonText}>Register New Dispute</Text>
           </Pressable>
@@ -73,7 +102,9 @@ const DisputeListScreen: React.FC<DisputeListScreenProps> = ({ onNavigate, onSel
 
         <Text style={styles.sectionTitle}>{activeTab === 'abunzi' ? 'Assigned Cases' : 'My Active Cases'}</Text>
 
-        {disputes.map((dispute) => (
+        {loading ? (
+           <ActivityIndicator color={Colors.primary} style={{ marginTop: 40 }} />
+        ) : filteredDisputes.map((dispute) => (
           <Pressable
             key={dispute.id}
             onPress={() => onSelectDispute(dispute.id)}
@@ -85,7 +116,7 @@ const DisputeListScreen: React.FC<DisputeListScreenProps> = ({ onNavigate, onSel
             <View style={styles.cardHeader}>
               <View style={styles.idContainer}>
                 <MaterialIcons name="gavel" size={16} color={Colors.primary} />
-                <Text style={styles.disputeId}>{dispute.id}</Text>
+                <Text style={styles.disputeId}>#{dispute.id.slice(-6).toUpperCase()}</Text>
               </View>
               <View style={[
                 styles.statusBadge, 
@@ -114,6 +145,10 @@ const DisputeListScreen: React.FC<DisputeListScreenProps> = ({ onNavigate, onSel
             </View>
           </Pressable>
         ))}
+        {!loading && filteredDisputes.length === 0 && (
+           <Text style={{ textAlign: 'center', marginTop: 40, color: Colors.textSecondary }}>No disputes found.</Text>
+        )}
+
       </ScrollView>
     </View>
   );

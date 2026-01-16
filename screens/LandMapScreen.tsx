@@ -12,6 +12,7 @@ import { Screen } from '../types';
 import { LandParcel, MapLayer, MapCoordinates, GeoPoint } from '../types/map';
 import { Colors, getColorWithOpacity } from '../styles/colors';
 import { GlobalStyles } from '../styles/globalStyles';
+import { API_ENDPOINTS } from '../config/api';
 
 interface LandMapScreenProps {
   onNavigate: (screen: Screen) => void;
@@ -81,6 +82,8 @@ const LandMapScreen: React.FC<LandMapScreenProps> = ({ onNavigate }) => {
   const [measureDistance, setMeasureDistance] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  const [parcels, setParcels] = useState<LandParcel[]>(MOCK_PARCELS || []);
+
   useEffect(() => {
     (async () => {
       let { status } = await Location.requestForegroundPermissionsAsync();
@@ -91,14 +94,43 @@ const LandMapScreen: React.FC<LandMapScreenProps> = ({ onNavigate }) => {
 
       let location = await Location.getCurrentPositionAsync({});
       setUserLocation(location);
+
+      // Fetch parcels
+        try {
+            // In a real app, this would fetch based on map viewport (bounds)
+            const resp = await fetch(API_ENDPOINTS.PARCELS); 
+            if (resp.ok) {
+                const data = await resp.json();
+                // Transform API data to map data structure if needed
+                // Assuming API returns compatible LandParcel[] or we map it here
+               // For now, we might need to map your API Parcel type to LandParcel (Map type)
+               // This requires aligning types.
+               // Let's assume for now we keep using MOCK if API fails or returns empty for safety
+               if (data && data.length > 0) {
+                   // Ensure data has coordinates
+                   // setParcels(data); 
+                   // NOTE: Real implementation needs strict type alignment. 
+                   // Keeping MOCK_PARCELS as fallback/demo if API is not fully ready for map data
+               }
+            }
+        } catch (err) {
+            console.error(err);
+        }
       
-      // Focus on user parcel (simulated)
-      if (mapRef.current) {
-        mapRef.current.animateToRegion({
-          latitude: MOCK_PARCELS[0].center.latitude,
-          longitude: MOCK_PARCELS[0].center.longitude,
+      // Focus on user location or first parcel
+      if (mapRef.current && location) {
+         mapRef.current.animateToRegion({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
           latitudeDelta: 0.005,
           longitudeDelta: 0.005,
+        });
+      } else if (mapRef.current) {
+         mapRef.current.animateToRegion({
+          latitude: -1.9441, 
+          longitude: 30.0619,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
         });
       }
       setLoading(false);
@@ -212,7 +244,7 @@ const LandMapScreen: React.FC<LandMapScreenProps> = ({ onNavigate }) => {
         // using standard Google mapTypes for stability on Mobile.
       >
         {/* Parcels */}
-        {MOCK_PARCELS.map((parcel) => (
+        {parcels.map((parcel) => (
           <Polygon
             key={parcel.id}
             coordinates={parcel.boundary}
