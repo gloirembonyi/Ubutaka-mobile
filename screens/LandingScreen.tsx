@@ -310,6 +310,7 @@ const styles = StyleSheet.create({
   },
   secondaryActions: {
     marginTop: 8,
+    marginBottom: 42,
     alignItems: 'center',
   },
   loginLink: {

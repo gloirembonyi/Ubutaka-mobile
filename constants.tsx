@@ -79,4 +79,4 @@ export const MOCK_DISPUTES: Dispute[] = [
     location: "Nyamata, Bugesera"
   }
 ];
-export const API_BASE_URL = "http://10.175.113.252:3000/api";
+export const API_BASE_URL = "https://ubutaka-admin.vercel.app/api";

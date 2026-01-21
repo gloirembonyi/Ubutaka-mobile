@@ -20,7 +20,13 @@
       "adaptiveIcon": {
         "backgroundColor": "#3b82f6"
       },
-      "package": "com.ubutaka.app"
+      "package": "com.ubutaka.app",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT"
+      ]
     },
     "web": {},
     "scheme": "ubutaka",
@@ -38,6 +44,11 @@
         }
       ],
       "expo-font"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "04e14d89-040e-451c-bdee-dda4fccf90ee"
+      }
+    }
   }
 }
