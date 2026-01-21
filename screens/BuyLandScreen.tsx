@@ -1,279 +1,169 @@
-
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialIcons, Ionicons } from '@expo/vector-icons';
-import { Screen } from '../types';
-import { MOCK_PARCELS } from '../constants';
-import { Colors, getColorWithOpacity } from '../styles/colors';
+import { View, Text, StyleSheet, Image, ScrollView, Pressable, Alert, ActivityIndicator } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
+import { Screen, Parcel } from '../types';
+import { Colors as AppColors } from '../styles/colors';
 import { GlobalStyles } from '../styles/globalStyles';
+import { API_ENDPOINTS } from '../config/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface BuyLandScreenProps {
   onNavigate: (screen: Screen) => void;
+  // params should be injected by the navigator in App.tsx but simplified here for direct access via params prop in App.tsx
+  // We'll rely on global user state context in a real app, here we fetch from storage
 }
 
-const BuyLandScreen: React.FC<BuyLandScreenProps> = ({ onNavigate }) => {
-  const [step, setStep] = useState(1);
-  const parcel = MOCK_PARCELS[0];
+// Mocking params injection via navigation wrapper
+// For now assuming we have access to the parcel via some global state or passed props if refactored
+// But simpler to just use what we have. 
+// I will assume the parent passes 'params.parcel' which we can access if we typed it.
+
+const BuyLandScreen: React.FC<any> = ({ onNavigate, params }) => {
+  const parcel = params?.parcel as Parcel;
+  const [loading, setLoading] = useState(false);
+
+  if (!parcel) {
+      return (
+          <View style={[GlobalStyles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+              <Text>No parcel selected</Text>
+              <Pressable onPress={() => onNavigate('marketplace')}><Text style={{color: AppColors.primary}}>Go Back</Text></Pressable>
+          </View>
+      )
+  }
+
+  const handlePurchase = async () => {
+    setLoading(true);
+    try {
+        const userStr = await AsyncStorage.getItem('user');
+        const user = userStr ? JSON.parse(userStr) : null;
+
+        const response = await fetch(API_ENDPOINTS.TRANSACTIONS, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: `Purchase of ${parcel.upi}`,
+              upi: parcel.upi,
+              type: 'SALE',
+              status: 'PENDING_PAYMENT',
+              date: new Date().toISOString(),
+              step: 'Payment Verification',
+              progress: 40,
+              sellerName: parcel.ownerName,
+              buyerName: user?.name || "Me",
+              price: parcel.price
+            })
+          });
+          
+          if (response.ok) {
+              Alert.alert("Offer Submitted", "The seller has been notified. Please proceed to payment.");
+              onNavigate('dashboard');
+          } else {
+              Alert.alert("Error", "Could not submit offer.");
+          }
+    } catch (e) {
+        Alert.alert("Error", "Network error");
+    } finally {
+        setLoading(false);
+    }
+  }
 
   return (
     <View style={GlobalStyles.container}>
-      <SafeAreaView edges={['top']} style={GlobalStyles.safeArea}>
-        <View style={styles.header}>
-          <Pressable onPress={() => onNavigate('marketplace')} style={styles.backButton}>
-            <MaterialIcons name="arrow-back" size={24} color={Colors.textPrimary} />
-          </Pressable>
-          <Text style={styles.headerTitle}>Review Purchase</Text>
-          <View style={{ width: 40 }} />
+      <View style={styles.header}>
+        <Pressable onPress={() => onNavigate('marketplace')} style={styles.backButton}>
+          <MaterialIcons name="close" size={24} color={AppColors.textPrimary} />
+        </Pressable>
+        <Text style={styles.headerTitle}>Confirm Purchase</Text>
+        <View style={{width: 40}} />
+      </View>
+
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: 150 }]}>
+        <Image source={{ uri: parcel.imageUrl }} style={styles.image} />
+        
+        <View style={styles.detailsCard}>
+           <Text style={styles.upi}>UPI: {parcel.upi}</Text>
+           <Text style={styles.price}>{parcel.price}</Text>
+           
+           <View style={styles.divider} />
+           
+           <View style={styles.row}>
+               <Text style={styles.label}>Location</Text>
+               <Text style={styles.value}>{parcel.district}, {parcel.location}</Text>
+           </View>
+           <View style={styles.row}>
+               <Text style={styles.label}>Size</Text>
+               <Text style={styles.value}>{parcel.size}</Text>
+           </View>
+           <View style={styles.row}>
+               <Text style={styles.label}>Seller</Text>
+               <Text style={styles.value}>{parcel.ownerName}</Text>
+           </View>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-          <View style={styles.parcelCard}>
-            <Image source={{ uri: parcel.imageUrl }} style={styles.image} resizeMode="cover" />
-            <View style={styles.parcelInfo}>
-              <View style={styles.badgeRow}>
-                <View style={[styles.badge, { backgroundColor: getColorWithOpacity(Colors.primary, 0.1) }]}>
-                  <Text style={[styles.badgeText, { color: Colors.primary }]}>{parcel.district}</Text>
-                </View>
-                <View style={[styles.badge, { backgroundColor: getColorWithOpacity(Colors.success, 0.1) }]}>
-                  <Text style={[styles.badgeText, { color: Colors.success }]}>Registered</Text>
-                </View>
-              </View>
-              <Text style={styles.parcelTitle}>{parcel.location} Parcel</Text>
-              <Text style={styles.parcelUpi}>UPI: {parcel.upi}</Text>
-            </View>
-          </View>
-
-          <View style={styles.detailsSection}>
-            <View style={styles.detailItem}>
-              <View style={styles.detailIcon}>
-                <MaterialIcons name="square-foot" size={20} color={Colors.textSecondary} />
-              </View>
-              <View>
-                <Text style={styles.detailLabel}>Total Area</Text>
-                <Text style={styles.detailValue}>{parcel.size}</Text>
-              </View>
-            </View>
-            <View style={styles.detailItem}>
-              <View style={styles.detailIcon}>
-                <MaterialIcons name="person" size={20} color={Colors.textSecondary} />
-              </View>
-              <View>
-                <Text style={styles.detailLabel}>Current Owner</Text>
-                <Text style={styles.detailValue}>{parcel.ownerName}</Text>
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.paymentCard}>
-            <Text style={styles.paymentTitle}>Payment Summary</Text>
-            <View style={styles.paymentRow}>
-              <Text style={styles.paymentLabel}>Property Value</Text>
-              <Text style={styles.paymentValue}>RWF {parcel.price}</Text>
-            </View>
-            <View style={styles.paymentRow}>
-              <Text style={styles.paymentLabel}>Transfer Fee (2%)</Text>
-              <Text style={styles.paymentValue}>RWF 500,000</Text>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.paymentRow}>
-              <Text style={styles.totalLabel}>Total Payable</Text>
-              <Text style={styles.totalValue}>RWF 25,500,000</Text>
-            </View>
-          </View>
-
-          <View style={styles.guaranteeBox}>
-            <MaterialIcons name="verified-user" size={20} color={Colors.success} />
-            <Text style={styles.guaranteeText}>
-              Title deed verification complete. Funds are held in escrow until title transfer is confirmed.
+        <View style={styles.trustCard}>
+            <MaterialIcons name="security" size={32} color={AppColors.success} />
+            <Text style={styles.trustTitle}>Blockchain Secured</Text>
+            <Text style={styles.trustText}>
+                This transaction will be immutably recorded on the Ubutaka Blockchain. Ownership transfer is guaranteed upon payment.
             </Text>
-          </View>
-        </ScrollView>
-
-        <View style={styles.footer}>
-          <Pressable 
-            onPress={() => onNavigate('verification')}
-            style={styles.payButton}
-          >
-            <Text style={styles.payButtonText}>Authorize Purchase</Text>
-            <MaterialIcons name="lock" size={20} color={Colors.white} />
-          </Pressable>
         </View>
-      </SafeAreaView>
+      </ScrollView>
+
+      <View style={styles.footer}>
+         <Pressable style={styles.button} onPress={handlePurchase} disabled={loading}>
+            {loading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.buttonText}>Confirm Purchase Offer</Text>}
+         </Pressable>
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: 16,
+      backgroundColor: AppColors.white,
   },
-  backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '900', color: Colors.textPrimary },
-  scrollContent: {
-    padding: 24,
-    gap: 24,
-    paddingBottom: 200,
+  headerTitle: { fontSize: 18, fontWeight: 'bold' },
+  backButton: { padding: 4 },
+  content: { padding: 20 },
+  image: { width: '100%', height: 200, borderRadius: 16, marginBottom: 20 },
+  detailsCard: {
+      backgroundColor: AppColors.white,
+      padding: 20,
+      borderRadius: 16,
+      elevation: 2,
+      marginBottom: 20
   },
-  parcelCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 24,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
+  upi: { fontSize: 14, color: AppColors.textSecondary, marginBottom: 4 },
+  price: { fontSize: 24, fontWeight: 'bold', color: AppColors.primary, marginBottom: 16 },
+  divider: { height: 1, backgroundColor: AppColors.borderLight, marginBottom: 16 },
+  row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
+  label: { color: AppColors.textSecondary },
+  value: { fontWeight: 'bold', color: AppColors.textPrimary },
+  
+  trustCard: {
+      backgroundColor: '#F0FDF4',
+      padding: 20,
+      borderRadius: 16,
+      alignItems: 'center',
+      gap: 12,
+      borderWidth: 1,
+      borderColor: AppColors.success
   },
-  image: {
-    width: '100%',
-    aspectRatio: 16 / 9,
+  trustTitle: { fontSize: 16, fontWeight: 'bold', color: AppColors.success },
+  trustText: { textAlign: 'center', color: '#166534', fontSize: 13, lineHeight: 20 },
+  
+  footer: { padding: 20, paddingBottom: 40, backgroundColor: AppColors.white, borderTopWidth: 1, borderColor: AppColors.borderLight },
+  button: {
+      backgroundColor: AppColors.primary,
+      padding: 16,
+      borderRadius: 16,
+      alignItems: 'center'
   },
-  parcelInfo: {
-    padding: 20,
-    gap: 8,
-  },
-  badgeRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  badgeText: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
-  },
-  parcelTitle: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: Colors.textPrimary,
-  },
-  parcelUpi: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-  },
-  detailsSection: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  detailItem: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.backgroundLight,
-    padding: 16,
-    borderRadius: 16,
-    gap: 12,
-  },
-  detailIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: Colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  detailLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: Colors.textTertiary,
-    textTransform: 'uppercase',
-  },
-  detailValue: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    color: Colors.textPrimary,
-  },
-  paymentCard: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 24,
-    padding: 24,
-    gap: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  paymentTitle: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: Colors.textPrimary,
-    marginBottom: 4,
-  },
-  paymentRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  paymentLabel: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    fontWeight: '500',
-  },
-  paymentValue: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: Colors.textPrimary,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#E2E8F0',
-  },
-  totalLabel: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: Colors.textPrimary,
-  },
-  totalValue: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: Colors.primary,
-  },
-  guaranteeBox: {
-    flexDirection: 'row',
-    backgroundColor: getColorWithOpacity(Colors.success, 0.05),
-    padding: 16,
-    borderRadius: 16,
-    gap: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: getColorWithOpacity(Colors.success, 0.1),
-  },
-  guaranteeText: {
-    flex: 1,
-    fontSize: 12,
-    color: Colors.textSecondary,
-    lineHeight: 18,
-  },
-  footer: {
-    position: 'absolute',
-    bottom: 85,
-    left: 0,
-    right: 0,
-    padding: 24,
-    paddingBottom: 40,
-    backgroundColor: Colors.white,
-    borderTopWidth: 1,
-    borderTopColor: Colors.borderLight,
-  },
-  payButton: {
-    backgroundColor: Colors.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 18,
-    borderRadius: 20,
-    gap: 12,
-  },
-  payButtonText: {
-    color: Colors.white,
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
+  buttonText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 }
 });
 
 export default BuyLandScreen;

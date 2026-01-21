@@ -20,6 +20,10 @@ async function getUsers(): Promise<User[]> {
     avatar: u.avatar,
     role: u.role,
     isVerified: u.isVerified,
+    district: u.district,
+    sector: u.sector,
+    cell: u.cell,
+    village: u.village,
     createdAt: u.createdAt.toISOString()
   }));
 }

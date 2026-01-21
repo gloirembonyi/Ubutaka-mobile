@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
   content: {
     padding: 20,
     gap: 24,
-    paddingBottom: 40,
+    paddingBottom: 150,
   },
   section: {
     gap: 12,

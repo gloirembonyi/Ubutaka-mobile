@@ -14,6 +14,10 @@ export async function createUser(data: any) {
         nationalId: data.nationalId,
         role: data.role || "CITIZEN",
         isVerified: data.isVerified || false,
+        district: data.district || null,
+        sector: data.sector || null,
+        cell: data.cell || null,
+        village: data.village || null,
         avatar: `https://api.dicebear.com/7.x/avataaars/png?seed=${encodeURIComponent(data.name)}`,
       } as any,
     });
@@ -36,6 +40,10 @@ export async function updateUser(id: string, data: any) {
         email: data.email,
         role: data.role,
         isVerified: data.isVerified,
+        district: data.district || null,
+        sector: data.sector || null,
+        cell: data.cell || null,
+        village: data.village || null,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any,
     });

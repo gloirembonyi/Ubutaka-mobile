@@ -16,16 +16,37 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    
+    // Find an Abunzi in the same village if possible
+    let assignedAbunziId = null;
+    if (body.village) {
+      const abunzi = await prisma.user.findFirst({
+        where: {
+          role: "ABUNZI",
+          village: body.village,
+          isVerified: true
+        } as any
+      });
+      if (abunzi) {
+        assignedAbunziId = abunzi.id;
+      }
+    }
+
     const dispute = await prisma.dispute.create({
       data: {
         upi: body.upi,
         type: body.type,
-        status: body.status,
-        dateOpened: body.dateOpened,
+        status: body.status || "Investigation",
+        dateOpened: body.dateOpened || new Date().toLocaleDateString(),
         parties: body.parties,
         description: body.description,
         location: body.location,
-      },
+        district: body.district || null,
+        sector: body.sector || null,
+        cell: body.cell || null,
+        village: body.village || null,
+        assignedAbunziId: assignedAbunziId,
+      } as any,
     });
     return NextResponse.json(dispute);
   } catch (error) {

@@ -153,14 +153,14 @@ const App: React.FC = () => {
       case 'inheritance': return <InheritanceScreen onNavigate={handleNavigate} />;
       case 'register-land' : return <RegisterLandScreen onNavigate={handleNavigate} />;
       case 'sell-land': return <SellLandScreen onNavigate={handleNavigate} />;
-      case 'buy-land': return <BuyLandScreen onNavigate={handleNavigate} />;
+      case 'buy-land': return <BuyLandScreen onNavigate={handleNavigate} params={navParams} />;
       case 'verification': return <VerificationScreen onNavigate={handleNavigate} />;
       case 'dispute-list': return <DisputeListScreen onNavigate={handleNavigate} onSelectDispute={navigateToDispute} user={user} />;
       case 'dispute-detail': return <DisputeDetailScreen onNavigate={handleNavigate} disputeId={selectedDisputeId} user={user} />;
       case 'mediation-room': return <MediationRoomScreen onNavigate={handleNavigate} disputeId={selectedDisputeId} user={user} />;
       case 'settings': return <SettingsScreen onNavigate={handleNavigate} theme={theme} toggleTheme={toggleTheme} language={language} toggleLanguage={toggleLanguage} onLogout={handleLogout} />;
       case 'tax-payment': return <TaxPaymentScreen onNavigate={handleNavigate} />;
-      case 'certificate': return <CertificateScreen onNavigate={handleNavigate} />;
+      case 'certificate': return <CertificateScreen onNavigate={handleNavigate} parcelData={navParams?.parcel} />;
       case 'qr-scanner': return <QRScannerScreen onNavigate={handleNavigate} />;
       case 'land-map': return <LandMapScreen onNavigate={handleNavigate} />;
       case 'abunzi-dashboard': return <AbunziDashboardScreen onNavigate={handleNavigate} user={user} />;
@@ -189,8 +189,7 @@ const App: React.FC = () => {
   }, [user, currentScreen]);
 
   const showNav = !isPublicScreen(currentScreen) && 
-                  currentScreen !== 'verification' && 
-                  currentScreen !== 'mediation-room' &&
+                  !['verification', 'mediation-room', 'register-land', 'sell-land', 'buy-land', 'report-anomaly', 'tax-payment', 'qr-scanner'].includes(currentScreen) &&
                   user !== null;
 
   const backgroundColor = theme === 'dark' ? Colors.backgroundDark : Colors.backgroundLight;

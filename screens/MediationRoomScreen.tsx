@@ -96,7 +96,7 @@ const MediationRoomScreen: React.FC<MediationRoomScreenProps> = ({ onNavigate, d
       </View>
 
       {showResolution ? (
-        <ScrollView style={styles.resolutionPanel}>
+        <ScrollView style={styles.resolutionPanel} contentContainerStyle={{ paddingBottom: 150 }}>
           <View style={styles.resCard}>
             <Text style={styles.resTitle}>Formalize Resolution</Text>
             <Text style={styles.resSub}>Record final outcome and upload signed agreement.</Text>

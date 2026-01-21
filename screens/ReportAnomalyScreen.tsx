@@ -13,6 +13,10 @@ interface ReportAnomalyScreenProps {
   params?: {
     type?: string;
     upi?: string;
+    district?: string;
+    sector?: string;
+    cell?: string;
+    village?: string;
   };
 }
 
@@ -75,7 +79,7 @@ const ReportAnomalyScreen: React.FC<ReportAnomalyScreenProps> = ({ onNavigate, u
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 160 }}>
         <View style={styles.intro}>
           <View style={styles.progressDots}>
             <View style={[styles.dot, styles.dotActive]} />
@@ -196,7 +200,10 @@ const ReportAnomalyScreen: React.FC<ReportAnomalyScreenProps> = ({ onNavigate, u
                   parties: user?.name || 'Citizen',
                   description,
                   location: 'Sector Office', // Default
-                  district: user?.district || 'Kigali',
+                  district: params?.upi ? (params?.district || user?.district) : 'Kigali',
+                  sector: params?.sector || user?.sector || null,
+                  cell: params?.cell || user?.cell || null,
+                  village: params?.village || user?.village || null,
                   reportedById: user?.id
                 })
               });
@@ -357,7 +364,7 @@ const styles = StyleSheet.create({
     right: 0,
     backgroundColor: Colors.white,
     padding: 20,
-    paddingBottom: 32,
+    paddingBottom: 40,
     borderTopWidth: 1,
     borderTopColor: Colors.borderLight,
   },

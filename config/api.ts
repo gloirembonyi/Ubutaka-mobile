@@ -4,21 +4,19 @@
 // To find your IP on Mac/Linux: run `ifconfig` or `hostname -I`
 
 export const getApiBaseUrl = () => {
-  // For iOS Simulator or Android Emulator, use localhost
-  // For physical devices, use your computer's local IP address
-  
-  // Option 1: localhost (for emulators only)
-  // return 'http://192.168.1.67:3000/api';
-  
-  // Option 2: Use your computer's IP address (for physical devices)
-  // Example: return 'http://192.168.1.100:3000/api';
-  
-  // Use environment variable with fallbacks
+  // Get the API URL from environment variable
   const envUrl = process.env.EXPO_PUBLIC_API_URL;
   
   if (__DEV__) {
-    // Falls back to the hardcoded local IP if env is missing
-    return envUrl || '';
+    // In development, use the environment variable
+    // If not set, provide a helpful error message
+    if (!envUrl) {
+      console.warn('⚠️ EXPO_PUBLIC_API_URL is not set in .env file!');
+      console.warn('Please create a .env file with: EXPO_PUBLIC_API_URL="http://YOUR_IP:3000/api"');
+      return 'http://192.168.1.69:3000/api'; // Fallback to current network IP
+    }
+    console.log('✅ API Base URL:', envUrl);
+    return envUrl;
   }
   
   // Production URL
@@ -47,4 +45,7 @@ export const API_ENDPOINTS = {
   // Disputes
   DISPUTES: `${API_BASE_URL}/disputes`,
   DISPUTE_BY_ID: (id: string) => `${API_BASE_URL}/disputes/${id}`,
+  
+  // Anomalies
+  ANOMALIES: `${API_BASE_URL}/anomalies`,
 };

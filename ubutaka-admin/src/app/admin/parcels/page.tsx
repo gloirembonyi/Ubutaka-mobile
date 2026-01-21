@@ -8,10 +8,11 @@ import Image from "next/image";
 
 export const dynamic = "force-dynamic";
 
-async function getParcels() {
-  return await prisma.parcel.findMany({
+async function getParcels(): Promise<Parcel[]> {
+  const parcels = await prisma.parcel.findMany({
     orderBy: { createdAt: "desc" },
   });
+  return parcels as unknown as Parcel[];
 }
 
 export default async function ParcelsPage() {
@@ -32,14 +33,22 @@ export default async function ParcelsPage() {
             <div key={parcel.upi} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all group">
               <div className="relative h-48">
                 <Image 
-                  src={parcel.imageUrl} 
+                  src={parcel.imageUrl || "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800"} 
                   alt={parcel.upi} 
                   fill
                   className="w-full h-full object-cover" 
                 />
-                <div className="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-black shadow-sm text-emerald-600 border border-emerald-100 uppercase tracking-wider">
+                <div className={`absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-[10px] font-black shadow-sm border uppercase tracking-wider ${
+                  parcel.isVerified ? 'text-emerald-600 border-emerald-100' : 'text-amber-600 border-amber-100'
+                }`}>
                   {parcel.status}
                 </div>
+                {parcel.isVerified && (
+                  <div className="absolute top-4 left-4 bg-emerald-600 text-white px-3 py-1 rounded-full text-[10px] font-black shadow-sm flex items-center gap-1 uppercase tracking-wider">
+                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                    Verified Title
+                  </div>
+                )}
               </div>
               <div className="p-6">
                 <div className="flex justify-between items-start mb-4">
@@ -72,10 +81,15 @@ export default async function ParcelsPage() {
                      </div>
                     <span className="text-xs font-bold text-slate-600 uppercase tracking-tight">{parcel.ownerName}</span>
                   </div>
-                  <button className="text-emerald-600 hover:text-emerald-700 font-bold text-xs uppercase tracking-widest flex items-center gap-1 transition-all">
-                    Details
+                  <a 
+                    href={`/admin/parcels/${encodeURIComponent(parcel.upi)}`}
+                    className={`font-bold text-xs uppercase tracking-widest flex items-center gap-1 transition-all ${
+                      parcel.isVerified ? 'text-slate-400 hover:text-slate-600' : 'text-emerald-600 hover:text-emerald-700'
+                    }`}
+                  >
+                    {parcel.isVerified ? 'View Record' : 'Verify Parcel'}
                     <ExternalLink size={14} />
-                  </button>
+                  </a>
                 </div>
               </div>
             </div>

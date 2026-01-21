@@ -36,8 +36,11 @@ export interface User {
   nationalId: string;
   isVerified: boolean;
   avatar: string;
-  role: 'USER' | 'ABUNZI' | 'ADMIN';
+  role: 'USER' | 'ABUNZI' | 'ADMIN' | 'CITIZEN';
   district?: string;
+  sector?: string;
+  cell?: string;
+  village?: string;
 }
 
 export interface Parcel {
@@ -45,32 +48,51 @@ export interface Parcel {
   size: string;
   use: string;
   district: string;
+  sector?: string;
+  cell?: string;
+  village?: string;
   location: string;
-  price?: string;
-  status: 'registered' | 'pending' | 'disputed';
+  price?: string | null;
+  status: string;
   ownerName: string;
   imageUrl: string;
+  isVerified?: boolean;
+  verifiedAt?: string;
+  certificateId?: string;
+  documents?: string;
+  coordinates?: string;
+  userId?: string;
 }
 
 export interface Transaction {
   id: string;
   title: string;
   upi: string;
-  status: 'action_required' | 'in_progress' | 'completed' | 'archived';
+  status: string;
+  type?: string;
   date: string;
   step: string;
   progress: number;
+  sellerName?: string;
+  buyerName?: string;
+  price?: string;
+  txHash?: string;
+  blockNumber?: number;
 }
 
 export interface Dispute {
   id: string;
   upi: string;
-  type: 'Boundary' | 'Ownership' | 'Encroachment';
-  status: 'Investigation' | 'Mediation' | 'Resolved';
+  type: string;
+  status: string;
   dateOpened: string;
-  parties: string[];
+  parties: string | string[];
   description: string;
   location: string;
   district?: string;
+  sector?: string;
+  cell?: string;
+  village?: string;
+  assignedAbunziId?: string;
   reportedById?: string;
 }

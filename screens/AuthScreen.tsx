@@ -23,6 +23,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onNavigate, onLogin, type: init
   const [role, setRole] = useState<'USER' | 'ABUNZI'>('USER');
   const [loading, setLoading] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Store actions
   const login = useAuthStore(state => state.login);
@@ -242,8 +243,15 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onNavigate, onLogin, type: init
                 placeholder="••••••••"
                 value={password}
                 onChangeText={setPassword}
-                secureTextEntry
+                secureTextEntry={!showPassword}
               />
+              <Pressable onPress={() => setShowPassword(!showPassword)} hitSlop={10}>
+                <Ionicons 
+                  name={showPassword ? "eye-off-outline" : "eye-outline"} 
+                  size={20} 
+                  color={Colors.textSecondary} 
+                />
+              </Pressable>
             </View>
           </View>
 

@@ -42,7 +42,7 @@ const SupportScreen: React.FC<SupportScreenProps> = ({ onNavigate }) => {
   ];
 
   return (
-    <ScrollView style={GlobalStyles.container} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+    <ScrollView style={GlobalStyles.container} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 160 }}>
       <View style={styles.header}>
         <View>
           <Text style={styles.headerTitle}>Support & Learning</Text>

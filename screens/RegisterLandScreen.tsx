@@ -23,6 +23,7 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
     district: 'Gasabo',
     sector: 'Remera',
     cell: 'Nyabisindu',
+    village: '',
     upi: '',
     landUse: 'Residential (R1)',
     size: '',
@@ -104,11 +105,30 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
         size: `${formData.size} sqm`,
         use: formData.landUse,
         district: formData.district,
-        location: `${formData.sector}, ${formData.cell}, ${formData.province}`,
-        status: 'pending', // Set to pending for review
+        sector: formData.sector,
+        cell: formData.cell,
+        village: formData.village,
+        location: `${formData.village ? formData.village + ', ' : ''}${formData.cell}, ${formData.sector}, ${formData.province}`,
+        status: 'Pending Verification', 
         ownerName: formData.ownerName || user.name,
         imageUrl: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800',
         price: null,
+        userId: user.id,
+        coordinates: {
+          type: "Polygon",
+          coordinates: [[
+            [30.0619, -1.9441],
+            [30.0625, -1.9441],
+            [30.0625, -1.9450],
+            [30.0619, -1.9450],
+            [30.0619, -1.9441]
+          ]]
+        },
+        documents: [
+          { name: "National ID Copy", status: "Uploaded", type: "ID" },
+          { name: "Sale Agreement", status: "Uploaded", type: "CONTRACT" },
+          { name: "Tax Clearance", status: "Uploaded", type: "TAX" }
+        ].filter((_, i) => [formData.hasIdCopy, formData.hasSaleAgreement, formData.hasTaxClearance][i])
       };
 
       const response = await fetch(API_ENDPOINTS.PARCELS, {
@@ -146,7 +166,7 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
 
   return (
     <View style={GlobalStyles.container}>
-      <SafeAreaView edges={['top']} style={GlobalStyles.safeArea}>
+      <SafeAreaView edges={['top', 'bottom']} style={GlobalStyles.safeArea}>
         <MainHeader 
           user={user} 
           showBack 
@@ -218,6 +238,15 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
                       style={styles.selectInput}
                       value={formData.cell}
                       onChangeText={(text) => setFormData({...formData, cell: text})}
+                    />
+                  </View>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>VILLAGE</Text>
+                    <TextInput 
+                      style={styles.selectInput}
+                      placeholder="e.g. Isangano"
+                      value={formData.village}
+                      onChangeText={(text) => setFormData({...formData, village: text})}
                     />
                   </View>
                 </View>

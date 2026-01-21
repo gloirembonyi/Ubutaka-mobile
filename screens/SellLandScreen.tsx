@@ -1,9 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Alert, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, ActivityIndicator, Alert, Image } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Screen } from '../types';
+import { Screen, User, Parcel } from '../types';
 import { Colors, getColorWithOpacity } from '../styles/colors';
 import { GlobalStyles } from '../styles/globalStyles';
 import { API_ENDPOINTS } from '../config/api';
@@ -14,226 +12,233 @@ interface SellLandScreenProps {
 }
 
 const SellLandScreen: React.FC<SellLandScreenProps> = ({ onNavigate }) => {
-  const [selectedParcel, setSelectedParcel] = useState(0);
-  const [price, setPrice] = useState('');
+  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [fetchLoading, setFetchLoading] = useState(true);
-  const [myParcels, setMyParcels] = useState<any[]>([]);
+  const [user, setUser] = useState<User | null>(null);
+  const [myParcels, setMyParcels] = useState<Parcel[]>([]);
+  
+  const [formData, setFormData] = useState({
+    selectedParcel: null as Parcel | null,
+    price: '',
+    buyerId: '',
+    buyerName: '', // Optional, fetched if possible
+  });
 
   useEffect(() => {
-    fetchMyParcels();
+    loadUserAndParcels();
   }, []);
 
-  const fetchMyParcels = async () => {
+  const loadUserAndParcels = async () => {
     try {
-      setFetchLoading(true);
-      const userJson = await AsyncStorage.getItem('user');
-      const user = userJson ? JSON.parse(userJson) : null;
-
-      if (!user) {
-        Alert.alert('Error', 'Please login first');
-        onNavigate('login');
-        return;
+      const savedUser = await AsyncStorage.getItem('user');
+      if (savedUser) {
+        const u = JSON.parse(savedUser);
+        setUser(u);
+        
+        // Fetch parcels
+        const resp = await fetch(`${API_ENDPOINTS.PARCELS}?ownerName=${encodeURIComponent(u.name)}`);
+        if (resp.ok) {
+          const data = await resp.json();
+          setMyParcels(data);
+        }
       }
-
-      const response = await fetch(API_ENDPOINTS.PARCELS);
-      if (!response.ok) throw new Error('Failed to fetch parcels');
-      
-      const allParcels = await response.json();
-      
-      // Filter parcels owned by current user and not already for sale
-      const userParcels = allParcels.filter(
-        (p: any) => p.ownerName === user.name && !p.price
-      );
-      setMyParcels(userParcels);
-    } catch (error) {
-      console.error('Fetch parcels error:', error);
-      Alert.alert('Error', 'Failed to load your parcels');
-    } finally {
-      setFetchLoading(false);
+    } catch (e) {
+      console.error("Error loading initial data", e);
     }
   };
 
-  const handleListForSale = async () => {
-    if (!price || parseFloat(price.replace(/,/g, '')) <= 0) {
-      Alert.alert('Error', 'Please enter a valid price');
-      return;
-    }
+  const steps = ['PARCEL', 'BUYER', 'REVIEW'];
 
-    if (myParcels.length === 0) {
-      Alert.alert('Error', 'No parcels available to sell');
+  const handleSubmit = async () => {
+    if (!formData.selectedParcel || !formData.price || !formData.buyerId) {
+      Alert.alert("Missing Info", "Please fill all fields.");
       return;
     }
 
     setLoading(true);
-
     try {
-      const selectedParcelData = myParcels[selectedParcel];
-      
-      // For now, we'll create a transaction instead of updating parcels
-      // since we don't have a PUT endpoint yet
-      const transactionData = {
-        title: `Land Sale - ${selectedParcelData.upi}`,
-        upi: selectedParcelData.upi,
-        status: 'in_progress',
-        date: new Date().toLocaleDateString(),
-        step: 'Listed for sale',
-        progress: 0,
-      };
-
       const response = await fetch(API_ENDPOINTS.TRANSACTIONS, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(transactionData),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: `Sale of Parcel ${formData.selectedParcel.upi}`,
+          upi: formData.selectedParcel.upi,
+          type: 'SALE',
+          status: 'PENDING_NOTARY',
+          date: new Date().toISOString(),
+          step: 'Notary Verification',
+          progress: 20,
+          sellerName: user?.name,
+          buyerName: formData.buyerId, // Using ID as name for now
+          price: formData.price
+        })
       });
 
-      if (!response.ok) {
-        Alert.alert('Error', 'Failed to list parcel for sale');
-        return;
+      if (response.ok) {
+        Alert.alert("Success", "Smart Transfer Initiated! The buyer and Notary have been notified.");
+        onNavigate('dashboard');
+      } else {
+        Alert.alert("Error", "Failed to initiate transfer.");
       }
-
-      Alert.alert(
-        'Success',
-        `Parcel ${selectedParcelData.upi} has been listed for sale at ${price} RWF!`,
-        [
-          { text: 'OK', onPress: () => onNavigate('marketplace') }
-        ]
-      );
     } catch (error) {
-      console.error('List for sale error:', error);
-      Alert.alert(
-        'Connection Error',
-        'Could not connect to server. Please check your network connection.'
-      );
+      Alert.alert("Error", "Network error occurred.");
     } finally {
       setLoading(false);
     }
   };
 
+  const StepCircle = ({ s, label }: { s: number, label: string }) => (
+    <View style={styles.stepHeader}>
+      <View style={[styles.stepCircle, step >= s && styles.stepCircleActive]}>
+        <Text style={[styles.stepNumber, step >= s && styles.stepNumberActive]}>{s}</Text>
+      </View>
+      <Text style={[styles.stepLabel, step >= s && styles.stepLabelActive]}>{label}</Text>
+    </View>
+  );
+
   return (
     <View style={GlobalStyles.container}>
-      <SafeAreaView edges={['top']} style={GlobalStyles.safeArea}>
-        <View style={styles.header}>
-          <Pressable onPress={() => onNavigate('dashboard')} style={styles.backButton}>
-            <MaterialIcons name="arrow-back" size={24} color={Colors.textPrimary} />
-          </Pressable>
-          <Text style={styles.headerTitle}>Initiate Sale</Text>
-          <View style={{ width: 40 }} />
-        </View>
+      <View style={styles.header}>
+        <Pressable onPress={() => step > 1 ? setStep(step - 1) : onNavigate('dashboard')} style={styles.backButton}>
+          <MaterialIcons name="arrow-back" size={24} color={Colors.textPrimary} />
+        </Pressable>
+        <Text style={styles.headerTitle}>Sell Land (Smart Flow)</Text>
+        <View style={{ width: 40 }} />
+      </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-          {fetchLoading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={Colors.primary} />
-              <Text style={styles.loadingText}>Loading your parcels...</Text>
-            </View>
-          ) : myParcels.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <MaterialIcons name="landscape" size={48} color={Colors.textTertiary} />
-              <Text style={styles.emptyText}>You don't have any parcels to sell</Text>
-              <Pressable onPress={() => onNavigate('register-land')} style={styles.emptyButton}>
-                <Text style={styles.emptyButtonText}>Register a Parcel</Text>
-              </Pressable>
-            </View>
-          ) : (
-            <>
-              <View style={styles.intro}>
-                <Text style={styles.title}>Details & Pricing</Text>
-                <Text style={styles.subtitle}>Select a parcel and set your terms. Your listing will be verified before going live.</Text>
-              </View>
-
-          {/* Parcel Selection */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>1. SELECT PROPERTY</Text>
-              <Pressable><Text style={styles.viewMapText}>View Map</Text></Pressable>
-            </View>
-
-            {myParcels.map((parcel, idx) => (
-              <Pressable 
-                key={idx}
-                onPress={() => setSelectedParcel(idx)}
-                style={[
-                  styles.parcelOption,
-                  selectedParcel === idx && styles.parcelOptionSelected
-                ]}
-              >
-                <View style={styles.parcelOptionTop}>
-                  <View style={styles.badgeRow}>
-                    <MaterialIcons 
-                      name="verified" 
-                      size={16} 
-                      color={selectedParcel === idx ? Colors.primary : Colors.textTertiary} 
-                    />
-                    <View style={styles.districtBadge}>
-                      <Text style={styles.districtText}>{parcel.district}</Text>
-                    </View>
-                  </View>
-                  <View style={[
-                    styles.radio,
-                    selectedParcel === idx && styles.radioActive
-                  ]}>
-                    {selectedParcel === idx && <View style={styles.radioInner} />}
-                  </View>
-                </View>
-                
-                <Text style={styles.parcelUpi}>UPI: {parcel.upi}</Text>
-                <Text style={styles.parcelSub}>{parcel.use} • {parcel.size}</Text>
-              </Pressable>
-            ))}
+      <View style={styles.progressContainer}>
+        {steps.map((label, idx) => (
+          <View key={idx} style={styles.progressStep}>
+             <View style={[styles.progressBar, idx + 1 <= step && styles.progressBarActive]} />
           </View>
+        ))}
+      </View>
 
-          {/* Asking Price */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>2. ASKING PRICE</Text>
+      <ScrollView style={styles.content}>
+        {step === 1 && (
+          <View>
+            <StepCircle s={1} label="Select Parcel" />
+            <Text style={styles.subtext}>Choose the land parcel you wish to transfer.</Text>
             
-            <View style={styles.priceInputRow}>
-              <View style={styles.currencySelect}>
-                <Text style={styles.currencyText}>RWF</Text>
-                <MaterialIcons name="expand-more" size={20} color={Colors.textSecondary} />
-              </View>
+            {myParcels.length === 0 ? (
+               <Text style={styles.emptyText}>No parcels found.</Text>
+            ) : (
+              myParcels.map(parcel => (
+                <Pressable 
+                  key={parcel.upi}
+                  style={[styles.parcelCard, formData.selectedParcel?.upi === parcel.upi && styles.parcelCardActive]}
+                  onPress={() => setFormData({...formData, selectedParcel: parcel})}
+                >
+                  <Image source={{ uri: parcel.imageUrl }} style={styles.parcelImage} />
+                  <View style={styles.parcelInfo}>
+                     <Text style={styles.parcelTitle}>UPI: {parcel.upi}</Text>
+                     <Text style={styles.parcelSub}>{parcel.size} • {parcel.location}</Text>
+                  </View>
+                  <View style={styles.radio}>
+                     {formData.selectedParcel?.upi === parcel.upi && <View style={styles.radioInner} />}
+                  </View>
+                </Pressable>
+              ))
+            )}
+            
+            <View style={{ height: 100 }} />
+          </View>
+        )}
+
+        {step === 2 && (
+          <View>
+            <StepCircle s={2} label="Sale Details" />
+            
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>SALE PRICE (RWF)</Text>
               <TextInput 
-                style={styles.priceInput}
+                style={styles.input}
                 placeholder="e.g. 15,000,000"
                 keyboardType="numeric"
-                value={price}
-                onChangeText={setPrice}
+                value={formData.price}
+                onChangeText={t => setFormData({...formData, price: t})}
               />
             </View>
 
-            <View style={styles.marketInfo}>
-              <MaterialIcons name="bar-chart" size={16} color={Colors.primary} />
-              <Text style={styles.marketInfoText}>
-                Market average for residential plots in {myParcels[selectedParcel]?.district || 'this area'} is currently <Text style={styles.boldText}>~8,500 RWF/sqm</Text>.
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>BUYER NATIONAL ID</Text>
+              <TextInput 
+                style={styles.input}
+                placeholder="1 1990 8 0000 000 0 00"
+                keyboardType="numeric"
+                value={formData.buyerId}
+                onChangeText={t => setFormData({...formData, buyerId: t})}
+              />
+            </View>
+
+            <View style={styles.infoBox}>
+              <MaterialIcons name="info" size={20} color={Colors.primary} />
+              <Text style={styles.infoText}>
+                The buyer will be notified to accept the price. Once accepted, the smart contract will lock the process until payment is verified.
               </Text>
             </View>
           </View>
-            </>
-          )}
-        </ScrollView>
+        )}
 
-        <View style={styles.footer}>
-          <Pressable 
-            onPress={handleListForSale}
-            disabled={loading || fetchLoading || myParcels.length === 0}
-            style={[styles.submitButton, (loading || fetchLoading || myParcels.length === 0) && { opacity: 0.6 }]}
-          >
-            {loading ? (
-              <ActivityIndicator color={Colors.white} />
-            ) : (
-              <>
-                <Text style={styles.submitButtonText}>List for Sale</Text>
-                <MaterialIcons name="arrow-forward" size={20} color={Colors.white} />
-              </>
-            )}
-          </Pressable>
-          <Pressable style={styles.draftButton}>
-            <Text style={styles.draftButtonText}>Save Draft</Text>
-          </Pressable>
-        </View>
-      </SafeAreaView>
+        {step === 3 && (
+          <View>
+            <StepCircle s={3} label="Review & Confirm" />
+            
+            <View style={styles.summaryCard}>
+               <Text style={styles.summaryTitle}>Transaction Summary</Text>
+               
+               <View style={styles.summaryRow}>
+                 <Text style={styles.summaryLabel}>Property</Text>
+                 <Text style={styles.summaryValue}>{formData.selectedParcel?.upi}</Text>
+               </View>
+               <View style={styles.summaryRow}>
+                 <Text style={styles.summaryLabel}>Sale Price</Text>
+                 <Text style={styles.summaryValue}>{formData.price} RWF</Text>
+               </View>
+               <View style={styles.summaryRow}>
+                 <Text style={styles.summaryLabel}>Buyer ID</Text>
+                 <Text style={styles.summaryValue}>{formData.buyerId}</Text>
+               </View>
+               <View style={styles.summaryRow}>
+                 <Text style={styles.summaryLabel}>Transfer Fee</Text>
+                 <Text style={styles.summaryValue}>25,000 RWF</Text>
+               </View>
+            </View>
+
+            <View style={styles.blockchainPreview}>
+               <MaterialIcons name="link" size={24} color={Colors.white} />
+               <View>
+                 <Text style={styles.blockchainTitle}>Blockchain Record Preview</Text>
+                 <Text style={styles.blockchainHash}>
+                   Next Block: #89210 • Hash: 0x8f...2a9
+                 </Text>
+               </View>
+            </View>
+          </View>
+        )}
+      </ScrollView>
+
+      <View style={styles.footer}>
+        {step < 3 ? (
+           <Pressable 
+             style={[styles.button, (!formData.selectedParcel && step === 1) && styles.buttonDisabled]} 
+             disabled={!formData.selectedParcel && step === 1}
+             onPress={() => setStep(step + 1)}
+           >
+             <Text style={styles.buttonText}>Continue</Text>
+             <MaterialIcons name="arrow-forward" size={20} color={Colors.white} />
+           </Pressable>
+        ) : (
+           <Pressable style={styles.button} onPress={handleSubmit}>
+             {loading ? <ActivityIndicator color={Colors.white} /> : (
+               <>
+                 <Text style={styles.buttonText}>Initiate Transfer</Text>
+                 <MaterialIcons name="fingerprint" size={20} color={Colors.white} />
+               </>
+             )}
+           </Pressable>
+        )}
+      </View>
     </View>
   );
 };
@@ -243,232 +248,59 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-  },
-  backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 20, fontWeight: '900', color: '#1B3C53' },
-  scrollContent: {
-    padding: 24,
-    gap: 32,
-    paddingBottom: 200,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 14,
-    color: Colors.textSecondary,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
-    gap: 16,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-  },
-  emptyButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    marginTop: 8,
-  },
-  emptyButtonText: {
-    color: Colors.white,
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  intro: {
-    gap: 12,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: '#1B3C53',
-  },
-  subtitle: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: '#64748B',
-  },
-  section: {
-    gap: 16,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '900',
-    color: '#1B3C53',
-    letterSpacing: 0.5,
-  },
-  viewMapText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: Colors.primary,
-  },
-  parcelOption: {
-    backgroundColor: Colors.white,
-    borderRadius: 20,
-    padding: 24,
-    borderWidth: 1.5,
-    borderColor: '#F1F5F9',
-    gap: 8,
-  },
-  parcelOptionSelected: {
-    borderColor: Colors.primary,
-    backgroundColor: getColorWithOpacity(Colors.primary, 0.02),
-  },
-  parcelOptionTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  badgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  districtBadge: {
-    backgroundColor: getColorWithOpacity(Colors.primary, 0.1),
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  districtText: {
-    fontSize: 11,
-    fontWeight: 'bold',
-    color: Colors.primary,
-  },
-  radio: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
-    borderColor: '#CBD5E1',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  radioActive: {
-    borderColor: Colors.primary,
-  },
-  radioInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: Colors.primary,
-  },
-  parcelUpi: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: '#1B3C53',
-  },
-  parcelSub: {
-    fontSize: 13,
-    color: '#64748B',
-    fontWeight: '500',
-  },
-  priceInputRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  currencySelect: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 8,
-  },
-  currencyText: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: '#1B3C53',
-  },
-  priceInput: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 16,
-    paddingHorizontal: 20,
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1B3C53',
-  },
-  marketInfo: {
-    flexDirection: 'row',
-    backgroundColor: '#F8FAFC',
     padding: 16,
-    borderRadius: 12,
-    gap: 12,
-    alignItems: 'center',
-  },
-  marketInfoText: {
-    flex: 1,
-    fontSize: 12,
-    color: '#64748B',
-    lineHeight: 18,
-  },
-  boldText: {
-    fontWeight: 'bold',
-    color: '#1B3C53',
-  },
-  footer: {
-    position: 'absolute',
-    bottom: 85,
-    left: 0,
-    right: 0,
-    padding: 24,
-    paddingBottom: 40,
     backgroundColor: Colors.white,
-    gap: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
   },
-  submitButton: {
-    backgroundColor: Colors.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 18,
-    borderRadius: 20,
-    gap: 12,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  submitButtonText: {
-    color: Colors.white,
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  draftButton: {
-    alignItems: 'center',
-    paddingBottom: 8,
-  },
-  draftButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1B3C53',
-  },
+  headerTitle: { fontSize: 18, fontWeight: 'bold', color: Colors.textPrimary },
+  backButton: { padding: 8 },
+  content: { padding: 20 },
+  progressContainer: { flexDirection: 'row', gap: 4, paddingHorizontal: 20, paddingTop: 20 },
+  progressStep: { flex: 1, height: 4, backgroundColor: Colors.borderLight, borderRadius: 2 },
+  progressBar: { flex: 1, backgroundColor: 'transparent', borderRadius: 2 },
+  progressBarActive: { backgroundColor: Colors.primary },
+  
+  stepHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 24, paddingVertical: 10 },
+  stepCircle: { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.borderLight },
+  stepCircleActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  stepNumber: { fontSize: 14, fontWeight: 'bold', color: Colors.textSecondary },
+  stepNumberActive: { color: Colors.white },
+  stepLabel: { fontSize: 18, fontWeight: 'bold', color: Colors.textSecondary },
+  stepLabelActive: { color: Colors.textPrimary },
+  subtext: { color: Colors.textSecondary, marginBottom: 20 },
+
+  parcelCard: { flexDirection: 'row', alignItems: 'center', padding: 12, borderWidth: 1, borderColor: Colors.borderLight, borderRadius: 12, marginBottom: 12, backgroundColor: Colors.white },
+  parcelCardActive: { borderColor: Colors.primary, backgroundColor: '#F0FDF4' },
+  parcelImage: { width: 60, height: 60, borderRadius: 8, marginRight: 12 },
+  parcelInfo: { flex: 1 },
+  parcelTitle: { fontWeight: 'bold', color: Colors.textPrimary },
+  parcelSub: { fontSize: 12, color: Colors.textSecondary },
+  radio: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: Colors.borderLight, alignItems: 'center', justifyContent: 'center' },
+  radioInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.primary },
+  
+  inputGroup: { marginBottom: 20 },
+  label: { fontSize: 12, fontWeight: 'bold', color: Colors.textSecondary, marginBottom: 8 },
+  input: { backgroundColor: Colors.background, padding: 16, borderRadius: 12, borderWidth: 1, borderColor: Colors.borderLight, fontSize: 16 },
+  
+  infoBox: { flexDirection: 'row', gap: 12, backgroundColor: '#EFF6FF', padding: 16, borderRadius: 12, alignItems: 'center' },
+  infoText: { flex: 1, fontSize: 12, color: '#1E40AF', lineHeight: 18 },
+
+  summaryCard: { backgroundColor: Colors.background, padding: 20, borderRadius: 16, marginBottom: 20 },
+  summaryTitle: { fontWeight: 'bold', marginBottom: 16, fontSize: 16 },
+  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
+  summaryLabel: { color: Colors.textSecondary },
+  summaryValue: { fontWeight: 'bold', color: Colors.textPrimary },
+
+  blockchainPreview: { flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: '#1E293B', padding: 16, borderRadius: 16 },
+  blockchainTitle: { color: '#94A3B8', fontSize: 12, fontWeight: 'bold' },
+  blockchainHash: { color: Colors.white, fontWeight: 'bold', fontFamily: 'monospace' },
+
+  footer: { padding: 20, paddingBottom: 40, borderTopWidth: 1, borderTopColor: Colors.borderLight },
+  button: { backgroundColor: Colors.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 16, borderRadius: 16, gap: 8 },
+  buttonDisabled: { backgroundColor: Colors.textTertiary },
+  buttonText: { color: Colors.white, fontWeight: 'bold', fontSize: 16 },
+  emptyText: { textAlign: 'center', color: Colors.textSecondary, marginTop: 40 },
 });
 
 export default SellLandScreen;

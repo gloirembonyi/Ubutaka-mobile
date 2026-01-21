@@ -13,6 +13,7 @@ import { useAuthStore } from '../store/authStore';
 
 interface CertificateScreenProps {
   onNavigate: (screen: Screen) => void;
+  parcelData?: Parcel;
 }
 
 // Translations
@@ -84,38 +85,49 @@ const translations = {
 
 type LangCode = 'EN' | 'RW' | 'FR';
 
-const CertificateScreen: React.FC<CertificateScreenProps> = ({ onNavigate }) => {
+const CertificateScreen: React.FC<CertificateScreenProps> = ({ onNavigate, parcelData }) => {
   const [lang, setLang] = useState<LangCode>('EN');
   const user = useAuthStore(state => state.user);
   
-  // Mock Data - In real app, fetch this based on selected parcel
+  // Use parcel data if available, otherwise mock for demo
+  const parcel = parcelData || {
+    upi: "1/03/04/05/1234",
+    ownerName: user?.name || "MUGAKIHIRE Jean",
+    district: "Gasabo",
+    location: "Kimironko",
+    size: "650 sqm",
+    use: "Residential",
+    certificateId: "CERT-2026-00129",
+    verifiedAt: new Date().toISOString(),
+  } as any;
+
   const certificate: Certificate = {
-    id: "CERT-2026-00129",
-    issuedAt: "2024-11-15T10:00:00Z",
+    id: parcel.certificateId || `CERT-2026-${Math.floor(10000 + Math.random() * 90000)}`,
+    issuedAt: parcel.verifiedAt || new Date().toISOString(),
     issuedBy: "RLMUA",
-    watermarkText: "VALID DOCUMENT",
+    watermarkText: "VALID E-TITLE",
     qrData: JSON.stringify({
       ver: 1,
-      upi: "1/03/04/05/1234",
-      hash: "0x8f2d...3ca1",
-      owner: user?.id || "unknown"
+      upi: parcel.upi,
+      certId: parcel.certificateId,
+      owner: parcel.ownerName
     }),
     landTitle: {
-      upi: "1/03/04/05/1234",
-      ownerName: user?.name || "MUGAKIHIRE Jean",
+      upi: parcel.upi,
+      ownerName: parcel.ownerName,
       ownerAuthId: user?.id || "u1",
       nationalId: user?.nationalId || "1199080000000000",
-      district: "Gasabo",
-      sector: "Kimironko",
-      cell: "Kibagabaga",
+      district: parcel.district || "Gasabo",
+      sector: parcel.location?.split(',')[0] || "Kimironko",
+      cell: parcel.location?.split(',')[1] || "Kibagabaga",
       village: "Buriga",
-      size: "650 sqm",
-      landUse: "Residential",
-      issueDate: "15/11/2024",
+      size: parcel.size || "Unknown",
+      landUse: parcel.use || "Unknown",
+      issueDate: parcel.verifiedAt ? new Date(parcel.verifiedAt).toLocaleDateString() : new Date().toLocaleDateString(),
       coordinates: [{ latitude: -1.9441, longitude: 30.0619 }],
-      blockchainHash: "0x8f2d7e4b9c1a3f5d6e2b8a4c9d3e5f7a1c2b4d6e8f0a2c4e6b8d0f2a4c6e8d0",
+      blockchainHash: parcel.blockchainHash || "0x8f2d7e4b9c1a3f5d6e2b8a4c9d3e5f7a1c2b4d6e8f0a2c4e6b8d0f2a4c6e8d0",
       status: "ACTIVE",
-      ownerPhoto: user?.avatar || "https://api.dicebear.com/7.x/avataaars/png?seed=Jean"
+      ownerPhoto: user?.avatar || `https://ui-avatars.com/api/?name=${parcel.ownerName}&background=random`
     }
   };
 
@@ -390,7 +402,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
-    paddingBottom: 40,
+    paddingBottom: 150,
   },
   certificateCard: {
     backgroundColor: Colors.white,

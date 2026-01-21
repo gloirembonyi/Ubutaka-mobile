@@ -60,13 +60,13 @@ const MyParcelsScreen: React.FC<MyParcelsScreenProps> = ({
 
   const fetchParcels = async () => {
     try {
-      // const resp = await fetch(`${API_ENDPOINTS.PARCELS}?ownerName=${encodeURIComponent(user?.name || '')}`);
-      // if (resp.ok) {
-      //    const data = await resp.json();
-      //    setParcels(data);
-      // } else {
-      setParcels(MOCK_PARCELS);
-      // }
+      const resp = await fetch(`${API_ENDPOINTS.PARCELS}?ownerName=${encodeURIComponent(user?.name || '')}`);
+      if (resp.ok) {
+         const data = await resp.json();
+         setParcels(data.length > 0 ? data : MOCK_PARCELS);
+      } else {
+        setParcels(MOCK_PARCELS);
+      }
     } catch (err) {
       console.error("Fetch parcels error:", err);
       setParcels(MOCK_PARCELS);
@@ -89,7 +89,10 @@ const MyParcelsScreen: React.FC<MyParcelsScreenProps> = ({
           />
         </Pressable>
         <Text style={styles.headerTitle}>My Land Parcels</Text>
-        <Pressable style={styles.headerButton}>
+        <Pressable 
+          onPress={() => onNavigate("register-land")}
+          style={styles.headerButton}
+        >
           <MaterialIcons name="add" size={24} color={Colors.primary} />
         </Pressable>
       </View>
@@ -121,7 +124,7 @@ const MyParcelsScreen: React.FC<MyParcelsScreenProps> = ({
           ) : (
             parcels.map((parcel, index) => (
               <Pressable
-                key={index}
+                key={parcel.upi || index}
                 style={({ pressed }) => [
                   styles.parcelCard,
                   pressed && GlobalStyles.pressed,
@@ -129,16 +132,16 @@ const MyParcelsScreen: React.FC<MyParcelsScreenProps> = ({
                 onPress={() => onNavigate("parcel-details", { parcel })}
               >
                 <Image
-                  source={{ uri: parcel.imageUrl }}
+                  source={{ uri: parcel.imageUrl || "https://images.unsplash.com/photo-1541888941255-2200230234ed?w=800" }}
                   style={styles.parcelImage}
                 />
                 <View style={styles.parcelInfo}>
                   <View style={styles.parcelHeader}>
-                    <Text style={styles.parcelUpi}>UPI: {parcel.upi}</Text>
+                    <Text style={styles.parcelUpi} numberOfLines={1}>UPI: {parcel.upi}</Text>
                     <MaterialIcons
-                      name="verified"
+                      name={parcel.status === 'Verified' ? "verified" : "hourglass-top"}
                       size={16}
-                      color={Colors.success}
+                      color={parcel.status === 'Verified' ? Colors.success : Colors.accent}
                     />
                   </View>
                   <Text style={styles.parcelDistrict}>
@@ -164,7 +167,13 @@ const MyParcelsScreen: React.FC<MyParcelsScreenProps> = ({
                     </View>
                   </View>
                 </View>
-                <View style={styles.arrowContainer}>
+                <View style={styles.actionsContainer}>
+                  <Pressable 
+                    style={styles.sellButton}
+                    onPress={() => onNavigate("sell-land")}
+                  >
+                    <Text style={styles.sellButtonText}>Sell</Text>
+                  </Pressable>
                   <MaterialIcons
                     name="chevron-right"
                     size={24}
@@ -207,7 +216,7 @@ const styles = StyleSheet.create({
   content: {
     padding: 16,
     gap: 16,
-    paddingBottom: 100,
+    paddingBottom: 160,
   },
   loadingContainer: {
     flex: 1,
@@ -292,6 +301,22 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Colors.textTertiary,
     fontWeight: "500",
+  },
+  actionsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  sellButton: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  sellButtonText: {
+    color: Colors.white,
+    fontWeight: "bold",
+    fontSize: 12,
   },
   arrowContainer: {
     width: 24,

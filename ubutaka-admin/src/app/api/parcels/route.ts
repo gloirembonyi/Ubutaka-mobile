@@ -31,12 +31,18 @@ export async function POST(request: Request) {
         size: body.size,
         use: body.use,
         district: body.district,
+        sector: body.sector || null,
+        cell: body.cell || null,
+        village: body.village || null,
         location: body.location,
-        status: body.status,
+        status: body.status || "Pending Verification",
         ownerName: body.ownerName,
         imageUrl: body.imageUrl,
         price: body.price || null,
-      },
+        coordinates: body.coordinates ? JSON.stringify(body.coordinates) : null,
+        documents: body.documents ? JSON.stringify(body.documents) : null,
+        userId: body.userId || null,
+      } as any,
     });
     return NextResponse.json(parcel);
   } catch (error) {

@@ -2,9 +2,10 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Image } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Screen, Parcel } from '../types';
+import { Screen, Parcel, Transaction } from '../types';
 import { Colors, getColorWithOpacity } from '../styles/colors';
 import { GlobalStyles } from '../styles/globalStyles';
+import { API_ENDPOINTS } from '../config/api';
 
 interface ParcelDetailScreenProps {
   onNavigate: (screen: Screen, params?: any) => void;
@@ -13,22 +14,39 @@ interface ParcelDetailScreenProps {
 
 const ParcelDetailScreen: React.FC<ParcelDetailScreenProps> = ({ onNavigate, parcelData }) => {
   const [viewMode, setViewMode] = useState<'image' | 'map'>('image');
+  const [history, setHistory] = useState<Transaction[]>([]);
   
   // Fallback if no specific parcel passed (should ideally handle gracefully or fetch default)
-  const parcel = parcelData || {
+  const parcel = parcelData || ({
       id: 'unknown',
       upi: 'No Parcel Selected',
       ownerName: 'Unknown',
       status: 'active',
-      size: 0,
+      size: '0 sqm',
       use: 'Unknown',
       district: 'Unknown',
+      location: 'Unknown',
       imageUrl: 'https://via.placeholder.com/400x300.png?text=No+Image',
       value: 0
-  };
+  } as unknown as Parcel);
+
+  React.useEffect(() => {
+     if (parcel.upi) {
+         fetch(API_ENDPOINTS.TRANSACTIONS)
+             .then(r => r.json())
+             .then(data => {
+                 if (Array.isArray(data)) {
+                   // Filter for this parcel and sort by date desc
+                   const relevant = data.filter((t: any) => t.upi === parcel.upi || t.upi === '1/03/04/05/1230'); // Demo fallback
+                   setHistory(typeof relevant === 'object' ? relevant : []);
+                 }
+             })
+             .catch(e => console.log(e));
+     }
+  }, [parcel.upi]);
 
   return (
-    <ScrollView style={GlobalStyles.container} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+    <ScrollView style={GlobalStyles.container} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 160 }}>
       <View style={styles.header}>
         <Pressable onPress={() => onNavigate('dashboard')} style={styles.headerButton}>
           <MaterialIcons name="arrow-back" size={24} color={Colors.textPrimary} />
@@ -59,27 +77,49 @@ const ParcelDetailScreen: React.FC<ParcelDetailScreenProps> = ({ onNavigate, par
 
         <View style={styles.mediaContainer}>
           {viewMode === 'image' ? (
-            <Image source={{ uri: parcel.imageUrl }} style={styles.mediaImage} resizeMode="cover" />
+            <Image source={{ uri: parcel.imageUrl || "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800" }} style={styles.mediaImage} resizeMode="cover" />
           ) : (
             <View style={styles.mapPlaceholder}>
-              <MaterialIcons name="map" size={48} color={Colors.border} />
-              <Text style={styles.mapText}>Map View</Text>
+              <Image 
+                source={{ uri: "https://images.unsplash.com/photo-1524661135-423995f22d0b?w=1200" }} 
+                style={[styles.mediaImage, { opacity: 0.6 }]} 
+              />
+              <View style={styles.polygonOverlay}>
+                  <View style={styles.polygon}>
+                     <Text style={styles.polygonText}>{parcel.upi}</Text>
+                  </View>
+              </View>
+              <View style={styles.mapBadge}>
+                <Text style={styles.mapBadgeText}>GPS VERIFIED</Text>
+              </View>
             </View>
           )}
           <View style={styles.verifiedBadge}>
-            <MaterialIcons name="verified-user" size={18} color={Colors.primary} />
-            <Text style={styles.verifiedText}>Registered & Secure</Text>
+            <MaterialIcons 
+              name={parcel.status === 'Verified' ? "verified-user" : "hourglass-empty"} 
+              size={18} 
+              color={parcel.status === 'Verified' ? Colors.success : Colors.accent} 
+            />
+            <Text style={[styles.verifiedText, parcel.status === 'Verified' && { color: Colors.success }]}>
+              {parcel.status === 'Verified' ? 'Verified & Secure' : 'Pending Review'}
+            </Text>
           </View>
         </View>
 
         <View style={styles.statsCard}>
           <View style={styles.statsHeader}>
             <Text style={styles.statsLabel}>Unique Parcel Identifier (UPI)</Text>
-            <MaterialIcons name="lock" size={16} color={Colors.primary} />
+            <MaterialIcons 
+              name={parcel.status === 'Verified' ? "lock" : "lock-open"} 
+              size={16} 
+              color={parcel.status === 'Verified' ? Colors.success : Colors.accent} 
+            />
           </View>
           <Text style={styles.upi}>{parcel.upi}</Text>
-          <View style={styles.blockchainBadge}>
-            <Text style={styles.blockchainText}>Blockchain Verified</Text>
+          <View style={[styles.blockchainBadge, parcel.status === 'Verified' ? { backgroundColor: getColorWithOpacity(Colors.success, 0.1), borderColor: Colors.success } : { backgroundColor: getColorWithOpacity(Colors.accent, 0.1), borderColor: Colors.accent }]}>
+            <Text style={[styles.blockchainText, parcel.status === 'Verified' ? { color: Colors.success } : { color: Colors.accent }]}>
+              {parcel.status === 'Verified' ? 'Blockchain Verified' : 'Awaiting Confirmation'}
+            </Text>
           </View>
         </View>
 
@@ -101,17 +141,72 @@ const ParcelDetailScreen: React.FC<ParcelDetailScreenProps> = ({ onNavigate, par
           </View>
         </View>
 
-        <Pressable style={styles.downloadButton}>
-          <MaterialIcons name="download" size={20} color={Colors.white} />
-          <Text style={styles.downloadText}>Download Title Deed</Text>
-        </Pressable>
+        {parcel.status === 'Verified' ? (
+          <Pressable 
+            style={styles.downloadButton}
+            onPress={() => onNavigate('certificate', { parcel })}
+          >
+            <MaterialIcons name="card-membership" size={22} color={Colors.white} />
+            <Text style={styles.downloadText}>View Digital Title (e-Title)</Text>
+          </Pressable>
+        ) : (
+          <View style={[styles.downloadButton, { backgroundColor: Colors.borderLight, shadowOpacity: 0 }]}>
+            <MaterialIcons name="hourglass-top" size={20} color={Colors.textTertiary} />
+            <Text style={[styles.downloadText, { color: Colors.textTertiary }]}>Verification In Progress</Text>
+          </View>
+        )}
+
+        <View style={styles.historySection}>
+            <View style={styles.sectionHeaderRow}>
+               <Text style={styles.sectionTitle}>Ownership Chain (Blockchain)</Text>
+               <MaterialIcons name="link" size={20} color={Colors.primary} />
+            </View>
+            
+            {history.length === 0 ? (
+                <Text style={styles.noHistory}>No digital history recorded yet.</Text>
+            ) : (
+                history.map((tx, idx) => (
+                    <View key={idx} style={styles.historyItem}>
+                        <View style={styles.timeline}>
+                            <View style={[styles.timelineDot, idx===0 && styles.timelineDotActive]} />
+                            {idx < history.length - 1 && <View style={styles.timelineLine} />}
+                        </View>
+                        <View style={styles.historyContent}>
+                            <View style={styles.historyHeader}>
+                                <Text style={styles.historyType}>{tx.type || 'TRANSFER'}</Text>
+                                <Text style={styles.historyDate}>{new Date(tx.date).toLocaleDateString()}</Text>
+                            </View>
+                            <Text style={styles.historyDesc}>{tx.title}</Text>
+                            {tx.sellerName && (
+                                <Text style={styles.historyParties}>
+                                    {tx.sellerName} <MaterialIcons name="arrow-right-alt" size={14} /> {tx.buyerName}
+                                </Text>
+                            )}
+                            <View style={styles.hashContainer}>
+                                <MaterialIcons name="verified" size={12} color={Colors.success} />
+                                <Text style={styles.hashText} numberOfLines={1}>
+                                    Hash: {tx.txHash || 'Pending...'}
+                                </Text>
+                            </View>
+                        </View>
+                    </View>
+                ))
+            )}
+        </View>
 
         <View style={styles.reportingSection}>
             <Text style={styles.sectionTitle}>Issues & Disputes</Text>
             
             <View style={styles.actionRow}>
                 <Pressable
-                  onPress={() => onNavigate('report-anomaly', { type: 'Dispute', upi: parcel.upi })}
+                  onPress={() => onNavigate('report-anomaly', { 
+                    type: 'Dispute', 
+                    upi: parcel.upi,
+                    district: parcel.district,
+                    sector: parcel.sector,
+                    cell: parcel.cell,
+                    village: parcel.village
+                  })}
                   style={[styles.actionButton, styles.disputeButton]}
                 >
                   <MaterialIcons name="gavel" size={20} color={Colors.white} />
@@ -212,7 +307,48 @@ const styles = StyleSheet.create({
     height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.backgroundLight,
+    backgroundColor: '#e3f2fd',
+  },
+  polygonOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  polygon: {
+    width: 140,
+    height: 140,
+    borderWidth: 3,
+    borderColor: Colors.primary,
+    backgroundColor: getColorWithOpacity(Colors.primary, 0.2),
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+  },
+  polygonText: {
+    color: Colors.primary,
+    fontWeight: '900',
+    fontSize: 14,
+  },
+  mapBadge: {
+    position: 'absolute',
+    bottom: 16,
+    right: 16,
+    backgroundColor: Colors.white,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  mapBadgeText: {
+    fontSize: 8,
+    fontWeight: '900',
+    color: Colors.textSecondary,
+    letterSpacing: 1,
   },
   mapText: {
     marginTop: 8,
@@ -435,6 +571,110 @@ const styles = StyleSheet.create({
       color: Colors.textSecondary,
       lineHeight: 16,
       textAlign: 'center',
+  },
+  historySection: {
+      backgroundColor: Colors.background,
+      padding: 20,
+      borderRadius: 24,
+      borderWidth: 1,
+      borderColor: Colors.borderLight,
+      marginTop: 24,
+  },
+  sectionHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 16,
+  },
+
+  noHistory: {
+      color: Colors.textTertiary,
+      fontStyle: 'italic',
+      textAlign: 'center',
+      padding: 12,
+  },
+  historyItem: {
+      flexDirection: 'row',
+      marginBottom: 0,
+      minHeight: 80,
+  },
+  timeline: {
+      width: 20,
+      alignItems: 'center',
+      marginRight: 12,
+  },
+  timelineDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: Colors.border,
+      marginTop: 6,
+      zIndex: 1,
+  },
+  timelineDotActive: {
+      backgroundColor: Colors.success,
+      borderColor: '#D1FAE5',
+      borderWidth: 2,
+      width: 14,
+      height: 14,
+      borderRadius: 7,
+      marginLeft: -2,
+  },
+  timelineLine: {
+      flex: 1,
+      width: 2,
+      backgroundColor: Colors.borderLight,
+      position: 'absolute',
+      top: 14,
+      bottom: 0,
+  },
+  historyContent: {
+      flex: 1,
+      backgroundColor: Colors.white,
+      padding: 12,
+      borderRadius: 12,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: Colors.borderLight,
+  },
+  historyHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: 6,
+  },
+  historyType: {
+      fontSize: 12,
+      fontWeight: 'bold',
+      color: Colors.textPrimary,
+  },
+  historyDate: {
+      fontSize: 10,
+      color: Colors.textTertiary,
+  },
+  historyDesc: {
+      fontSize: 12,
+      color: Colors.textSecondary,
+      marginBottom: 4,
+  },
+  historyParties: {
+      fontSize: 11,
+      color: Colors.textPrimary,
+      fontWeight: '500',
+      marginBottom: 8,
+  },
+  hashContainer: {
+     flexDirection: 'row',
+     alignItems: 'center',
+     gap: 4,
+     backgroundColor: '#F0FDF4',
+     padding: 6,
+     borderRadius: 6,
+  },
+  hashText: {
+      fontSize: 10,
+      fontFamily: 'monospace',
+      color: Colors.success,
+      flex: 1,
   },
 });
 

@@ -75,7 +75,7 @@ const DisputeListScreen: React.FC<DisputeListScreenProps> = ({ onNavigate, onSel
         </View>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 160 }}>
         {activeTab === 'abunzi' && (
           <View style={styles.statsRow}>
             <View style={styles.statCard}>

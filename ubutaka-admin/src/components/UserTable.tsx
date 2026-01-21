@@ -253,6 +253,52 @@ export default function UserTable({ initialUsers }: UserTableProps) {
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-4">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">District</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g., Gasabo"
+                    value={currentUser.district || ""}
+                    onChange={e => setCurrentUser({...currentUser, district: e.target.value})}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-xs font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Sector</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g., Kimironko"
+                    value={currentUser.sector || ""}
+                    onChange={e => setCurrentUser({...currentUser, sector: e.target.value})}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-xs font-medium"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Cell</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g., Nyagatovu"
+                    value={currentUser.cell || ""}
+                    onChange={e => setCurrentUser({...currentUser, cell: e.target.value})}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-xs font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Village</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g., Isangano"
+                    value={currentUser.village || ""}
+                    onChange={e => setCurrentUser({...currentUser, village: e.target.value})}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-xs font-medium"
+                  />
+                </div>
+              </div>
+
               <button 
                 type="submit"
                 className="w-full py-3.5 bg-emerald-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg shadow-emerald-200 hover:bg-emerald-700 transition-all transform active:scale-95"
