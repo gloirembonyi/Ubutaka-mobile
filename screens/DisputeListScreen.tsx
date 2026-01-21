@@ -108,7 +108,7 @@ const DisputeListScreen: React.FC<DisputeListScreenProps> = ({ onNavigate, onSel
           <Pressable
             key={dispute.id}
             onPress={() => onSelectDispute(dispute.id)}
-            style={({ pressed }) => [
+            style={({ pressed }: { pressed: boolean }) => [
               styles.disputeCard,
               pressed && GlobalStyles.pressed
             ]}

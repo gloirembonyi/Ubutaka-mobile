@@ -29,7 +29,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onR
   const displayUser = user || MOCK_USER;
 
   useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener(state => {
+    const unsubscribe = NetInfo.addEventListener((state: any) => {
       setIsOffline(!state.isConnected);
     });
     fetchParcels();
@@ -111,7 +111,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onR
             {/* Verification Status Banner */}
             <Pressable 
               onPress={handleBiometricVerify}
-              style={({ pressed }) => [
+              style={({ pressed }: { pressed: boolean }) => [
                 styles.verificationBanner,
                 pressed && GlobalStyles.pressed,
                 displayUser.isVerified && styles.verificationBannerActive
@@ -142,7 +142,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onR
         {/* Hero Card */}
         <Pressable 
           onPress={() => onNavigate('my-parcels')}
-          style={({ pressed }) => [
+          style={({ pressed }: { pressed: boolean }) => [
             styles.heroCard,
             pressed && GlobalStyles.pressed
           ]}
@@ -173,13 +173,13 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onR
             </View>
             <View style={styles.heroButtons}>
               <Pressable 
-                onPress={(e) => { e.stopPropagation(); onNavigate('certificate'); }}
+                onPress={(e: any) => { e.stopPropagation(); onNavigate('certificate'); }}
                 style={styles.heroButtonPrimary}
               >
                 <Text style={styles.heroButtonText}>Land Certificates</Text>
               </Pressable>
               <Pressable 
-                onPress={(e) => { e.stopPropagation(); onNavigate('register-land'); }}
+                onPress={(e: any) => { e.stopPropagation(); onNavigate('register-land'); }}
                 style={styles.heroButtonSecondary}
               >
                 <Text style={styles.heroButtonSecondaryText}>Register New</Text>
@@ -196,7 +196,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onR
               <Pressable 
                 key={idx} 
                 onPress={() => onNavigate(action.screen as Screen, (action as any).params)}
-                style={({ pressed }) => [
+                style={({ pressed }: { pressed: boolean }) => [
                   styles.actionCard,
                   pressed && GlobalStyles.pressed
                 ]}

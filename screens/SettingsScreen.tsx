@@ -54,7 +54,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
     color?: string
   }) => (
     <Pressable 
-      style={({ pressed }) => [
+      style={({ pressed }: { pressed: boolean }) => [
         styles.settingItem, 
         pressed && type !== 'switch' && styles.pressed
       ]}

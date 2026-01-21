@@ -123,7 +123,7 @@ const SellLandScreen: React.FC<SellLandScreenProps> = ({ onNavigate }) => {
             {myParcels.length === 0 ? (
                <Text style={styles.emptyText}>No parcels found.</Text>
             ) : (
-              myParcels.map(parcel => (
+              myParcels.map((parcel: Parcel) => (
                 <Pressable 
                   key={parcel.upi}
                   style={[styles.parcelCard, formData.selectedParcel?.upi === parcel.upi && styles.parcelCardActive]}
@@ -156,7 +156,7 @@ const SellLandScreen: React.FC<SellLandScreenProps> = ({ onNavigate }) => {
                 placeholder="e.g. 15,000,000"
                 keyboardType="numeric"
                 value={formData.price}
-                onChangeText={t => setFormData({...formData, price: t})}
+                onChangeText={(t: string) => setFormData({...formData, price: t})}
               />
             </View>
 
@@ -167,7 +167,7 @@ const SellLandScreen: React.FC<SellLandScreenProps> = ({ onNavigate }) => {
                 placeholder="1 1990 8 0000 000 0 00"
                 keyboardType="numeric"
                 value={formData.buyerId}
-                onChangeText={t => setFormData({...formData, buyerId: t})}
+                onChangeText={(t: string) => setFormData({...formData, buyerId: t})}
               />
             </View>
 

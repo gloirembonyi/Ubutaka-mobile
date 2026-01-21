@@ -122,10 +122,10 @@ const MyParcelsScreen: React.FC<MyParcelsScreenProps> = ({
               </Pressable>
             </View>
           ) : (
-            parcels.map((parcel, index) => (
+            parcels.map((parcel: Parcel, index: number) => (
               <Pressable
                 key={parcel.upi || index}
-                style={({ pressed }) => [
+                style={({ pressed }: { pressed: boolean }) => [
                   styles.parcelCard,
                   pressed && GlobalStyles.pressed,
                 ]}

@@ -280,7 +280,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onNavigate, onLogin, type: init
           <Pressable 
             onPress={handleSubmit}
             disabled={loading}
-            style={({ pressed }) => [
+            style={({ pressed }: { pressed: boolean }) => [
               styles.submitButton,
               pressed && GlobalStyles.pressed,
               loading && { opacity: 0.6 }
@@ -298,7 +298,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onNavigate, onLogin, type: init
           {type === 'login' && biometricAvailable && (
             <Pressable 
               onPress={handleBiometricLogin}
-              style={({ pressed }) => [
+              style={({ pressed }: { pressed: boolean }) => [
                 styles.biometricButton,
                 pressed && GlobalStyles.pressed
               ]}

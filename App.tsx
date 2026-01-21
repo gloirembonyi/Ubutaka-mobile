@@ -124,8 +124,8 @@ const App: React.FC = () => {
     AsyncStorage.setItem('theme', theme);
   }, [theme]);
 
-  const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
-  const toggleLanguage = () => setLanguage(prev => prev === 'RW' ? 'EN' : 'RW');
+  const toggleTheme = () => setTheme((prev: 'light' | 'dark') => prev === 'light' ? 'dark' : 'light');
+  const toggleLanguage = () => setLanguage((prev: Language) => prev === 'RW' ? 'EN' : 'RW');
 
   const navigateToDispute = (id: string) => {
     setSelectedDisputeId(id);

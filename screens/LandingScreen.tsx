@@ -74,7 +74,7 @@ const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
           <View style={styles.buttonsContainer}>
             <Pressable 
               onPress={() => onNavigate('signup')}
-              style={({ pressed }) => [
+              style={({ pressed }: { pressed: boolean }) => [
                 styles.primaryButton,
                 pressed && GlobalStyles.pressed
               ]}
