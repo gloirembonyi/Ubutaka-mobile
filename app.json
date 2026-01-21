@@ -4,7 +4,7 @@
     "slug": "ubutaka",
     "version": "1.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "splash": {
       "backgroundColor": "#3b82f6",
       "resizeMode": "contain"
