@@ -158,39 +158,46 @@ const ParcelDetailScreen: React.FC<ParcelDetailScreenProps> = ({ onNavigate, par
 
         <View style={styles.historySection}>
             <View style={styles.sectionHeaderRow}>
-               <Text style={styles.sectionTitle}>Ownership Chain (Blockchain)</Text>
-               <MaterialIcons name="link" size={20} color={Colors.primary} />
+               <Text style={styles.sectionTitle}>Ownership Chain & History</Text>
+               <Pressable onPress={() => onNavigate('land-vault', { upi: parcel.upi })}>
+                  <Text style={styles.vaultLink}>View Archive</Text>
+               </Pressable>
             </View>
             
             {history.length === 0 ? (
-                <Text style={styles.noHistory}>No digital history recorded yet.</Text>
+                <View style={styles.emptyHistory}>
+                   <MaterialIcons name="history" size={32} color={Colors.border} />
+                   <Text style={styles.noHistory}>Digital chain starts with you.</Text>
+                </View>
             ) : (
-                history.map((tx, idx) => (
-                    <View key={idx} style={styles.historyItem}>
-                        <View style={styles.timeline}>
-                            <View style={[styles.timelineDot, idx===0 && styles.timelineDotActive]} />
-                            {idx < history.length - 1 && <View style={styles.timelineLine} />}
-                        </View>
-                        <View style={styles.historyContent}>
-                            <View style={styles.historyHeader}>
-                                <Text style={styles.historyType}>{tx.type || 'TRANSFER'}</Text>
-                                <Text style={styles.historyDate}>{new Date(tx.date).toLocaleDateString()}</Text>
+                <View style={styles.timelineContainer}>
+                    {history.map((tx, idx) => (
+                        <View key={idx} style={styles.historyItem}>
+                            <View style={styles.timelineSide}>
+                                <Image 
+                                    source={{ uri: `https://ui-avatars.com/api/?name=${tx.buyerName}&background=random` }} 
+                                    style={styles.ownerThumb} 
+                                />
+                                {idx < history.length - 1 && <View style={styles.chainLink} />}
                             </View>
-                            <Text style={styles.historyDesc}>{tx.title}</Text>
-                            {tx.sellerName && (
-                                <Text style={styles.historyParties}>
-                                    {tx.sellerName} <MaterialIcons name="arrow-right-alt" size={14} /> {tx.buyerName}
-                                </Text>
-                            )}
-                            <View style={styles.hashContainer}>
-                                <MaterialIcons name="verified" size={12} color={Colors.success} />
-                                <Text style={styles.hashText} numberOfLines={1}>
-                                    Hash: {tx.txHash || 'Pending...'}
-                                </Text>
+                            <View style={styles.historyBody}>
+                                <View style={styles.historyHeader}>
+                                    <Text style={styles.historyRole}>{idx === 0 ? 'Current Owner' : 'Previous Owner'}</Text>
+                                    <Text style={styles.historyDate}>{new Date(tx.date).getFullYear()}</Text>
+                                </View>
+                                <Text style={styles.ownerNameText}>{tx.buyerName}</Text>
+                                <Text style={styles.historyTxType}>{tx.type} via Ubutaka</Text>
+                                
+                                <View style={styles.blockchainPill}>
+                                    <MaterialIcons name="verified" size={12} color={Colors.success} />
+                                    <Text style={styles.hashPillText} numberOfLines={1}>
+                                        {tx.txHash || 'Verified on Chain'}
+                                    </Text>
+                                </View>
                             </View>
                         </View>
-                    </View>
-                ))
+                    ))}
+                </View>
             )}
         </View>
 
@@ -573,108 +580,103 @@ const styles = StyleSheet.create({
       textAlign: 'center',
   },
   historySection: {
-      backgroundColor: Colors.background,
-      padding: 20,
-      borderRadius: 24,
+      backgroundColor: Colors.white,
+      padding: 24,
+      borderRadius: 32,
       borderWidth: 1,
       borderColor: Colors.borderLight,
-      marginTop: 24,
+      marginTop: 16,
   },
   sectionHeaderRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      marginBottom: 16,
+      marginBottom: 20,
   },
-
-  noHistory: {
-      color: Colors.textTertiary,
-      fontStyle: 'italic',
-      textAlign: 'center',
-      padding: 12,
+  vaultLink: {
+      fontSize: 12,
+      color: Colors.primary,
+      fontWeight: 'bold',
+      textDecorationLine: 'underline',
+  },
+  timelineContainer: {
+      gap: 0,
   },
   historyItem: {
       flexDirection: 'row',
-      marginBottom: 0,
-      minHeight: 80,
+      gap: 16,
   },
-  timeline: {
-      width: 20,
+  timelineSide: {
       alignItems: 'center',
-      marginRight: 12,
+      width: 40,
   },
-  timelineDot: {
-      width: 10,
-      height: 10,
-      borderRadius: 5,
-      backgroundColor: Colors.border,
-      marginTop: 6,
-      zIndex: 1,
-  },
-  timelineDotActive: {
-      backgroundColor: Colors.success,
-      borderColor: '#D1FAE5',
-      borderWidth: 2,
-      width: 14,
-      height: 14,
-      borderRadius: 7,
-      marginLeft: -2,
-  },
-  timelineLine: {
-      flex: 1,
-      width: 2,
+  ownerThumb: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
       backgroundColor: Colors.borderLight,
-      position: 'absolute',
-      top: 14,
-      bottom: 0,
   },
-  historyContent: {
+  chainLink: {
+      width: 2,
       flex: 1,
-      backgroundColor: Colors.white,
-      padding: 12,
-      borderRadius: 12,
-      marginBottom: 16,
-      borderWidth: 1,
-      borderColor: Colors.borderLight,
+      backgroundColor: Colors.borderLight,
+      marginVertical: 4,
+  },
+  historyBody: {
+      flex: 1,
+      paddingBottom: 24,
   },
   historyHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      marginBottom: 6,
+      alignItems: 'center',
+      marginBottom: 4,
   },
-  historyType: {
-      fontSize: 12,
+  historyRole: {
+      fontSize: 10,
       fontWeight: 'bold',
-      color: Colors.textPrimary,
+      color: Colors.textTertiary,
+      textTransform: 'uppercase',
   },
   historyDate: {
       fontSize: 10,
       color: Colors.textTertiary,
   },
-  historyDesc: {
+  ownerNameText: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      color: Colors.textPrimary,
+  },
+  historyTxType: {
       fontSize: 12,
       color: Colors.textSecondary,
-      marginBottom: 4,
-  },
-  historyParties: {
-      fontSize: 11,
-      color: Colors.textPrimary,
-      fontWeight: '500',
       marginBottom: 8,
   },
-  hashContainer: {
-     flexDirection: 'row',
-     alignItems: 'center',
-     gap: 4,
-     backgroundColor: '#F0FDF4',
-     padding: 6,
-     borderRadius: 6,
+  blockchainPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: '#F0FDF4',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
+      alignSelf: 'flex-start',
   },
-  hashText: {
+  hashPillText: {
       fontSize: 10,
-      fontFamily: 'monospace',
       color: Colors.success,
-      flex: 1,
+      fontFamily: 'monospace',
+      maxWidth: 150,
+  },
+  emptyHistory: {
+      alignItems: 'center',
+      padding: 20,
+      gap: 12,
+  },
+  noHistory: {
+      fontSize: 13,
+      color: Colors.textTertiary,
+      fontStyle: 'italic',
   },
 });
 

@@ -16,6 +16,10 @@ export async function PATCH(
         description: body.description || undefined,
         parties: body.parties || undefined,
         location: body.location || undefined,
+        statements: body.statements || undefined,
+        evidence: body.evidence || undefined,
+        decisions: body.decisions || undefined,
+        familyTree: body.familyTree || undefined,
       },
     });
 
@@ -25,6 +29,14 @@ export async function PATCH(
     return NextResponse.json({ error: "Failed to update dispute", details: error.message }, { status: 500 });
   }
 }
+
+export async function PUT(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  return PATCH(request, { params });
+}
+
 
 export async function GET(
   request: Request,

@@ -23,8 +23,8 @@ export async function POST(request: Request) {
       orderBy: { createdAt: 'desc' }
     });
 
-    const previousHash = lastTx?.txHash || "0x0000000000000000000000000000000000000000000000000000000000000000";
-    const blockNumber = (lastTx?.blockNumber || 0) + 1;
+    const previousHash = (lastTx as any)?.txHash || "0x0000000000000000000000000000000000000000000000000000000000000000";
+    const blockNumber = ((lastTx as any)?.blockNumber || 0) + 1;
     
     // Simulate mining/hashing
     const timestamp = new Date().toISOString();

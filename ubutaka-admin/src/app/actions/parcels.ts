@@ -14,7 +14,7 @@ export async function verifyParcel(upi: string) {
         isVerified: true,
         verifiedAt: new Date(),
         certificateId: certificateId,
-      },
+      } as any,
     });
 
     revalidatePath("/admin/parcels");

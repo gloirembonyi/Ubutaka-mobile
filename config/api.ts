@@ -48,4 +48,7 @@ export const API_ENDPOINTS = {
   
   // Anomalies
   ANOMALIES: `${API_BASE_URL}/anomalies`,
+  
+  // Documents
+  DOCUMENTS: `${API_BASE_URL}/documents`,
 };

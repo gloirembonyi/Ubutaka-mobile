@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Image, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
+import NetInfo from '@react-native-community/netinfo';
 import { Screen, User, Parcel } from '../types';
 import { MOCK_USER } from '../constants';
 import { Colors, getColorWithOpacity } from '../styles/colors';
@@ -23,11 +24,16 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onR
   const [parcels, setParcels] = useState<Parcel[]>([]);
   const [loading, setLoading] = useState(true);
   const [verifying, setVerifying] = useState(false);
+  const [isOffline, setIsOffline] = useState(false);
   
   const displayUser = user || MOCK_USER;
 
   useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      setIsOffline(!state.isConnected);
+    });
     fetchParcels();
+    return () => unsubscribe();
   }, [user]);
 
   const fetchParcels = async () => {
@@ -95,6 +101,12 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onR
         <MainHeader user={displayUser} />
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+          {isOffline && (
+            <View style={styles.offlineBanner}>
+               <MaterialIcons name="cloud-off" size={16} color={Colors.white} />
+               <Text style={styles.offlineText}>Working Offline. Data will sync when connected.</Text>
+            </View>
+          )}
           <View style={styles.content}>
             {/* Verification Status Banner */}
             <Pressable 
@@ -646,6 +658,19 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: 'bold',
     color: Colors.textTertiary,
+  },
+  offlineBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F59E0B', // Amber
+    paddingVertical: 8,
+    gap: 8,
+  },
+  offlineText: {
+    color: Colors.white,
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });
 

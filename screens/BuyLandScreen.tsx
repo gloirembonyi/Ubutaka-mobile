@@ -6,6 +6,7 @@ import { Colors as AppColors } from '../styles/colors';
 import { GlobalStyles } from '../styles/globalStyles';
 import { API_ENDPOINTS } from '../config/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import SyncService from '../services/SyncService';
 
 interface BuyLandScreenProps {
   onNavigate: (screen: Screen) => void;
@@ -37,29 +38,36 @@ const BuyLandScreen: React.FC<any> = ({ onNavigate, params }) => {
         const userStr = await AsyncStorage.getItem('user');
         const user = userStr ? JSON.parse(userStr) : null;
 
-        const response = await fetch(API_ENDPOINTS.TRANSACTIONS, {
+        const payload = {
+          title: `Purchase of ${parcel.upi}`,
+          upi: parcel.upi,
+          type: 'SALE',
+          status: 'PENDING_PAYMENT',
+          date: new Date().toISOString(),
+          step: 'Payment Verification',
+          progress: 40,
+          sellerName: parcel.ownerName,
+          buyerName: user?.name || "Me",
+          price: parcel.price
+        };
+
+        const response = await SyncService.fetchWithSync(API_ENDPOINTS.TRANSACTIONS, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              title: `Purchase of ${parcel.upi}`,
-              upi: parcel.upi,
-              type: 'SALE',
-              status: 'PENDING_PAYMENT',
-              date: new Date().toISOString(),
-              step: 'Payment Verification',
-              progress: 40,
-              sellerName: parcel.ownerName,
-              buyerName: user?.name || "Me",
-              price: parcel.price
-            })
-          });
+            body: JSON.stringify(payload)
+        }) as any;
           
-          if (response.ok) {
-              Alert.alert("Offer Submitted", "The seller has been notified. Please proceed to payment.");
-              onNavigate('dashboard');
-          } else {
-              Alert.alert("Error", "Could not submit offer.");
-          }
+        if (response.ok) {
+            Alert.alert(
+                response.queued ? "Offline Mode" : "Offer Submitted", 
+                response.queued 
+                    ? "You are currently offline. Your purchase offer has been saved and will be sent automatically when you have signal."
+                    : "The seller has been notified. Please proceed to payment."
+            );
+            onNavigate('dashboard');
+        } else {
+            Alert.alert("Error", "Could not submit offer.");
+        }
     } catch (e) {
         Alert.alert("Error", "Network error");
     } finally {
@@ -98,6 +106,14 @@ const BuyLandScreen: React.FC<any> = ({ onNavigate, params }) => {
                <Text style={styles.label}>Seller</Text>
                <Text style={styles.value}>{parcel.ownerName}</Text>
            </View>
+           
+           <Pressable 
+                style={styles.historyBtn}
+                onPress={() => onNavigate('parcel-detail', { parcelData: parcel })}
+           >
+                <MaterialIcons name="history" size={18} color={AppColors.primary} />
+                <Text style={styles.historyBtnText}>Check Ownership History & Disputes</Text>
+           </Pressable>
         </View>
 
         <View style={styles.trustCard}>
@@ -143,6 +159,21 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
   label: { color: AppColors.textSecondary },
   value: { fontWeight: 'bold', color: AppColors.textPrimary },
+  historyBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      padding: 12,
+      backgroundColor: '#F1F5F9',
+      borderRadius: 12,
+      marginTop: 20
+  },
+  historyBtnText: {
+      color: AppColors.primary,
+      fontWeight: 'bold',
+      fontSize: 13
+  },
   
   trustCard: {
       backgroundColor: '#F0FDF4',

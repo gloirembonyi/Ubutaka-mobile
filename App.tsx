@@ -4,6 +4,7 @@ import { View, StyleSheet, Text, Pressable, useColorScheme, StatusBar } from 're
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Screen, Language, User } from './types';
+import SyncService from './services/SyncService';
 import { Colors } from './styles/colors';
 import { API_ENDPOINTS } from './config/api';
 import LandingScreen from './screens/LandingScreen';
@@ -28,6 +29,7 @@ import TaxPaymentScreen from './screens/TaxPaymentScreen';
 import CertificateScreen from './screens/CertificateScreen';
 import QRScannerScreen from './screens/QRScannerScreen';
 import LandMapScreen from './screens/LandMapScreen';
+import DocumentVaultScreen from './screens/DocumentVaultScreen';
 import BottomNav from './components/BottomNav';
 
 import AuthScreen from './screens/AuthScreen';
@@ -77,6 +79,7 @@ const App: React.FC = () => {
     };
 
     initialize();
+    SyncService.init();
 
     // Fetch initial data from API
     fetchUsers();
@@ -164,6 +167,7 @@ const App: React.FC = () => {
       case 'qr-scanner': return <QRScannerScreen onNavigate={handleNavigate} />;
       case 'land-map': return <LandMapScreen onNavigate={handleNavigate} />;
       case 'abunzi-dashboard': return <AbunziDashboardScreen onNavigate={handleNavigate} user={user} />;
+      case 'land-vault': return <DocumentVaultScreen onNavigate={handleNavigate} user={user} />;
       default: return <LandingScreen onNavigate={handleNavigate} />;
     }
   };

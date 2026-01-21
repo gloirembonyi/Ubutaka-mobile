@@ -5,7 +5,7 @@ import { MaterialIcons, Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import { Screen } from '../types';
+import { Screen, Parcel } from '../types';
 import { Certificate, LandTitle } from '../types/certificate';
 import { Colors, getColorWithOpacity } from '../styles/colors';
 import { GlobalStyles } from '../styles/globalStyles';

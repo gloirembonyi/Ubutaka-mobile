@@ -114,4 +114,16 @@ model AnomalyReport {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
-
+model LandDocument {
+  id           String   @id @default(cuid())
+  name         String
+  category     String   // Title Deed, Permit, Tax, Evidence, Historical
+  url          String
+  upi          String?
+  ownerId      String
+  fileDate     String?
+  description  String?
+  isEncrypted  Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}

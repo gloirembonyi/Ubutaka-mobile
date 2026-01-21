@@ -3,6 +3,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Image, ImageBackground } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
+import NetInfo from '@react-native-community/netinfo';
 import { Screen, User } from '../types';
 import { MOCK_USER } from '../constants';
 import { Colors, getColorWithOpacity } from '../styles/colors';
@@ -21,6 +22,14 @@ const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?background=0D8ABC&color=fff&
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme, onLogout, user }) => {
   const displayUser = user || MOCK_USER;
   const isDark = theme === 'dark';
+  const [isOffline, setIsOffline] = React.useState(false);
+
+  React.useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      setIsOffline(!state.isConnected);
+    });
+    return () => unsubscribe();
+  }, []);
 
   return (
     <View style={[GlobalStyles.container, isDark && styles.containerDark]}>
@@ -102,6 +111,13 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme, onLogo
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, isDark && styles.textDark]}>Digital Identity</Text>
         </View>
+
+        {isOffline && (
+            <View style={styles.offlineBanner}>
+               <MaterialIcons name="cloud-off" size={16} color={Colors.white} />
+               <Text style={styles.offlineText}>Offline Mode: Using cached data</Text>
+            </View>
+        )}
 
         {/* Digital ID Card */}
         <View style={styles.idCard}>
@@ -464,6 +480,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     color: Colors.textPrimary,
+  },
+  offlineBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F59E0B',
+    paddingVertical: 10,
+    borderRadius: 12,
+    gap: 8,
+    marginBottom: 16,
+  },
+  offlineText: {
+    color: Colors.white,
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });
 

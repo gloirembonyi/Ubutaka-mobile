@@ -25,7 +25,8 @@ export type Screen =
   | 'qr-scanner'
   | 'land-map'
   | 'abunzi-dashboard'
-  | 'my-parcels';
+  | 'my-parcels'
+  | 'land-vault';
 
 export type Language = 'RW' | 'EN';
 
@@ -95,4 +96,23 @@ export interface Dispute {
   village?: string;
   assignedAbunziId?: string;
   reportedById?: string;
+  
+  // Abunzi Portal Fields
+  statements?: string;  // JSON string
+  evidence?: string;    // JSON string
+  decisions?: string;   // JSON string
+  familyTree?: string;  // JSON string
+}
+
+export interface LandDocument {
+  id: string;
+  name: string;
+  category: string;
+  url: string;
+  upi?: string;
+  ownerId: string;
+  fileDate?: string;
+  description?: string;
+  isEncrypted: boolean;
+  createdAt: string;
 }
