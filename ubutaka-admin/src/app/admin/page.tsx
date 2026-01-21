@@ -1,5 +1,7 @@
 import AdminLayout from "@/components/AdminLayout";
 import prisma from "@/lib/db";
+
+export const dynamic = "force-dynamic";
 import { 
   Users, 
   Map as MapIcon, 

@@ -1,6 +1,8 @@
 import AdminLayout from "@/components/AdminLayout";
 import prisma from "@/lib/db";
 import { notFound } from "next/navigation";
+
+export const dynamic = "force-dynamic";
 import Image from "next/image";
 import { 
   MapPin, 
