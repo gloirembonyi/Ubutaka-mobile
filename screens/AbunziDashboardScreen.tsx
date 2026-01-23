@@ -49,7 +49,7 @@ const AbunziDashboardScreen: React.FC<AbunziDashboardScreenProps> = ({ onNavigat
     fetchDisputes();
   };
 
-  const jobs = disputes.filter(d => 
+  const jobs = disputes.filter((d: Dispute) => 
     activeTab === 'pending' ? d.status !== 'Resolved' : d.status === 'Resolved'
   );
 
@@ -143,11 +143,11 @@ const AbunziDashboardScreen: React.FC<AbunziDashboardScreenProps> = ({ onNavigat
           <View style={styles.jobsList}>
             {loading ? (
               <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: 40 }} />
-            ) : jobs.length > 0 ? jobs.map((job) => (
+            ) : jobs.length > 0 ? jobs.map((job: Dispute) => (
               <Pressable 
                 key={job.id}
                 onPress={() => onNavigate('dispute-detail')}
-                style={({ pressed }) => [
+                style={({ pressed }: { pressed: boolean }) => [
                   styles.jobCard,
                   pressed && GlobalStyles.pressed
                 ]}

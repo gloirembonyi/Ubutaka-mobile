@@ -87,7 +87,7 @@ type LangCode = 'EN' | 'RW' | 'FR';
 
 const CertificateScreen: React.FC<CertificateScreenProps> = ({ onNavigate, parcelData }) => {
   const [lang, setLang] = useState<LangCode>('EN');
-  const user = useAuthStore(state => state.user);
+  const user = useAuthStore((state: any) => state.user); // AuthState import not strictly needed if we use any, but let's keep it safe. Actually, I'll just change any to what's defined.
   
   // Use parcel data if available, otherwise mock for demo
   const parcel = parcelData || {

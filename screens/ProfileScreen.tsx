@@ -25,7 +25,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme, onLogo
   const [isOffline, setIsOffline] = React.useState(false);
 
   React.useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener(state => {
+    const unsubscribe = NetInfo.addEventListener((state: any) => {
       setIsOffline(!state.isConnected);
     });
     return () => unsubscribe();

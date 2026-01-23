@@ -6,21 +6,20 @@
 export const getApiBaseUrl = () => {
   // Get the API URL from environment variable
   const envUrl = process.env.EXPO_PUBLIC_API_URL;
+  const productionUrl = 'https://ubutaka-admin.vercel.app/api';
   
   if (__DEV__) {
-    // In development, use the environment variable
-    // If not set, provide a helpful error message
+    // In development, use the environment variable if available, otherwise fallback to local IP
     if (!envUrl) {
       console.warn('⚠️ EXPO_PUBLIC_API_URL is not set in .env file!');
-      console.warn('Please create a .env file with: EXPO_PUBLIC_API_URL="http://YOUR_IP:3000/api"');
-      return 'http://192.168.1.64:3000/api'; // Fallback to current network IP
+      return 'http://192.168.1.69:3000/api'; 
     }
-    console.log('✅ API Base URL:', envUrl);
     return envUrl;
   }
   
-  // Production URL
-  return envUrl || 'https://your-production-api.com/api';
+  // In production builds (like the APK you downloaded), use the Vercel URL
+  // unless an environment variable was explicitly provided during the build
+  return envUrl || productionUrl;
 };
 
 export const API_BASE_URL = getApiBaseUrl();

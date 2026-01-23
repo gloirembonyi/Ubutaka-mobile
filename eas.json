@@ -8,9 +8,16 @@
       "android": {
         "buildType": "apk"
       },
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://ubutaka-admin.vercel.app/api"
+      }
     },
-    "production": {}
+    "production": {
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://ubutaka-admin.vercel.app/api"
+      }
+    }
   },
   "submit": {
     "production": {}

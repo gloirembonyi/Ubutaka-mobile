@@ -53,7 +53,7 @@ const SupportScreen: React.FC<SupportScreenProps> = ({ onNavigate }) => {
       <View style={styles.content}>
         <Pressable
           onPress={() => onNavigate('dispute-list')}
-          style={({ pressed }) => [
+          style={({ pressed }: { pressed: boolean }) => [
             styles.disputeCard,
             pressed && GlobalStyles.pressed
           ]}
@@ -94,7 +94,7 @@ const SupportScreen: React.FC<SupportScreenProps> = ({ onNavigate }) => {
               <Pressable
                 key={idx}
                 onPress={() => setSelectedGuide(guide)}
-                style={({ pressed }) => [
+                style={({ pressed }: { pressed: boolean }) => [
                   styles.guideCard,
                   pressed && GlobalStyles.pressed
                 ]}

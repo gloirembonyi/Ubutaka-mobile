@@ -210,7 +210,7 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
                     <TextInput 
                       style={styles.selectInput}
                       value={formData.province}
-                      onChangeText={(text) => setFormData({...formData, province: text})}
+                      onChangeText={(text: string) => setFormData({...formData, province: text})}
                     />
                   </View>
                   <View style={styles.inputGroup}>
@@ -218,7 +218,7 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
                     <TextInput 
                       style={styles.selectInput}
                       value={formData.district}
-                      onChangeText={(text) => setFormData({...formData, district: text})}
+                      onChangeText={(text: string) => setFormData({...formData, district: text})}
                     />
                   </View>
                 </View>
@@ -229,7 +229,7 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
                     <TextInput 
                       style={styles.selectInput}
                       value={formData.sector}
-                      onChangeText={(text) => setFormData({...formData, sector: text})}
+                      onChangeText={(text: string) => setFormData({...formData, sector: text})}
                     />
                   </View>
                   <View style={styles.inputGroup}>
@@ -237,7 +237,7 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
                     <TextInput 
                       style={styles.selectInput}
                       value={formData.cell}
-                      onChangeText={(text) => setFormData({...formData, cell: text})}
+                      onChangeText={(text: string) => setFormData({...formData, cell: text})}
                     />
                   </View>
                   <View style={styles.inputGroup}>
@@ -246,7 +246,7 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
                       style={styles.selectInput}
                       placeholder="e.g. Isangano"
                       value={formData.village}
-                      onChangeText={(text) => setFormData({...formData, village: text})}
+                      onChangeText={(text: string) => setFormData({...formData, village: text})}
                     />
                   </View>
                 </View>
@@ -263,7 +263,7 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
                       placeholder="X/XX/XX/XX/XXXX"
                       placeholderTextColor={Colors.textTertiary}
                       value={formData.upi}
-                      onChangeText={(text) => setFormData({...formData, upi: text})}
+                      onChangeText={(text: string) => setFormData({...formData, upi: text})}
                     />
                     <MaterialIcons name="qr-code-scanner" size={20} color={Colors.textTertiary} />
                   </View>
@@ -303,7 +303,7 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
                   <TextInput 
                     style={styles.selectInput}
                     value={formData.landUse}
-                    onChangeText={(text) => setFormData({...formData, landUse: text})}
+                    onChangeText={(text: string) => setFormData({...formData, landUse: text})}
                   />
                 </View>
 
@@ -316,7 +316,7 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
                         placeholder="0"
                         keyboardType="numeric"
                         value={formData.size}
-                        onChangeText={(text) => setFormData({...formData, size: text})}
+                        onChangeText={(text: string) => setFormData({...formData, size: text})}
                       />
                       <Text style={styles.unitText}>m²</Text>
                     </View>
@@ -326,7 +326,7 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
                     <TextInput 
                       style={styles.selectInput}
                       value={formData.ownership}
-                      onChangeText={(text) => setFormData({...formData, ownership: text})}
+                      onChangeText={(text: string) => setFormData({...formData, ownership: text})}
                     />
                   </View>
                 </View>
@@ -349,7 +349,7 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
                   style={styles.selectInput}
                   placeholder="Enter full name as on ID"
                   value={formData.ownerName}
-                  onChangeText={(text) => setFormData({...formData, ownerName: text})}
+                  onChangeText={(text: string) => setFormData({...formData, ownerName: text})}
                 />
               </View>
 
@@ -360,7 +360,7 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
                   placeholder="1 1990 8 0000000 0 00"
                   keyboardType="numeric"
                   value={formData.ownerId}
-                  onChangeText={(text) => setFormData({...formData, ownerId: text})}
+                  onChangeText={(text: string) => setFormData({...formData, ownerId: text})}
                 />
               </View>
 
@@ -372,7 +372,7 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
                     placeholder="+250..."
                     keyboardType="phone-pad"
                     value={formData.ownerPhone}
-                    onChangeText={(text) => setFormData({...formData, ownerPhone: text})}
+                    onChangeText={(text: string) => setFormData({...formData, ownerPhone: text})}
                   />
                 </View>
               </View>
@@ -384,7 +384,7 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
                   placeholder="example@mail.com"
                   keyboardType="email-address"
                   value={formData.ownerEmail}
-                  onChangeText={(text) => setFormData({...formData, ownerEmail: text})}
+                  onChangeText={(text: string) => setFormData({...formData, ownerEmail: text})}
                 />
               </View>
             </View>

@@ -4,7 +4,7 @@
     "slug": "ubutaka",
     "version": "1.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "splash": {
       "backgroundColor": "#3b82f6",
       "resizeMode": "contain"
@@ -20,7 +20,13 @@
       "adaptiveIcon": {
         "backgroundColor": "#3b82f6"
       },
-      "package": "com.ubutaka.app"
+      "package": "com.ubutaka.app",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT"
+      ]
     },
     "web": {},
     "scheme": "ubutaka",
@@ -36,7 +42,13 @@
         {
           "faceIDPermission": "Allow $(PRODUCT_NAME) to use Face ID for secure login."
         }
-      ]
-    ]
+      ],
+      "expo-font"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "04e14d89-040e-451c-bdee-dda4fccf90ee"
+      }
+    }
   }
 }

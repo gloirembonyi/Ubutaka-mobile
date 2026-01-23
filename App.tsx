@@ -42,10 +42,7 @@ const App: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<Screen>('landing');
   const [language, setLanguage] = useState<Language>('RW');
   const [selectedDisputeId, setSelectedDisputeId] = useState<string | null>(null);
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    // Default to system preference, will be updated from AsyncStorage
-    return systemColorScheme === 'dark' ? 'dark' : 'light';
-  });
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
@@ -55,10 +52,11 @@ const App: React.FC = () => {
     const initialize = async () => {
       try {
         const savedTheme = await AsyncStorage.getItem('theme');
-        if (savedTheme === 'light' || savedTheme === 'dark') {
-          setTheme(savedTheme);
+        if (savedTheme === 'dark') {
+          setTheme('dark');
         } else {
-          setTheme(systemColorScheme === 'dark' ? 'dark' : 'light');
+          // Default to light for everything else (including 'light' or null)
+          setTheme('light');
         }
 
         const savedUser = await AsyncStorage.getItem('user');
@@ -124,8 +122,8 @@ const App: React.FC = () => {
     AsyncStorage.setItem('theme', theme);
   }, [theme]);
 
-  const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
-  const toggleLanguage = () => setLanguage(prev => prev === 'RW' ? 'EN' : 'RW');
+  const toggleTheme = () => setTheme((prev: 'light' | 'dark') => prev === 'light' ? 'dark' : 'light');
+  const toggleLanguage = () => setLanguage((prev: Language) => prev === 'RW' ? 'EN' : 'RW');
 
   const navigateToDispute = (id: string) => {
     setSelectedDisputeId(id);

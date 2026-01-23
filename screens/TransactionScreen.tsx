@@ -98,14 +98,14 @@ const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate, user 
               <View style={{ gap: 12 }}>
                 <Pressable 
                     onPress={() => onNavigate('dispute-list')}
-                    style={({pressed}) => [styles.simulateButton, pressed && {opacity: 0.8}]}
+                    style={({pressed}: {pressed: boolean}) => [styles.simulateButton, pressed && {opacity: 0.8}]}
                 >
                     <MaterialIcons name="fact-check" size={24} color={Colors.white} />
                     <Text style={styles.simulateText}>Review Pending Disputes</Text>
                 </Pressable>
                 <Pressable 
                     onPress={() => Alert.alert("Calendar", "Opening mediation desk schedule...")}
-                    style={({pressed}) => [styles.simulateButton, { backgroundColor: Colors.primary }, pressed && {opacity: 0.8}]}
+                    style={({pressed}: {pressed: boolean}) => [styles.simulateButton, { backgroundColor: Colors.primary }, pressed && {opacity: 0.8}]}
                 >
                     <MaterialIcons name="event-available" size={24} color={Colors.white} />
                     <Text style={styles.simulateText}>Manage Mediation Calendar</Text>
@@ -114,7 +114,7 @@ const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate, user 
             ) : (
               <Pressable 
                   onPress={handleCreateMockTx}
-                  style={({pressed}) => [styles.simulateButton, pressed && {opacity: 0.8}]}
+                  style={({pressed}: {pressed: boolean}) => [styles.simulateButton, pressed && {opacity: 0.8}]}
                   disabled={verifying}
               >
                   {verifying ? (
