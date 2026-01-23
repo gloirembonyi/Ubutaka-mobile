@@ -13,7 +13,7 @@ export const getApiBaseUrl = () => {
     if (!envUrl) {
       console.warn('⚠️ EXPO_PUBLIC_API_URL is not set in .env file!');
       console.warn('Please create a .env file with: EXPO_PUBLIC_API_URL="http://YOUR_IP:3000/api"');
-      return 'http://192.168.1.69:3000/api'; // Fallback to current network IP
+      return 'http://192.168.1.64:3000/api'; // Fallback to current network IP
     }
     console.log('✅ API Base URL:', envUrl);
     return envUrl;
