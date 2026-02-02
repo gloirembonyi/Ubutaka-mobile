@@ -7,6 +7,7 @@ import { Colors, getColorWithOpacity } from '../styles/colors';
 import { GlobalStyles } from '../styles/globalStyles';
 import { API_ENDPOINTS } from '../config/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { encryptData, encryptObject } from '../utils/encryption';
 import MainHeader from '../components/MainHeader';
 import { User } from '../types';
 
@@ -34,6 +35,8 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
     ownerId: '',
     ownerPhone: '',
     ownerEmail: '',
+    partners: [] as any[],
+    children: [] as any[],
     
     // Step 3: Docs
     hasIdCopy: false,
@@ -46,7 +49,16 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
   React.useEffect(() => {
     const loadUser = async () => {
       const savedUser = await AsyncStorage.getItem('user');
-      if (savedUser) setUser(JSON.parse(savedUser));
+      if (savedUser) {
+        const u = JSON.parse(savedUser);
+        setUser(u);
+        // Pre-fill owner info with current user
+        setFormData(prev => ({
+          ...prev,
+          ownerName: u.name || '',
+          ownerId: u.nationalId || '',
+        }));
+      }
     };
     loadUser();
   }, []);
@@ -83,6 +95,46 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
     );
   };
 
+  const addPartner = () => {
+    setFormData(prev => ({
+      ...prev,
+      partners: [...prev.partners, { name: '', id: '', relation: 'Partner' }]
+    }));
+  };
+
+  const removePartner = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      partners: prev.partners.filter((_, i: number) => i !== index)
+    }));
+  };
+
+  const updatePartner = (index: number, field: string, value: string) => {
+    const newPartners = [...formData.partners];
+    newPartners[index] = { ...newPartners[index], [field]: value };
+    setFormData(prev => ({ ...prev, partners: newPartners }));
+  };
+
+  const addChild = () => {
+    setFormData(prev => ({
+      ...prev,
+      children: [...prev.children, { name: '', age: '', id: '' }]
+    }));
+  };
+
+  const removeChild = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      children: prev.children.filter((_, i: number) => i !== index)
+    }));
+  };
+
+  const updateChild = (index: number, field: string, value: string) => {
+    const newChildren = [...formData.children];
+    newChildren[index] = { ...newChildren[index], [field]: value };
+    setFormData(prev => ({ ...prev, children: newChildren }));
+  };
+
   const handleSubmit = async () => {
     // Validation
     if (!formData.upi || !formData.size) {
@@ -114,6 +166,8 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
         imageUrl: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800',
         price: null,
         userId: user.id,
+        partners: encryptData(JSON.stringify(formData.partners)),
+        children: encryptData(JSON.stringify(formData.children)),
         coordinates: {
           type: "Polygon",
           coordinates: [[
@@ -150,7 +204,14 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
         'Success',
         `Parcel ${formData.upi} has been registered successfully!`,
         [
-          { text: 'OK', onPress: () => onNavigate('dashboard') }
+          { 
+            text: 'OK', 
+            onPress: () => {
+              // Navigate to dashboard and trigger refresh
+              onNavigate('dashboard');
+              // The dashboard will refresh parcels when it comes into focus
+            }
+          }
         ]
       );
     } catch (error) {
@@ -386,6 +447,65 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
                   value={formData.ownerEmail}
                   onChangeText={(text: string) => setFormData({...formData, ownerEmail: text})}
                 />
+              </View>
+
+              {/* Partners Section */}
+              <View style={styles.subSection}>
+                <View style={[styles.sectionHeader, { marginBottom: 10 }]}>
+                  <Text style={styles.subSectionTitle}>Joint Owners / Partners</Text>
+                  <Pressable onPress={addPartner} style={styles.addButton}>
+                    <MaterialIcons name="add" size={16} color={Colors.white} />
+                  </Pressable>
+                </View>
+                {formData.partners.map((partner: any, index: number) => (
+                  <View key={index} style={styles.itemRow}>
+                    <TextInput 
+                      style={[styles.smallInput, { flex: 2 }]} 
+                      placeholder="Name" 
+                      value={partner.name}
+                      onChangeText={(t: string) => updatePartner(index, 'name', t)}
+                    />
+                    <TextInput 
+                      style={[styles.smallInput, { flex: 1.5 }]} 
+                      placeholder="ID" 
+                      value={partner.id}
+                      onChangeText={(t: string) => updatePartner(index, 'id', t)}
+                    />
+                    <Pressable onPress={() => removePartner(index)}>
+                      <MaterialIcons name="remove-circle-outline" size={24} color={Colors.error} />
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+
+              {/* Children Section */}
+              <View style={styles.subSection}>
+                <View style={[styles.sectionHeader, { marginBottom: 10 }]}>
+                  <Text style={styles.subSectionTitle}>Family / Children</Text>
+                  <Pressable onPress={addChild} style={styles.addButton}>
+                    <MaterialIcons name="add" size={16} color={Colors.white} />
+                  </Pressable>
+                </View>
+                {formData.children.map((child: any, index: number) => (
+                  <View key={index} style={styles.itemRow}>
+                    <TextInput 
+                      style={[styles.smallInput, { flex: 2 }]} 
+                      placeholder="Name" 
+                      value={child.name}
+                      onChangeText={(t: string) => updateChild(index, 'name', t)}
+                    />
+                    <TextInput 
+                      style={[styles.smallInput, { flex: 0.8 }]} 
+                      placeholder="Age" 
+                      keyboardType="numeric"
+                      value={child.age}
+                      onChangeText={(t: string) => updateChild(index, 'age', t)}
+                    />
+                    <Pressable onPress={() => removeChild(index)}>
+                      <MaterialIcons name="remove-circle-outline" size={24} color={Colors.error} />
+                    </Pressable>
+                  </View>
+                ))}
               </View>
             </View>
           )}
@@ -844,6 +964,41 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: Colors.borderLight,
     marginVertical: 16,
+  },
+  subSection: {
+    marginTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
+    paddingTop: 20,
+  },
+  subSectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.textSecondary,
+  },
+  addButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  itemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 10,
+  },
+  smallInput: {
+    backgroundColor: Colors.backgroundLight,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 12,
+    color: Colors.textPrimary,
   },
 });
 

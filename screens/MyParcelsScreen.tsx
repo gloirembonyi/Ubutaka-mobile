@@ -7,6 +7,7 @@ import {
   Pressable,
   Image,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { Screen, Parcel, User } from "../types";
@@ -17,6 +18,7 @@ import { GlobalStyles } from "../styles/globalStyles";
 interface MyParcelsScreenProps {
   onNavigate: (screen: Screen, params?: any) => void;
   user?: User | null;
+  navigation?: any; // For focus listener
 }
 
 const MyParcelsScreen: React.FC<MyParcelsScreenProps> = ({
@@ -25,6 +27,7 @@ const MyParcelsScreen: React.FC<MyParcelsScreenProps> = ({
 }) => {
   const [parcels, setParcels] = useState<Parcel[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Mock data as fallback if API doesn't return or for demo
   const MOCK_PARCELS: Parcel[] = [
@@ -56,15 +59,36 @@ const MyParcelsScreen: React.FC<MyParcelsScreenProps> = ({
 
   useEffect(() => {
     fetchParcels();
-  }, []);
+    
+    const interval = setInterval(() => {
+      fetchParcels();
+    }, 5000); // Poll every 5 seconds
+    
+    return () => clearInterval(interval);
+  }, [user]);
 
-  const fetchParcels = async () => {
+  // Refresh when user changes
+  useEffect(() => {
+    fetchParcels();
+  }, [user?.name]);
+
+  const fetchParcels = async (isRefresh = false) => {
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+    
     try {
-      const resp = await fetch(`${API_ENDPOINTS.PARCELS}?ownerName=${encodeURIComponent(user?.name || '')}`);
+      const url = `${API_ENDPOINTS.PARCELS}?ownerName=${encodeURIComponent(user?.name || '')}`;
+      console.log('Fetching parcels from:', url);
+      const resp = await fetch(url);
       if (resp.ok) {
          const data = await resp.json();
+         console.log('Fetched parcels:', data.length);
          setParcels(data.length > 0 ? data : MOCK_PARCELS);
       } else {
+        console.error('Failed to fetch parcels:', resp.status);
         setParcels(MOCK_PARCELS);
       }
     } catch (err) {
@@ -72,7 +96,12 @@ const MyParcelsScreen: React.FC<MyParcelsScreenProps> = ({
       setParcels(MOCK_PARCELS);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const onRefresh = () => {
+    fetchParcels(true);
   };
 
   return (
@@ -103,7 +132,12 @@ const MyParcelsScreen: React.FC<MyParcelsScreenProps> = ({
           <Text style={styles.loadingText}>Loading your holdings...</Text>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView 
+          contentContainerStyle={styles.content}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        >
           {parcels.length === 0 ? (
             <View style={styles.emptyContainer}>
               <MaterialIcons

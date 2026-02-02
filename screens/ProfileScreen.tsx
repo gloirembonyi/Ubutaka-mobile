@@ -4,10 +4,12 @@ import { View, Text, StyleSheet, ScrollView, Pressable, Image, ImageBackground }
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import NetInfo from '@react-native-community/netinfo';
-import { Screen, User } from '../types';
+import { Screen, User, Parcel } from '../types';
 import { MOCK_USER } from '../constants';
 import { Colors, getColorWithOpacity } from '../styles/colors';
 import { GlobalStyles } from '../styles/globalStyles';
+import { API_ENDPOINTS } from '../config/api';
+import { getProfileCompletionPercentage, isProfileComplete } from '../utils/profileCompletion';
 
 interface ProfileScreenProps {
   onNavigate: (screen: Screen) => void;
@@ -23,13 +25,35 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme, onLogo
   const displayUser = user || MOCK_USER;
   const isDark = theme === 'dark';
   const [isOffline, setIsOffline] = React.useState(false);
+  const [parcelCount, setParcelCount] = React.useState(0);
+  const [loading, setLoading] = React.useState(true);
+
+  const completionPercentage = React.useMemo(() => getProfileCompletionPercentage(displayUser), [displayUser]);
+  const isComplete = React.useMemo(() => isProfileComplete(displayUser), [displayUser]);
 
   React.useEffect(() => {
     const unsubscribe = NetInfo.addEventListener((state: any) => {
       setIsOffline(!state.isConnected);
     });
+
+    const fetchParcelCount = async () => {
+      if (!displayUser.id) return;
+      try {
+        const response = await fetch(`${API_ENDPOINTS.PARCELS}?ownerName=${encodeURIComponent(displayUser.name)}`);
+        if (response.ok) {
+          const data: Parcel[] = await response.json();
+          setParcelCount(data.length);
+        }
+      } catch (error) {
+        console.log('Error fetching parcel count:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchParcelCount();
     return () => unsubscribe();
-  }, []);
+  }, [displayUser.id, displayUser.name]);
 
   return (
     <View style={[GlobalStyles.container, isDark && styles.containerDark]}>
@@ -74,20 +98,27 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme, onLogo
                     <Text style={styles.locationTabText}>{displayUser.district}</Text>
                   </View>
                 )}
+                
+                {/* Profile Completion Badge */}
+                <View style={[styles.completionBadge, { backgroundColor: isComplete ? getColorWithOpacity(Colors.success, 0.1) : getColorWithOpacity(Colors.warning, 0.1) }]}>
+                  <Text style={[styles.completionBadgeText, { color: isComplete ? Colors.success : Colors.warning }]}>
+                    {isComplete ? 'Profile Complete' : `${completionPercentage}% Complete`}
+                  </Text>
+                </View>
               </View>
             </View>
 
             <View style={styles.statsRow}>
               <View style={styles.statItem}>
                 <Text style={[styles.statValue, isDark && styles.textDark]}>
-                  {displayUser.role === 'ABUNZI' ? '8' : '2'}
+                  {displayUser.role === 'ABUNZI' ? '8' : parcelCount}
                 </Text>
                 <Text style={styles.statLabel}>{displayUser.role === 'ABUNZI' ? 'Cases' : 'Parcels'}</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
                 <Text style={[styles.statValue, isDark && styles.textDark]}>
-                  {displayUser.role === 'ABUNZI' ? '96%' : '1'}
+                  {displayUser.role === 'ABUNZI' ? '96%' : (parcelCount > 0 ? '0' : '1')}
                 </Text>
                 <Text style={styles.statLabel}>{displayUser.role === 'ABUNZI' ? 'Success' : 'Pending'}</Text>
               </View>
@@ -168,13 +199,25 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme, onLogo
         </View>
 
         <View style={styles.menuGrid}>
+          <Pressable 
+            style={[styles.menuItem, isDark && styles.menuItemDark]}
+            onPress={() => onNavigate('profile-completion')}
+          >
+            <View style={[styles.menuIcon, { backgroundColor: getColorWithOpacity(Colors.primary, 0.1) }]}>
+              <MaterialIcons name="person-add" size={24} color={Colors.primary} />
+            </View>
+            <Text style={[styles.menuLabel, isDark && styles.textDark]}>Complete Profile</Text>
+          </Pressable>
           <Pressable style={[styles.menuItem, isDark && styles.menuItemDark]}>
             <View style={[styles.menuIcon, { backgroundColor: getColorWithOpacity(Colors.primary, 0.1) }]}>
               <MaterialIcons name="folder-shared" size={24} color={Colors.primary} />
             </View>
             <Text style={[styles.menuLabel, isDark && styles.textDark]}>My Documents</Text>
           </Pressable>
-          <Pressable style={[styles.menuItem, isDark && styles.menuItemDark]}>
+          <Pressable 
+            style={[styles.menuItem, isDark && styles.menuItemDark]}
+            onPress={() => onNavigate('transactions')}
+          >
             <View style={[styles.menuIcon, { backgroundColor: getColorWithOpacity(Colors.success, 0.1) }]}>
               <MaterialIcons name="history" size={24} color={Colors.success} />
             </View>
@@ -312,6 +355,17 @@ const styles = StyleSheet.create({
   locationTabText: {
     fontSize: 12,
     color: Colors.textSecondary,
+  },
+  completionBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginTop: 4,
+  },
+  completionBadgeText: {
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   statsRow: {
     flexDirection: 'row',

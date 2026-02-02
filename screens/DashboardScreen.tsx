@@ -29,23 +29,38 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onR
   const displayUser = user || MOCK_USER;
 
   useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener((state: any) => {
+    const unsubscribe = NetInfo.addEventListener((state) => {
       setIsOffline(!state.isConnected);
     });
     fetchParcels();
     return () => unsubscribe();
   }, [user]);
 
+  // Refresh parcels when screen comes into focus (after registration)
+  useEffect(() => {
+    // This will be called when component mounts or user changes
+    const interval = setInterval(() => {
+      fetchParcels();
+    }, 5000); // Refresh every 5 seconds for real-time feel
+
+    return () => clearInterval(interval);
+  }, [user]);
+
   const fetchParcels = async () => {
     if (!displayUser.name) return;
     try {
-      const resp = await fetch(`${API_ENDPOINTS.PARCELS}?ownerName=${encodeURIComponent(displayUser.name)}`);
+      const url = `${API_ENDPOINTS.PARCELS}?ownerName=${encodeURIComponent(displayUser.name)}`;
+      console.log('Dashboard: Fetching parcels from:', url);
+      const resp = await fetch(url);
       if (resp.ok) {
         const data = await resp.json();
+        console.log('Dashboard: Fetched parcels:', data.length);
         setParcels(data);
+      } else {
+        console.error('Dashboard: Failed to fetch parcels:', resp.status);
       }
     } catch (err) {
-      console.error('Fetch parcels error:', err);
+      console.error('Dashboard: Fetch parcels error:', err);
     } finally {
       setLoading(false);
     }
@@ -91,6 +106,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onR
     { icon: 'qr-code-scanner', label: 'Verify Title', screen: 'qr-scanner' },
     { icon: 'receipt-long', label: 'Transactions', screen: 'transactions' },
     { icon: 'account-tree', label: 'Inheritance', screen: 'inheritance' },
+    { icon: 'wifi-off', label: 'Offline Mode', screen: 'offline' },
     { icon: 'gavel', label: 'Report Dispute', screen: 'report-anomaly', params: { type: 'Dispute' } },
     { icon: 'report-problem', label: 'Report Anomaly', screen: 'report-anomaly', params: { type: 'Anomaly' } }
   ];
@@ -162,7 +178,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onR
                   <MaterialIcons name="location-on" size={14} color={Colors.accent} />
                   <Text style={styles.heroLocationText}>
                     {loading ? 'Fetching location...' : 
-                     parcels.length > 0 ? Array.from(new Set(parcels.map(p => p.district))).join(' & ') + ' Districts' : 
+                     parcels.length > 0 ? Array.from(new Set(parcels.map((p: Parcel) => p.district))).join(' & ') + ' Districts' : 
                      'No parcels registered'}
                   </Text>
                 </View>
@@ -173,13 +189,13 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onR
             </View>
             <View style={styles.heroButtons}>
               <Pressable 
-                onPress={(e: any) => { e.stopPropagation(); onNavigate('certificate'); }}
+                onPress={(e) => { e.stopPropagation(); onNavigate('certificate'); }}
                 style={styles.heroButtonPrimary}
               >
                 <Text style={styles.heroButtonText}>Land Certificates</Text>
               </Pressable>
               <Pressable 
-                onPress={(e: any) => { e.stopPropagation(); onNavigate('register-land'); }}
+                onPress={(e) => { e.stopPropagation(); onNavigate('register-land'); }}
                 style={styles.heroButtonSecondary}
               >
                 <Text style={styles.heroButtonSecondaryText}>Register New</Text>
@@ -192,11 +208,11 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onR
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Land Actions</Text>
           <View style={styles.actionsGrid}>
-            {actions.map((action, idx) => (
+            {actions.map((action, idx: number) => (
               <Pressable 
                 key={idx} 
                 onPress={() => onNavigate(action.screen as Screen, (action as any).params)}
-                style={({ pressed }: { pressed: boolean }) => [
+                style={({ pressed }) => [
                   styles.actionCard,
                   pressed && GlobalStyles.pressed
                 ]}

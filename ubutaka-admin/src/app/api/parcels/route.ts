@@ -16,9 +16,10 @@ export async function GET(request: Request) {
       orderBy: { createdAt: "desc" },
     });
     return NextResponse.json(parcels);
-  } catch (error: any) {
-    console.error("GET parcels error:", error);
-    return NextResponse.json({ error: "Failed to fetch parcels", details: error.message }, { status: 500 });
+  } catch (error) {
+    const err = error as Error;
+    console.error("GET parcels error:", err);
+    return NextResponse.json({ error: "Failed to fetch parcels", details: err.message }, { status: 500 });
   }
 }
 
@@ -41,8 +42,10 @@ export async function POST(request: Request) {
         price: body.price || null,
         coordinates: body.coordinates ? JSON.stringify(body.coordinates) : null,
         documents: body.documents ? JSON.stringify(body.documents) : null,
+        partners: body.partners || null,
+        children: body.children || null,
         userId: body.userId || null,
-      } as any,
+      },
     });
     return NextResponse.json(parcel);
   } catch (error) {

@@ -3,17 +3,28 @@
 // To find your IP on Windows: run `ipconfig` and look for IPv4 Address
 // To find your IP on Mac/Linux: run `ifconfig` or `hostname -I`
 
+import Constants from 'expo-constants';
+
 export const getApiBaseUrl = () => {
   // Get the API URL from environment variable
-  const envUrl = process.env.EXPO_PUBLIC_API_URL;
+  // Expo loads EXPO_PUBLIC_* variables from .env file automatically
+  let envUrl = process.env.EXPO_PUBLIC_API_URL || Constants.expoConfig?.extra?.apiUrl;
+  
+  // Strip quotes if present (sometimes .env files have quotes)
+  if (envUrl && typeof envUrl === 'string') {
+    envUrl = envUrl.replace(/^["']|["']$/g, '').trim();
+  }
+  
   const productionUrl = 'https://ubutaka-admin.vercel.app/api';
   
   if (__DEV__) {
     // In development, use the environment variable if available, otherwise fallback to local IP
     if (!envUrl) {
       console.warn('⚠️ EXPO_PUBLIC_API_URL is not set in .env file!');
-      return 'http://192.168.1.69:3000/api'; 
+      console.warn('⚠️ Falling back to default: http://192.168.1.65:3000/api');
+      return 'http://192.168.1.65:3000/api'; 
     }
+    console.log('✅ API Base URL:', envUrl);
     return envUrl;
   }
   
@@ -22,6 +33,7 @@ export const getApiBaseUrl = () => {
   return envUrl || productionUrl;
 };
 
+// Compute API_BASE_URL (quotes already stripped in getApiBaseUrl)
 export const API_BASE_URL = getApiBaseUrl();
 
 // API Endpoints

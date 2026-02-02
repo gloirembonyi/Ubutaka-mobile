@@ -16,7 +16,12 @@ export async function PATCH(
         name: body.name || undefined,
         nationalId: body.nationalId || undefined,
         avatar: body.avatar || undefined,
-      },
+        // Profile completion fields
+        idPictureUrl: body.idPictureUrl !== undefined ? body.idPictureUrl : undefined,
+        biometricRegistered: body.biometricRegistered !== undefined ? body.biometricRegistered : undefined,
+        digitalSignature: body.digitalSignature !== undefined ? body.digitalSignature : undefined,
+        profileCompleted: body.profileCompleted !== undefined ? body.profileCompleted : undefined,
+      } as any,
     });
 
     return NextResponse.json(user);
