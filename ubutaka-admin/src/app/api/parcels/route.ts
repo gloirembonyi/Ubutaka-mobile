@@ -5,14 +5,18 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const ownerName = searchParams.get('ownerName');
+    const status = searchParams.get('status');
     
+    let whereClause: any = {};
+    if (ownerName) {
+      whereClause.ownerName = { equals: ownerName, mode: 'insensitive' };
+    }
+    if (status) {
+      whereClause.status = { equals: status, mode: 'insensitive' };
+    }
+
     const parcels = await prisma.parcel.findMany({
-      where: ownerName ? { 
-        ownerName: {
-          equals: ownerName,
-          mode: 'insensitive'
-        }
-      } : {},
+      where: whereClause,
       orderBy: { createdAt: "desc" },
     });
     return NextResponse.json(parcels);

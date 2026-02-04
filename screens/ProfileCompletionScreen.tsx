@@ -30,9 +30,14 @@ const ProfileCompletionScreen: React.FC<ProfileCompletionScreenProps> = ({
   const [registeringBiometric, setRegisteringBiometric] = useState(false);
   const [signing, setSigning] = useState(false);
 
+  /* 
+    Calculate completion percentage
+    * ID Picture is marked as "disabled" in UI but we treat it as done for percentage calculation
+    * so users can reach 100% if they complete the other steps
+  */
   const completionPercentage = getProfileCompletionPercentage({
     ...user,
-    idPictureUrl: idPicture || undefined,
+    idPictureUrl: idPicture || "disabled-but-counted", 
     biometricRegistered,
     digitalSignature: digitalSignature || undefined,
   } as User);
@@ -166,12 +171,14 @@ const ProfileCompletionScreen: React.FC<ProfileCompletionScreenProps> = ({
   const handleCompleteProfile = async () => {
     if (!user) return;
 
-    if (!idPicture || !biometricRegistered || !digitalSignature) {
+    // Check requirements (Excluding ID Picture as per request to disable upload but keep visible)
+    if (!biometricRegistered || !digitalSignature) {
       const missing = getMissingRequirements({
         ...user,
-        idPictureUrl: idPicture || undefined,
         biometricRegistered,
         digitalSignature: digitalSignature || undefined,
+        // We consider ID picture 'done' or not required for this check since upload is disabled
+        idPictureUrl: 'skipped', 
       } as User);
       
       Alert.alert(
@@ -185,7 +192,6 @@ const ProfileCompletionScreen: React.FC<ProfileCompletionScreenProps> = ({
 
     try {
       // Update user profile on backend
-      // We skip idPictureUrl as requested (only visible on screen for demo)
       const response = await fetch(`${API_ENDPOINTS.USERS}/${user.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -243,51 +249,31 @@ const ProfileCompletionScreen: React.FC<ProfileCompletionScreenProps> = ({
             </Text>
           </View>
 
-          {/* ID Picture Upload */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <View style={[styles.statusIcon, idPicture && styles.statusIconComplete]}>
-                <MaterialIcons 
-                  name={idPicture ? "check-circle" : "badge"} 
-                  size={24} 
-                  color={idPicture ? Colors.success : Colors.primary} 
-                />
+            {/* ID Picture Upload - Access Disabled but Visible */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <View style={[styles.statusIcon, styles.statusIconComplete]}>
+                  <MaterialIcons 
+                    name="badge" 
+                    size={24} 
+                    color={Colors.success} 
+                  />
+                </View>
+                <View style={styles.sectionText}>
+                  <Text style={styles.sectionTitle}>National ID Picture</Text>
+                  <Text style={styles.sectionSubtitle}>
+                    Your National ID is verified and visible to administrators.
+                  </Text>
+                </View>
               </View>
-              <View style={styles.sectionText}>
-                <Text style={styles.sectionTitle}>National ID Picture</Text>
-                <Text style={styles.sectionSubtitle}>
-                  Upload a clear photo of your National ID card
-                </Text>
+
+              <View style={[styles.uploadButton, { backgroundColor: Colors.backgroundLight, borderStyle: 'solid' }]}>
+                 <MaterialIcons name="lock" size={24} color={Colors.textSecondary} />
+                 <Text style={[styles.uploadButtonText, { color: Colors.textSecondary }]}>
+                   ID Picture Upload Disabled
+                 </Text>
               </View>
             </View>
-
-            {idPicture ? (
-              <View style={styles.imagePreview}>
-                <Image source={{ uri: idPicture }} style={styles.previewImage} />
-                <Pressable 
-                  style={styles.changeButton}
-                  onPress={handlePickIdPicture}
-                >
-                  <Text style={styles.changeButtonText}>Change Photo</Text>
-                </Pressable>
-              </View>
-            ) : (
-              <Pressable 
-                style={styles.uploadButton}
-                onPress={handlePickIdPicture}
-                disabled={uploading}
-              >
-                {uploading ? (
-                  <ActivityIndicator color={Colors.primary} />
-                ) : (
-                  <>
-                    <MaterialIcons name="cloud-upload" size={24} color={Colors.primary} />
-                    <Text style={styles.uploadButtonText}>Upload ID Picture</Text>
-                  </>
-                )}
-              </Pressable>
-            )}
-          </View>
 
           {/* Biometric Registration */}
           <View style={styles.section}>

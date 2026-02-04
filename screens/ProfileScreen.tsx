@@ -198,6 +198,58 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme, onLogo
           </View>
         </View>
 
+        {/* Personal Details Section */}
+        <View style={styles.sectionHeader}>
+           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+              <Text style={[styles.sectionTitle, isDark && styles.textDark]}>Personal Details</Text>
+              <Pressable 
+                onPress={() => onNavigate('edit-profile')}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+              >
+                <Text style={{ color: Colors.primary, fontWeight: 'bold', fontSize: 14 }}>Edit</Text>
+                <MaterialIcons name="edit" size={16} color={Colors.primary} />
+              </Pressable>
+           </View>
+        </View>
+
+        <View style={[styles.detailsCard, isDark && styles.detailsCardDark]}>
+           <View style={styles.detailRow}>
+              <View style={styles.detailIcon}>
+                 <MaterialIcons name="email" size={20} color={Colors.primary} />
+              </View>
+              <View>
+                 <Text style={styles.detailLabel}>Email Address</Text>
+                 <Text style={[styles.detailValue, isDark && styles.textDark]}>{displayUser.email || 'Not set'}</Text>
+              </View>
+           </View>
+           
+           <View style={styles.divider} />
+
+           <View style={styles.detailRow}>
+              <View style={styles.detailIcon}>
+                 <MaterialIcons name="phone" size={20} color={Colors.primary} />
+              </View>
+              <View>
+                 <Text style={styles.detailLabel}>Phone Number</Text>
+                 <Text style={[styles.detailValue, isDark && styles.textDark]}>{displayUser.phone || 'Not set'}</Text>
+              </View>
+           </View>
+
+           <View style={styles.divider} />
+
+           <View style={styles.detailRow}>
+              <View style={styles.detailIcon}>
+                 <MaterialIcons name="location-on" size={20} color={Colors.primary} />
+              </View>
+              <View>
+                 <Text style={styles.detailLabel}>Address</Text>
+                 <Text style={[styles.detailValue, isDark && styles.textDark]}>
+                    {[displayUser.district, displayUser.sector, displayUser.cell, displayUser.village].filter(Boolean).join(', ') || 'Kigali, Rwanda'}
+                 </Text>
+              </View>
+           </View>
+        </View>
+
         <View style={styles.menuGrid}>
           <Pressable 
             style={[styles.menuItem, isDark && styles.menuItemDark]}
@@ -244,6 +296,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme, onLogo
     </View>
   );
 };
+
+export default ProfileScreen;
 
 const styles = StyleSheet.create({
   containerDark: {
@@ -550,6 +604,47 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
   },
+  detailsCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  detailsCardDark: {
+    backgroundColor: Colors.surfaceDark,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  detailIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: getColorWithOpacity(Colors.primary, 0.1),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  detailLabel: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginBottom: 2,
+  },
+  detailValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: Colors.borderLight,
+    marginVertical: 16,
+    marginLeft: 56, // Align with text
+  },
 });
-
-export default ProfileScreen;

@@ -12,7 +12,7 @@ export async function PATCH(
     const user = await prisma.user.update({
       where: { id },
       data: {
-        isVerified: body.isVerified !== undefined ? body.isVerified : undefined,
+        isVerified: body.profileCompleted === true ? true : (body.isVerified !== undefined ? body.isVerified : undefined),
         name: body.name || undefined,
         nationalId: body.nationalId || undefined,
         avatar: body.avatar || undefined,
@@ -21,7 +21,7 @@ export async function PATCH(
         biometricRegistered: body.biometricRegistered !== undefined ? body.biometricRegistered : undefined,
         digitalSignature: body.digitalSignature !== undefined ? body.digitalSignature : undefined,
         profileCompleted: body.profileCompleted !== undefined ? body.profileCompleted : undefined,
-      } as any,
+      },
     });
 
     return NextResponse.json(user);
