@@ -1,9 +1,18 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const name = searchParams.get('name');
+
     const transactions = await prisma.transaction.findMany({
+      where: name ? {
+        OR: [
+          { sellerName: { equals: name, mode: 'insensitive' } },
+          { buyerName: { equals: name, mode: 'insensitive' } }
+        ]
+      } : {},
       orderBy: { createdAt: "desc" },
     });
     return NextResponse.json(transactions);
@@ -23,8 +32,8 @@ export async function POST(request: Request) {
       orderBy: { createdAt: 'desc' }
     });
 
-    const previousHash = (lastTx as any)?.txHash || "0x0000000000000000000000000000000000000000000000000000000000000000";
-    const blockNumber = ((lastTx as any)?.blockNumber || 0) + 1;
+    const previousHash = lastTx?.txHash || "0x0000000000000000000000000000000000000000000000000000000000000000";
+    const blockNumber = (lastTx?.blockNumber || 0) + 1;
     
     // Simulate mining/hashing
     const timestamp = new Date().toISOString();
@@ -52,7 +61,7 @@ export async function POST(request: Request) {
         blockNumber: blockNumber,
         previousHash: previousHash,
         gasFee: "0.00045 ETH", // Simulated fee
-      } as any,
+      },
     });
     return NextResponse.json(transaction);
   } catch (error) {

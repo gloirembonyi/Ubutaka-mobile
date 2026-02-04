@@ -4,10 +4,12 @@ import { View, Text, StyleSheet, ScrollView, Pressable, Image, ImageBackground }
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import NetInfo from '@react-native-community/netinfo';
-import { Screen, User } from '../types';
+import { Screen, User, Parcel } from '../types';
 import { MOCK_USER } from '../constants';
 import { Colors, getColorWithOpacity } from '../styles/colors';
 import { GlobalStyles } from '../styles/globalStyles';
+import { API_ENDPOINTS } from '../config/api';
+import { getProfileCompletionPercentage, isProfileComplete } from '../utils/profileCompletion';
 
 interface ProfileScreenProps {
   onNavigate: (screen: Screen) => void;
@@ -23,13 +25,35 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme, onLogo
   const displayUser = user || MOCK_USER;
   const isDark = theme === 'dark';
   const [isOffline, setIsOffline] = React.useState(false);
+  const [parcelCount, setParcelCount] = React.useState(0);
+  const [loading, setLoading] = React.useState(true);
+
+  const completionPercentage = React.useMemo(() => getProfileCompletionPercentage(displayUser), [displayUser]);
+  const isComplete = React.useMemo(() => isProfileComplete(displayUser), [displayUser]);
 
   React.useEffect(() => {
     const unsubscribe = NetInfo.addEventListener((state: any) => {
       setIsOffline(!state.isConnected);
     });
+
+    const fetchParcelCount = async () => {
+      if (!displayUser.id) return;
+      try {
+        const response = await fetch(`${API_ENDPOINTS.PARCELS}?ownerName=${encodeURIComponent(displayUser.name)}`);
+        if (response.ok) {
+          const data: Parcel[] = await response.json();
+          setParcelCount(data.length);
+        }
+      } catch (error) {
+        console.log('Error fetching parcel count:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchParcelCount();
     return () => unsubscribe();
-  }, []);
+  }, [displayUser.id, displayUser.name]);
 
   return (
     <View style={[GlobalStyles.container, isDark && styles.containerDark]}>
@@ -74,20 +98,27 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme, onLogo
                     <Text style={styles.locationTabText}>{displayUser.district}</Text>
                   </View>
                 )}
+                
+                {/* Profile Completion Badge */}
+                <View style={[styles.completionBadge, { backgroundColor: isComplete ? getColorWithOpacity(Colors.success, 0.1) : getColorWithOpacity(Colors.warning, 0.1) }]}>
+                  <Text style={[styles.completionBadgeText, { color: isComplete ? Colors.success : Colors.warning }]}>
+                    {isComplete ? 'Profile Complete' : `${completionPercentage}% Complete`}
+                  </Text>
+                </View>
               </View>
             </View>
 
             <View style={styles.statsRow}>
               <View style={styles.statItem}>
                 <Text style={[styles.statValue, isDark && styles.textDark]}>
-                  {displayUser.role === 'ABUNZI' ? '8' : '2'}
+                  {displayUser.role === 'ABUNZI' ? '8' : parcelCount}
                 </Text>
                 <Text style={styles.statLabel}>{displayUser.role === 'ABUNZI' ? 'Cases' : 'Parcels'}</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
                 <Text style={[styles.statValue, isDark && styles.textDark]}>
-                  {displayUser.role === 'ABUNZI' ? '96%' : '1'}
+                  {displayUser.role === 'ABUNZI' ? '96%' : (parcelCount > 0 ? '0' : '1')}
                 </Text>
                 <Text style={styles.statLabel}>{displayUser.role === 'ABUNZI' ? 'Success' : 'Pending'}</Text>
               </View>
@@ -167,14 +198,78 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme, onLogo
           </View>
         </View>
 
+        {/* Personal Details Section */}
+        <View style={styles.sectionHeader}>
+           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+              <Text style={[styles.sectionTitle, isDark && styles.textDark]}>Personal Details</Text>
+              <Pressable 
+                onPress={() => onNavigate('edit-profile')}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+              >
+                <Text style={{ color: Colors.primary, fontWeight: 'bold', fontSize: 14 }}>Edit</Text>
+                <MaterialIcons name="edit" size={16} color={Colors.primary} />
+              </Pressable>
+           </View>
+        </View>
+
+        <View style={[styles.detailsCard, isDark && styles.detailsCardDark]}>
+           <View style={styles.detailRow}>
+              <View style={styles.detailIcon}>
+                 <MaterialIcons name="email" size={20} color={Colors.primary} />
+              </View>
+              <View>
+                 <Text style={styles.detailLabel}>Email Address</Text>
+                 <Text style={[styles.detailValue, isDark && styles.textDark]}>{displayUser.email || 'Not set'}</Text>
+              </View>
+           </View>
+           
+           <View style={styles.divider} />
+
+           <View style={styles.detailRow}>
+              <View style={styles.detailIcon}>
+                 <MaterialIcons name="phone" size={20} color={Colors.primary} />
+              </View>
+              <View>
+                 <Text style={styles.detailLabel}>Phone Number</Text>
+                 <Text style={[styles.detailValue, isDark && styles.textDark]}>{displayUser.phone || 'Not set'}</Text>
+              </View>
+           </View>
+
+           <View style={styles.divider} />
+
+           <View style={styles.detailRow}>
+              <View style={styles.detailIcon}>
+                 <MaterialIcons name="location-on" size={20} color={Colors.primary} />
+              </View>
+              <View>
+                 <Text style={styles.detailLabel}>Address</Text>
+                 <Text style={[styles.detailValue, isDark && styles.textDark]}>
+                    {[displayUser.district, displayUser.sector, displayUser.cell, displayUser.village].filter(Boolean).join(', ') || 'Kigali, Rwanda'}
+                 </Text>
+              </View>
+           </View>
+        </View>
+
         <View style={styles.menuGrid}>
+          <Pressable 
+            style={[styles.menuItem, isDark && styles.menuItemDark]}
+            onPress={() => onNavigate('profile-completion')}
+          >
+            <View style={[styles.menuIcon, { backgroundColor: getColorWithOpacity(Colors.primary, 0.1) }]}>
+              <MaterialIcons name="person-add" size={24} color={Colors.primary} />
+            </View>
+            <Text style={[styles.menuLabel, isDark && styles.textDark]}>Complete Profile</Text>
+          </Pressable>
           <Pressable style={[styles.menuItem, isDark && styles.menuItemDark]}>
             <View style={[styles.menuIcon, { backgroundColor: getColorWithOpacity(Colors.primary, 0.1) }]}>
               <MaterialIcons name="folder-shared" size={24} color={Colors.primary} />
             </View>
             <Text style={[styles.menuLabel, isDark && styles.textDark]}>My Documents</Text>
           </Pressable>
-          <Pressable style={[styles.menuItem, isDark && styles.menuItemDark]}>
+          <Pressable 
+            style={[styles.menuItem, isDark && styles.menuItemDark]}
+            onPress={() => onNavigate('transactions')}
+          >
             <View style={[styles.menuIcon, { backgroundColor: getColorWithOpacity(Colors.success, 0.1) }]}>
               <MaterialIcons name="history" size={24} color={Colors.success} />
             </View>
@@ -201,6 +296,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme, onLogo
     </View>
   );
 };
+
+export default ProfileScreen;
 
 const styles = StyleSheet.create({
   containerDark: {
@@ -312,6 +409,17 @@ const styles = StyleSheet.create({
   locationTabText: {
     fontSize: 12,
     color: Colors.textSecondary,
+  },
+  completionBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginTop: 4,
+  },
+  completionBadgeText: {
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   statsRow: {
     flexDirection: 'row',
@@ -496,6 +604,47 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
   },
+  detailsCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  detailsCardDark: {
+    backgroundColor: Colors.surfaceDark,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  detailIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: getColorWithOpacity(Colors.primary, 0.1),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  detailLabel: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginBottom: 2,
+  },
+  detailValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: Colors.borderLight,
+    marginVertical: 16,
+    marginLeft: 56, // Align with text
+  },
 });
-
-export default ProfileScreen;

@@ -24,6 +24,12 @@ model User {
   sector     String?
   cell       String?
   village    String?
+  
+  // Profile Completion Fields
+  idPictureUrl      String?  // URL to uploaded ID picture
+  biometricRegistered Boolean @default(false)  // Face/biometric registered
+  digitalSignature   String?  // Digital signature data (base64 or URL)
+  profileCompleted   Boolean  @default(false)  // Overall profile completion status
 }
 
 model Parcel {
@@ -44,6 +50,8 @@ model Parcel {
   certificateId String?   @unique
   documents     String?   // JSON string of documents
   coordinates   String?   // JSON string of boundary coordinates
+  partners      String?   // JSON string of joint owners/partners
+  children      String?   // JSON string of children/dependents
   userId        String?   // Link to User model
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt

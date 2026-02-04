@@ -35,6 +35,9 @@ import BottomNav from './components/BottomNav';
 import AuthScreen from './screens/AuthScreen';
 import AbunziDashboardScreen from './screens/AbunziDashboardScreen';
 import MyParcelsScreen from './screens/MyParcelsScreen';
+import ProfileCompletionScreen from './screens/ProfileCompletionScreen';
+import { isProfileComplete } from './utils/profileCompletion';
+import EditProfileScreen from './screens/EditProfileScreen';
 
 
 const App: React.FC = () => {
@@ -108,8 +111,13 @@ const App: React.FC = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch(API_ENDPOINTS.USERS);
-      if (!response.ok) return;
+      const url = API_ENDPOINTS.USERS;
+      console.log('Fetching users from:', url);
+      const response = await fetch(url);
+      if (!response.ok) {
+        console.error('Failed to fetch users:', response.status, response.statusText);
+        return;
+      }
       const data = await response.json();
       console.log('Fetched users:', data);
     } catch (err) {
@@ -133,6 +141,16 @@ const App: React.FC = () => {
   const [navParams, setNavParams] = useState<any>(null);
 
   const handleNavigate = (screen: Screen, params?: any) => {
+    // Check if action requires profile completion
+    const requiresProfile = ['register-land', 'sell-land', 'buy-land', 'marketplace'].includes(screen);
+    
+    if (requiresProfile && user && !isProfileComplete(user)) {
+      // Show profile completion screen instead
+      setNavParams({ returnTo: screen, returnParams: params });
+      setCurrentScreen('profile-completion');
+      return;
+    }
+    
     setNavParams(params || null);
     setCurrentScreen(screen);
   };
@@ -146,14 +164,32 @@ const App: React.FC = () => {
       case 'my-parcels': return <MyParcelsScreen onNavigate={handleNavigate} user={user} />;
       case 'parcel-details': return <ParcelDetailScreen onNavigate={handleNavigate} parcelData={navParams?.parcel} />;
       case 'transactions': return <TransactionScreen onNavigate={handleNavigate} user={user} />;
-      case 'marketplace': return <MarketplaceScreen onNavigate={handleNavigate} />;
+      case 'marketplace': return <MarketplaceScreen onNavigate={handleNavigate} user={user} />;
       case 'support': return <SupportScreen onNavigate={handleNavigate} />;
       case 'profile': return <ProfileScreen onNavigate={handleNavigate} theme={theme} toggleTheme={toggleTheme} onLogout={handleLogout} user={user} />;
-      case 'offline': return <OfflineManagerScreen onNavigate={handleNavigate} />;
+      case 'offline': return <OfflineManagerScreen onNavigate={handleNavigate} user={user} />;
+      case 'profile-completion': {
+        const returnTo = navParams?.returnTo as Screen;
+        const returnParams = navParams?.returnParams;
+        return (
+          <ProfileCompletionScreen 
+            onNavigate={handleNavigate} 
+            user={user} 
+            onComplete={async () => {
+              await refreshUser();
+              if (returnTo) {
+                handleNavigate(returnTo, returnParams);
+              } else {
+                handleNavigate('dashboard');
+              }
+            }} 
+          />
+        );
+      }
       case 'report-anomaly': return <ReportAnomalyScreen onNavigate={handleNavigate} user={user} params={navParams} />;
       case 'inheritance': return <InheritanceScreen onNavigate={handleNavigate} />;
       case 'register-land' : return <RegisterLandScreen onNavigate={handleNavigate} />;
-      case 'sell-land': return <SellLandScreen onNavigate={handleNavigate} />;
+      case 'sell-land': return <SellLandScreen onNavigate={handleNavigate} params={navParams} user={user} />;
       case 'buy-land': return <BuyLandScreen onNavigate={handleNavigate} params={navParams} />;
       case 'verification': return <VerificationScreen onNavigate={handleNavigate} />;
       case 'dispute-list': return <DisputeListScreen onNavigate={handleNavigate} onSelectDispute={navigateToDispute} user={user} />;
@@ -166,6 +202,7 @@ const App: React.FC = () => {
       case 'land-map': return <LandMapScreen onNavigate={handleNavigate} />;
       case 'abunzi-dashboard': return <AbunziDashboardScreen onNavigate={handleNavigate} user={user} />;
       case 'land-vault': return <DocumentVaultScreen onNavigate={handleNavigate} user={user} />;
+      case 'edit-profile': return <EditProfileScreen onNavigate={handleNavigate} user={user} onUpdate={refreshUser} />;
       default: return <LandingScreen onNavigate={handleNavigate} />;
     }
   };

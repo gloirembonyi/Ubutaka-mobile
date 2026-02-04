@@ -23,7 +23,9 @@ const AbunziDashboardScreen: React.FC<AbunziDashboardScreenProps> = ({ onNavigat
 
   const fetchDisputes = async () => {
     try {
-      const resp = await fetch(API_ENDPOINTS.DISPUTES);
+      const url = API_ENDPOINTS.DISPUTES;
+      console.log('Fetching disputes from:', url);
+      const resp = await fetch(url);
       if (resp.ok) {
         const data: Dispute[] = await resp.json();
         // Filter by the Abunzi's district if they have one
@@ -31,6 +33,8 @@ const AbunziDashboardScreen: React.FC<AbunziDashboardScreenProps> = ({ onNavigat
           ? data.filter(d => d.district?.toLowerCase() === user.district?.toLowerCase())
           : data;
         setDisputes(filtered);
+      } else {
+        console.error('Failed to fetch disputes:', resp.status, resp.statusText);
       }
     } catch (err) {
       console.error('Fetch disputes error:', err);

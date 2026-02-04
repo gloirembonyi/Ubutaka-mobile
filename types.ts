@@ -26,7 +26,9 @@ export type Screen =
   | 'land-map'
   | 'abunzi-dashboard'
   | 'my-parcels'
-  | 'land-vault';
+  | 'land-vault'
+  | 'profile-completion'
+  | 'edit-profile';
 
 export type Language = 'RW' | 'EN';
 
@@ -34,6 +36,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  phone?: string;
   nationalId: string;
   isVerified: boolean;
   avatar: string;
@@ -42,6 +45,11 @@ export interface User {
   sector?: string;
   cell?: string;
   village?: string;
+  // Profile Completion Fields
+  idPictureUrl?: string;
+  biometricRegistered?: boolean;
+  digitalSignature?: string;
+  profileCompleted?: boolean;
 }
 
 export interface Parcel {
@@ -61,6 +69,8 @@ export interface Parcel {
   verifiedAt?: string;
   certificateId?: string;
   documents?: string;
+  partners?: string;
+  children?: string;
   coordinates?: string;
   userId?: string;
 }

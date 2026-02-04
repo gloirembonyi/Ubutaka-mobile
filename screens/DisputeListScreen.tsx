@@ -22,13 +22,17 @@ const DisputeListScreen: React.FC<DisputeListScreenProps> = ({ onNavigate, onSel
   React.useEffect(() => {
     const fetchDisputes = async () => {
       try {
-        const resp = await fetch(API_ENDPOINTS.DISPUTES);
+        const url = API_ENDPOINTS.DISPUTES;
+        console.log('Fetching disputes from:', url);
+        const resp = await fetch(url);
         if (resp.ok) {
           const data = await resp.json();
           setDisputes(data);
+        } else {
+          console.error('Failed to fetch disputes:', resp.status, resp.statusText);
         }
       } catch (err) {
-        console.error(err);
+        console.error('Fetch disputes error:', err);
       } finally {
         setLoading(false);
       }

@@ -6,6 +6,7 @@ import { Screen, Parcel, Transaction } from '../types';
 import { Colors, getColorWithOpacity } from '../styles/colors';
 import { GlobalStyles } from '../styles/globalStyles';
 import { API_ENDPOINTS } from '../config/api';
+import { decryptData } from '../utils/encryption';
 
 interface ParcelDetailScreenProps {
   onNavigate: (screen: Screen, params?: any) => void;
@@ -44,6 +45,29 @@ const ParcelDetailScreen: React.FC<ParcelDetailScreenProps> = ({ onNavigate, par
              .catch(e => console.log(e));
      }
   }, [parcel.upi]);
+
+  // Decrypt partners and children
+  const partners = React.useMemo(() => {
+    try {
+      if (!parcel.partners) return [];
+      const decrypted = decryptData(parcel.partners);
+      return JSON.parse(decrypted);
+    } catch (e) {
+      console.log('Error decrypting partners:', e);
+      return [];
+    }
+  }, [parcel.partners]);
+
+  const children = React.useMemo(() => {
+    try {
+      if (!parcel.children) return [];
+      const decrypted = decryptData(parcel.children);
+      return JSON.parse(decrypted);
+    } catch (e) {
+      console.log('Error decrypting children:', e);
+      return [];
+    }
+  }, [parcel.children]);
 
   return (
     <ScrollView style={GlobalStyles.container} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 160 }}>
@@ -140,6 +164,39 @@ const ParcelDetailScreen: React.FC<ParcelDetailScreenProps> = ({ onNavigate, par
             <Text style={styles.statValue}>{parcel.district}</Text>
           </View>
         </View>
+
+        {/* Ownership Details Section */}
+        {(partners.length > 0 || children.length > 0) && (
+          <View style={styles.familySection}>
+            <Text style={styles.sectionTitle}>Shared Ownership & Family</Text>
+            
+            {partners.length > 0 && (
+              <View style={styles.familyGroup}>
+                <Text style={styles.familyLabel}>Joint Owners / Partners</Text>
+                {partners.map((p: any, i: number) => (
+                  <View key={i} style={styles.familyItem}>
+                    <MaterialIcons name="person-outline" size={16} color={Colors.primary} />
+                    <Text style={styles.familyName}>{p.name}</Text>
+                    <Text style={styles.familyId}>ID: {p.id}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {children.length > 0 && (
+              <View style={styles.familyGroup}>
+                <Text style={styles.familyLabel}>Children / Dependents</Text>
+                {children.map((c: any, i: number) => (
+                  <View key={i} style={styles.familyItem}>
+                    <MaterialIcons name="child-care" size={16} color={Colors.primary} />
+                    <Text style={styles.familyName}>{c.name}</Text>
+                    <Text style={styles.familyId}>{c.age} yrs</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
 
         {parcel.status === 'Verified' ? (
           <Pressable 
@@ -677,6 +734,44 @@ const styles = StyleSheet.create({
       fontSize: 13,
       color: Colors.textTertiary,
       fontStyle: 'italic',
+  },
+  familySection: {
+    backgroundColor: Colors.white,
+    padding: 24,
+    borderRadius: 32,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    marginTop: 16,
+    gap: 16,
+  },
+  familyGroup: {
+    gap: 8,
+  },
+  familyLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.textTertiary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  familyItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: Colors.backgroundLight,
+    padding: 12,
+    borderRadius: 12,
+  },
+  familyName: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+  },
+  familyId: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontWeight: '500',
   },
 });
 

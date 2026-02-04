@@ -3,6 +3,7 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
 import { API_ENDPOINTS } from '../config/api';
 import { LoginCredentials, AuthResponse } from '../types/auth';
+import { encryptData } from '../utils/encryption';
 
 const BIOMETRIC_KEY = 'biometric_auth_token';
 
@@ -43,12 +44,15 @@ export const AuthService = {
 
   // API methods
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
+    const body = { ...credentials };
+    if (body.nationalId) body.nationalId = encryptData(body.nationalId);
+    
     const response = await fetch(API_ENDPOINTS.LOGIN, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(credentials),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
@@ -60,12 +64,15 @@ export const AuthService = {
   },
 
   async register(userData: any): Promise<AuthResponse> {
+    const body = { ...userData };
+    if (body.nationalId) body.nationalId = encryptData(body.nationalId);
+    
     const response = await fetch(API_ENDPOINTS.REGISTER, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(userData),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {

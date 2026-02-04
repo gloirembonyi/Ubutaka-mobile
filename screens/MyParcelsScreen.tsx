@@ -7,6 +7,7 @@ import {
   Pressable,
   Image,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { Screen, Parcel, User } from "../types";
@@ -17,6 +18,7 @@ import { GlobalStyles } from "../styles/globalStyles";
 interface MyParcelsScreenProps {
   onNavigate: (screen: Screen, params?: any) => void;
   user?: User | null;
+  navigation?: any; // For focus listener
 }
 
 const MyParcelsScreen: React.FC<MyParcelsScreenProps> = ({
@@ -25,6 +27,7 @@ const MyParcelsScreen: React.FC<MyParcelsScreenProps> = ({
 }) => {
   const [parcels, setParcels] = useState<Parcel[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Mock data as fallback if API doesn't return or for demo
   const MOCK_PARCELS: Parcel[] = [
@@ -54,26 +57,52 @@ const MyParcelsScreen: React.FC<MyParcelsScreenProps> = ({
     },
   ];
 
-  useEffect(() => {
-    fetchParcels();
-  }, []);
-
-  const fetchParcels = async () => {
+  const fetchParcels = async (isRefresh = false, isBackground = false) => {
+    if (isRefresh) {
+      setRefreshing(true);
+    } else if (!isBackground) {
+      setLoading(true);
+    }
+    
     try {
-      const resp = await fetch(`${API_ENDPOINTS.PARCELS}?ownerName=${encodeURIComponent(user?.name || '')}`);
+      const url = `${API_ENDPOINTS.PARCELS}?ownerName=${encodeURIComponent(user?.name || '')}`;
+      if (!isBackground) console.log('Fetching parcels from:', url);
+      const resp = await fetch(url);
       if (resp.ok) {
          const data = await resp.json();
-         setParcels(data.length > 0 ? data : MOCK_PARCELS);
+         // Sort verified first, then by date
+         const sorted = data.sort((a: Parcel, b: Parcel) => {
+            if (a.status === 'Verified' && b.status !== 'Verified') return -1;
+            if (a.status !== 'Verified' && b.status === 'Verified') return 1;
+            return 0;
+         });
+         setParcels(data.length > 0 ? sorted : MOCK_PARCELS);
       } else {
-        setParcels(MOCK_PARCELS);
+        if (!isBackground) console.error('Failed to fetch parcels:', resp.status);
+        if (parcels.length === 0) setParcels(MOCK_PARCELS);
       }
     } catch (err) {
-      console.error("Fetch parcels error:", err);
-      setParcels(MOCK_PARCELS);
+      if (!isBackground) console.error("Fetch parcels error:", err);
+      if (parcels.length === 0) setParcels(MOCK_PARCELS);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
+
+  const onRefresh = () => {
+    fetchParcels(true);
+  };
+
+  useEffect(() => {
+    fetchParcels();
+    
+    const interval = setInterval(() => {
+      fetchParcels(false, true); // Background poll
+    }, 5000); 
+    
+    return () => clearInterval(interval);
+  }, [user]);
 
   return (
     <View style={GlobalStyles.container}>
@@ -103,7 +132,12 @@ const MyParcelsScreen: React.FC<MyParcelsScreenProps> = ({
           <Text style={styles.loadingText}>Loading your holdings...</Text>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView 
+          contentContainerStyle={styles.content}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        >
           {parcels.length === 0 ? (
             <View style={styles.emptyContainer}>
               <MaterialIcons
@@ -170,7 +204,7 @@ const MyParcelsScreen: React.FC<MyParcelsScreenProps> = ({
                 <View style={styles.actionsContainer}>
                   <Pressable 
                     style={styles.sellButton}
-                    onPress={() => onNavigate("sell-land")}
+                    onPress={() => onNavigate("sell-land", { parcel })}
                   >
                     <Text style={styles.sellButtonText}>Sell</Text>
                   </Pressable>

@@ -8,30 +8,49 @@ import { BlockchainService } from '../services/blockchainService';
 import { Colors, getColorWithOpacity } from '../styles/colors';
 import { GlobalStyles } from '../styles/globalStyles';
 
+import { API_ENDPOINTS } from '../config/api';
+
 interface TransactionScreenProps {
   onNavigate: (screen: Screen) => void;
   user: User | null;
 }
 
-
 const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate, user }) => {
   const [selectedTx, setSelectedTx] = useState<BlockchainTransaction | null>(null);
   const [verifying, setVerifying] = useState(false);
-  
-  // Mock history state
-  const [history, setHistory] = useState<BlockchainTransaction[]>([
-    {
-      hash: '0x3a4b...9e21',
-      blockNumber: 18239405,
-      timestamp: '2024-11-20T10:30:00Z',
-      from: '0xUser...',
-      to: '0xRegistry...',
-      value: '0',
-      gasUsed: 42000,
-      status: 'confirmed',
-      contractAddress: '0xMockContract'
+  const [loading, setLoading] = useState(true);
+  const [history, setHistory] = useState<BlockchainTransaction[]>([]);
+
+  React.useEffect(() => {
+    fetchHistory();
+  }, [user?.name]);
+
+  const fetchHistory = async () => {
+    if (!user?.name) return;
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_ENDPOINTS.TRANSACTIONS}?name=${encodeURIComponent(user.name)}`);
+      if (response.ok) {
+        const data = await response.json();
+        const mappedData: BlockchainTransaction[] = data.map((tx: any) => ({
+          hash: tx.txHash,
+          blockNumber: tx.blockNumber,
+          timestamp: tx.createdAt,
+          from: tx.sellerName || 'System',
+          to: tx.buyerName || 'Unassigned',
+          value: tx.price || '0',
+          gasUsed: 42000,
+          status: tx.status.toLowerCase() === 'completed' ? 'confirmed' : 'pending',
+          contractAddress: '0xRegistry'
+        }));
+        setHistory(mappedData);
+      }
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+    } finally {
+      setLoading(false);
     }
-  ]);
+  };
 
   const handleCreateMockTx = async () => {
     setVerifying(true);
@@ -137,31 +156,41 @@ const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate, user 
 
         {/* List */}
         <View style={styles.historyList}>
-            {history.map((tx, index) => (
-                <Pressable 
-                    key={index}
-                    style={styles.txCard}
-                    onPress={() => handleVerify(tx)}
-                >
-                    <View style={styles.txRow}>
-                        <View style={styles.txIcon}>
-                            <FontAwesome5 name="cube" size={16} color={Colors.primary} />
+            {loading ? (
+                <View style={{ padding: 40, alignItems: 'center' }}>
+                    <ActivityIndicator size="large" color={Colors.primary} />
+                </View>
+            ) : history.length === 0 ? (
+                <View style={{ padding: 40, alignItems: 'center' }}>
+                    <Text style={{ color: Colors.textTertiary }}>No transactions found</Text>
+                </View>
+            ) : (
+                history.map((tx, index) => (
+                    <Pressable 
+                        key={index}
+                        style={styles.txCard}
+                        onPress={() => handleVerify(tx)}
+                    >
+                        <View style={styles.txRow}>
+                            <View style={styles.txIcon}>
+                                <FontAwesome5 name="cube" size={16} color={Colors.primary} />
+                            </View>
+                            <View style={styles.txInfo}>
+                                <Text style={styles.txType}>Land Operation</Text>
+                                <Text style={styles.txHash} numberOfLines={1} ellipsizeMode="middle">{tx.hash}</Text>
+                            </View>
+                            <View style={styles.badge}>
+                                <MaterialIcons name="check-circle" size={14} color={Colors.success} />
+                                <Text style={styles.badgeText}>Verified</Text>
+                            </View>
                         </View>
-                        <View style={styles.txInfo}>
-                            <Text style={styles.txType}>Land Operation</Text>
-                            <Text style={styles.txHash} numberOfLines={1} ellipsizeMode="middle">{tx.hash}</Text>
+                        <View style={styles.txDetails}>
+                            <Text style={styles.detailText}>Block: #{tx.blockNumber}</Text>
+                            <Text style={styles.detailText}>{new Date(tx.timestamp).toLocaleTimeString()}</Text>
                         </View>
-                        <View style={styles.badge}>
-                            <MaterialIcons name="check-circle" size={14} color={Colors.success} />
-                            <Text style={styles.badgeText}>Verified</Text>
-                        </View>
-                    </View>
-                    <View style={styles.txDetails}>
-                        <Text style={styles.detailText}>Block: #{tx.blockNumber}</Text>
-                        <Text style={styles.detailText}>{new Date(tx.timestamp).toLocaleTimeString()}</Text>
-                    </View>
-                </Pressable>
-            ))}
+                    </Pressable>
+                ))
+            )}
         </View>
 
       </View>

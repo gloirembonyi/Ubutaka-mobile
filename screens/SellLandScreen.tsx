@@ -9,78 +9,127 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface SellLandScreenProps {
   onNavigate: (screen: Screen) => void;
+  params?: any;
+  user?: User | null;
 }
 
-const SellLandScreen: React.FC<SellLandScreenProps> = ({ onNavigate }) => {
-  const [step, setStep] = useState(1);
+const SellLandScreen: React.FC<SellLandScreenProps> = ({ onNavigate, params, user: propUser }) => {
+  // If a parcel was passed, start at step 2
+  const initialStep = params?.parcel ? 2 : 1;
+  const [step, setStep] = useState(initialStep);
+  
   const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(propUser || null);
   const [myParcels, setMyParcels] = useState<Parcel[]>([]);
   
   const [formData, setFormData] = useState({
-    selectedParcel: null as Parcel | null,
+    selectedParcel: (params?.parcel as Parcel) || null,
     price: '',
     buyerId: '',
-    buyerName: '', // Optional, fetched if possible
+    buyerName: '',
   });
+  const [saleType, setSaleType] = useState<'marketplace' | 'private'>('marketplace');
+
+  const steps = ['PARCEL', 'DETAILS', 'REVIEW'];
 
   useEffect(() => {
     loadUserAndParcels();
-  }, []);
+  }, [propUser]);
 
   const loadUserAndParcels = async () => {
     try {
-      const savedUser = await AsyncStorage.getItem('user');
-      if (savedUser) {
-        const u = JSON.parse(savedUser);
-        setUser(u);
-        
-        // Fetch parcels
-        const resp = await fetch(`${API_ENDPOINTS.PARCELS}?ownerName=${encodeURIComponent(u.name)}`);
-        if (resp.ok) {
-          const data = await resp.json();
-          setMyParcels(data);
+      let currentUser = propUser;
+      
+      if (!currentUser) {
+        const savedUser = await AsyncStorage.getItem('user');
+        if (savedUser) {
+           currentUser = JSON.parse(savedUser);
+           setUser(currentUser || null);
+        }
+      }
+
+      if (currentUser) {
+        // Fetch specific parcels from API to ensure fresh list
+        // Note: If we passed a parcel, we might not strictly need the full list immediately,
+        // but it's good to have if the user goes "Back" to step 1.
+        try {
+            const resp = await fetch(`${API_ENDPOINTS.PARCELS}?ownerName=${encodeURIComponent(currentUser.name)}`);
+            if (resp.ok) {
+              const data = await resp.json();
+              setMyParcels(data);
+            }
+        } catch (fetchErr) {
+            console.warn("Failed to fetch parcels in Sell screen", fetchErr);
+            // If we have a passed parcel, at least show that in the list if fetch fails
+            if (params?.parcel) {
+                setMyParcels([params.parcel]);
+            }
         }
       }
     } catch (e) {
       console.error("Error loading initial data", e);
     }
   };
-
-  const steps = ['PARCEL', 'BUYER', 'REVIEW'];
-
   const handleSubmit = async () => {
-    if (!formData.selectedParcel || !formData.price || !formData.buyerId) {
-      Alert.alert("Missing Info", "Please fill all fields.");
+    if (!formData.selectedParcel || !formData.price) {
+      Alert.alert("Missing Info", "Please enter a price.");
+      return;
+    }
+
+    if (saleType === 'private' && !formData.buyerId) {
+      Alert.alert("Missing Info", "Please enter Buyer ID for private sale.");
       return;
     }
 
     setLoading(true);
     try {
-      const response = await fetch(API_ENDPOINTS.TRANSACTIONS, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: `Sale of Parcel ${formData.selectedParcel.upi}`,
-          upi: formData.selectedParcel.upi,
-          type: 'SALE',
-          status: 'PENDING_NOTARY',
-          date: new Date().toISOString(),
-          step: 'Notary Verification',
-          progress: 20,
-          sellerName: user?.name,
-          buyerName: formData.buyerId, // Using ID as name for now
-          price: formData.price
-        })
-      });
+      if (saleType === 'marketplace') {
+        // List on Marketplace
+        // We use the new dynamic route for this: /api/parcels/[upi]
+        const response = await fetch(`${API_ENDPOINTS.PARCELS}/${encodeURIComponent(formData.selectedParcel.upi)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: 'For Sale',
+            price: `${formData.price} RWF`,
+            // fees, etc. could be calculated here
+          })
+        });
 
-      if (response.ok) {
-        Alert.alert("Success", "Smart Transfer Initiated! The buyer and Notary have been notified.");
-        onNavigate('dashboard');
+        if (response.ok) {
+           Alert.alert("Listed!", "Your parcel is now listed on the Marketplace.");
+           onNavigate('marketplace');
+        } else {
+           Alert.alert("Error", "Failed to list parcel.");
+        }
       } else {
-        Alert.alert("Error", "Failed to initiate transfer.");
+        // Private Sale (Existing Transaction Logic)
+        const response = await fetch(API_ENDPOINTS.TRANSACTIONS, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: `Sale of Parcel ${formData.selectedParcel.upi}`,
+            upi: formData.selectedParcel.upi,
+            type: 'SALE',
+            status: 'PENDING_NOTARY',
+            date: new Date().toISOString(),
+            step: 'Notary Verification',
+            progress: 20,
+            sellerName: user?.name,
+            buyerName: formData.buyerId, 
+            price: `${formData.price} RWF`
+          })
+        });
+
+        if (response.ok) {
+          Alert.alert("Success", "Smart Transfer Initiated! The buyer and Notary have been notified.");
+          onNavigate('dashboard');
+        } else {
+          Alert.alert("Error", "Failed to initiate transfer.");
+        }
       }
     } catch (error) {
+      console.error(error);
       Alert.alert("Error", "Network error occurred.");
     } finally {
       setLoading(false);
@@ -133,6 +182,7 @@ const SellLandScreen: React.FC<SellLandScreenProps> = ({ onNavigate }) => {
                   <View style={styles.parcelInfo}>
                      <Text style={styles.parcelTitle}>UPI: {parcel.upi}</Text>
                      <Text style={styles.parcelSub}>{parcel.size} • {parcel.location}</Text>
+                     <Text style={[styles.parcelSub, {color: parcel.status === 'Verified' ? Colors.success : Colors.accent}]}>{parcel.status}</Text>
                   </View>
                   <View style={styles.radio}>
                      {formData.selectedParcel?.upi === parcel.upi && <View style={styles.radioInner} />}
@@ -149,6 +199,24 @@ const SellLandScreen: React.FC<SellLandScreenProps> = ({ onNavigate }) => {
           <View>
             <StepCircle s={2} label="Sale Details" />
             
+            {/* Sale Type Selector */}
+            <View style={styles.typeSelector}>
+                <Pressable 
+                    style={[styles.typeOption, saleType === 'marketplace' && styles.typeOptionActive]}
+                    onPress={() => setSaleType('marketplace')}
+                >
+                    <MaterialIcons name="storefront" size={24} color={saleType === 'marketplace' ? Colors.primary : Colors.textTertiary} />
+                    <Text style={[styles.typeText, saleType === 'marketplace' && styles.typeTextActive]}>List on Marketplace</Text>
+                </Pressable>
+                <Pressable 
+                    style={[styles.typeOption, saleType === 'private' && styles.typeOptionActive]}
+                    onPress={() => setSaleType('private')}
+                >
+                    <MaterialIcons name="person" size={24} color={saleType === 'private' ? Colors.primary : Colors.textTertiary} />
+                    <Text style={[styles.typeText, saleType === 'private' && styles.typeTextActive]}>Private Sale</Text>
+                </Pressable>
+            </View>
+
             <View style={styles.inputGroup}>
               <Text style={styles.label}>SALE PRICE (RWF)</Text>
               <TextInput 
@@ -160,21 +228,25 @@ const SellLandScreen: React.FC<SellLandScreenProps> = ({ onNavigate }) => {
               />
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>BUYER NATIONAL ID</Text>
-              <TextInput 
-                style={styles.input}
-                placeholder="1 1990 8 0000 000 0 00"
-                keyboardType="numeric"
-                value={formData.buyerId}
-                onChangeText={(t: string) => setFormData({...formData, buyerId: t})}
-              />
-            </View>
+            {saleType === 'private' && (
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>BUYER NATIONAL ID</Text>
+                  <TextInput 
+                    style={styles.input}
+                    placeholder="1 1990 8 0000 000 0 00"
+                    keyboardType="numeric"
+                    value={formData.buyerId}
+                    onChangeText={(t: string) => setFormData({...formData, buyerId: t})}
+                  />
+                </View>
+            )}
 
             <View style={styles.infoBox}>
               <MaterialIcons name="info" size={20} color={Colors.primary} />
               <Text style={styles.infoText}>
-                The buyer will be notified to accept the price. Once accepted, the smart contract will lock the process until payment is verified.
+                {saleType === 'marketplace' 
+                    ? "Your parcel will be listed publicly on the marketplace. Buyers can send offers directly." 
+                    : "The buyer will be notified to accept the price. Once accepted, the smart contract will lock the process."}
               </Text>
             </View>
           </View>
@@ -188,6 +260,10 @@ const SellLandScreen: React.FC<SellLandScreenProps> = ({ onNavigate }) => {
                <Text style={styles.summaryTitle}>Transaction Summary</Text>
                
                <View style={styles.summaryRow}>
+                 <Text style={styles.summaryLabel}>Type</Text>
+                 <Text style={styles.summaryValue}>{saleType === 'marketplace' ? 'Public Listing' : 'Private Sale'}</Text>
+               </View>
+               <View style={styles.summaryRow}>
                  <Text style={styles.summaryLabel}>Property</Text>
                  <Text style={styles.summaryValue}>{formData.selectedParcel?.upi}</Text>
                </View>
@@ -195,13 +271,15 @@ const SellLandScreen: React.FC<SellLandScreenProps> = ({ onNavigate }) => {
                  <Text style={styles.summaryLabel}>Sale Price</Text>
                  <Text style={styles.summaryValue}>{formData.price} RWF</Text>
                </View>
+               {saleType === 'private' && (
+                 <View style={styles.summaryRow}>
+                   <Text style={styles.summaryLabel}>Buyer ID</Text>
+                   <Text style={styles.summaryValue}>{formData.buyerId}</Text>
+                 </View>
+               )}
                <View style={styles.summaryRow}>
-                 <Text style={styles.summaryLabel}>Buyer ID</Text>
-                 <Text style={styles.summaryValue}>{formData.buyerId}</Text>
-               </View>
-               <View style={styles.summaryRow}>
-                 <Text style={styles.summaryLabel}>Transfer Fee</Text>
-                 <Text style={styles.summaryValue}>25,000 RWF</Text>
+                 <Text style={styles.summaryLabel}>Listing Fee</Text>
+                 <Text style={styles.summaryValue}>5,000 RWF</Text>
                </View>
             </View>
 
@@ -232,8 +310,8 @@ const SellLandScreen: React.FC<SellLandScreenProps> = ({ onNavigate }) => {
            <Pressable style={styles.button} onPress={handleSubmit}>
              {loading ? <ActivityIndicator color={Colors.white} /> : (
                <>
-                 <Text style={styles.buttonText}>Initiate Transfer</Text>
-                 <MaterialIcons name="fingerprint" size={20} color={Colors.white} />
+                 <Text style={styles.buttonText}>{saleType === 'marketplace' ? 'List Land' : 'Initiate Transfer'}</Text>
+                 <MaterialIcons name={saleType === 'marketplace' ? "store" : "fingerprint"} size={20} color={Colors.white} />
                </>
              )}
            </Pressable>
@@ -269,6 +347,12 @@ const styles = StyleSheet.create({
   stepLabel: { fontSize: 18, fontWeight: 'bold', color: Colors.textSecondary },
   stepLabelActive: { color: Colors.textPrimary },
   subtext: { color: Colors.textSecondary, marginBottom: 20 },
+
+  typeSelector: { flexDirection: 'row', gap: 12, marginBottom: 24 },
+  typeOption: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 16, borderRadius: 12, borderWidth: 1, borderColor: Colors.borderLight, backgroundColor: Colors.white },
+  typeOptionActive: { borderColor: Colors.primary, backgroundColor: '#F0FDF4' },
+  typeText: { fontSize: 13, fontWeight: 'bold', color: Colors.textTertiary },
+  typeTextActive: { color: Colors.primary },
 
   parcelCard: { flexDirection: 'row', alignItems: 'center', padding: 12, borderWidth: 1, borderColor: Colors.borderLight, borderRadius: 12, marginBottom: 12, backgroundColor: Colors.white },
   parcelCardActive: { borderColor: Colors.primary, backgroundColor: '#F0FDF4' },
