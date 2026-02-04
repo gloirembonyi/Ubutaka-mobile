@@ -9,11 +9,13 @@ import { User } from '../types';
  */
 export const isProfileComplete = (user: User | null): boolean => {
   if (!user) return false;
+  // If explicitly marked as completed, trust it
+  if (user.profileCompleted) return true;
+  
   return !!(
-    user.idPictureUrl &&
+    // ID Picture is handled by admin/external system for now
     user.biometricRegistered &&
-    user.digitalSignature &&
-    user.profileCompleted
+    user.digitalSignature
   );
 };
 
@@ -26,7 +28,8 @@ export const getProfileCompletionPercentage = (user: User | null): number => {
   let completed = 0;
   const total = 3;
   
-  if (user.idPictureUrl) completed++;
+  // ID Picture considered done/optional for user
+  completed++; 
   if (user.biometricRegistered) completed++;
   if (user.digitalSignature) completed++;
   

@@ -27,7 +27,8 @@ export type Screen =
   | 'abunzi-dashboard'
   | 'my-parcels'
   | 'land-vault'
-  | 'profile-completion';
+  | 'profile-completion'
+  | 'edit-profile';
 
 export type Language = 'RW' | 'EN';
 
@@ -35,6 +36,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  phone?: string;
   nationalId: string;
   isVerified: boolean;
   avatar: string;

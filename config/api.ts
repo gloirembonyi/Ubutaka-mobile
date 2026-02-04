@@ -21,8 +21,8 @@ export const getApiBaseUrl = () => {
     // In development, use the environment variable if available, otherwise fallback to local IP
     if (!envUrl) {
       console.warn('⚠️ EXPO_PUBLIC_API_URL is not set in .env file!');
-      console.warn('⚠️ Falling back to default: http://192.168.1.65:3000/api');
-      return 'http://192.168.1.65:3000/api'; 
+      console.warn('⚠️ Falling back to default: http://192.168.1.72:3000/api');
+      return 'http://192.168.1.72:3000/api'; 
     }
     console.log('✅ API Base URL:', envUrl);
     return envUrl;

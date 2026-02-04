@@ -58,6 +58,19 @@ const BuyLandScreen: React.FC<any> = ({ onNavigate, params }) => {
         }) as any;
           
         if (response.ok) {
+            // Also mark the parcel as pending sale so it's removed from marketplace
+            if (!response.queued) {
+                try {
+                    await fetch(`${API_ENDPOINTS.PARCELS}/${encodeURIComponent(parcel.upi)}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: 'Pending Sale' })
+                    });
+                } catch(err) {
+                    console.log("Failed to update parcel status", err);
+                }
+            }
+
             Alert.alert(
                 response.queued ? "Offline Mode" : "Offer Submitted", 
                 response.queued 
@@ -104,7 +117,7 @@ const BuyLandScreen: React.FC<any> = ({ onNavigate, params }) => {
            </View>
            <View style={styles.row}>
                <Text style={styles.label}>Seller</Text>
-               <Text style={styles.value}>{parcel.ownerName}</Text>
+               <Text style={styles.value}>Verified Seller (Hidden)</Text>
            </View>
            
            <Pressable 

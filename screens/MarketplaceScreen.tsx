@@ -8,9 +8,10 @@ import { API_ENDPOINTS } from '../config/api';
 
 interface MarketplaceScreenProps {
   onNavigate: (screen: Screen, params?: any) => void;
+  user: any; // Using any to avoid import circles if User type issue, but preferably User
 }
 
-const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ onNavigate }) => {
+const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ onNavigate, user }) => {
   const [parcels, setParcels] = useState<Parcel[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -45,12 +46,27 @@ const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ onNavigate }) => 
   ];
 
   useEffect(() => {
-    // In real app, fetch from API where status='For Sale'
-    setTimeout(() => {
-        setParcels(MOCK_MARKET);
-        setLoading(false);
-    }, 1000);
+    fetchMarketplaceParcels();
   }, []);
+
+  const fetchMarketplaceParcels = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_ENDPOINTS.PARCELS}?status=For Sale`);
+      if (response.ok) {
+        const data = await response.json();
+        setParcels(data);
+      } else {
+        // Fallback or error handling
+        setParcels(MOCK_MARKET);
+      }
+    } catch (error) {
+       console.error("Marketplace fetch error", error);
+       setParcels(MOCK_MARKET);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleBuy = (parcel: Parcel) => {
     onNavigate('buy-land', { parcel });
@@ -80,38 +96,53 @@ const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ onNavigate }) => 
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content}>
-           {parcels.map((parcel, index) => (
-             <Pressable 
-               key={index}
-               style={styles.card}
-               onPress={() => onNavigate('parcel-details', { parcel })}
-             >
-               <Image source={{ uri: parcel.imageUrl }} style={styles.cardImage} />
-               <View style={styles.cardContent}>
-                  <View style={styles.cardHeader}>
-                    <Text style={styles.cardPrice}>{parcel.price}</Text>
-                    {parcel.isVerified && (
-                      <View style={styles.verifiedBadge}>
-                        <MaterialIcons name="verified" size={12} color={Colors.white} />
-                        <Text style={styles.verifiedText}>Verified</Text>
-                      </View>
-                    )}
-                  </View>
-                  
-                  <Text style={styles.cardLocation}>{parcel.district}, {parcel.location}</Text>
-                  <Text style={styles.cardDetails}>{parcel.size} • {parcel.use}</Text>
-                  <Text style={styles.cardOwner}>Owned by {parcel.ownerName}</Text>
+           {parcels.map((parcel, index) => {
+             const isOwner = user?.name === parcel.ownerName;
+             
+             return (
+              <Pressable 
+                key={index}
+                style={styles.card}
+                onPress={() => onNavigate('parcel-details', { parcel })}
+              >
+                <Image source={{ uri: parcel.imageUrl }} style={styles.cardImage} />
+                <View style={styles.cardContent}>
+                    <View style={styles.cardHeader}>
+                      <Text style={styles.cardPrice}>{parcel.price}</Text>
+                      {(parcel.isVerified || parcel.status === 'Verified') && (
+                        <View style={styles.verifiedBadge}>
+                          <MaterialIcons name="verified" size={12} color={Colors.white} />
+                          <Text style={styles.verifiedText}>Verified</Text>
+                        </View>
+                      )}
+                    </View>
+                    
+                    <Text style={styles.cardLocation}>{parcel.district}, {parcel.location}</Text>
+                    <Text style={styles.cardDetails}>{parcel.size} • {parcel.use}</Text>
+                    
+                    {/* Hide sensitive info */}
+                    <Text style={styles.cardOwner}>
+                      {isOwner ? "Owned by Me" : "Verified Seller"}
+                    </Text>
 
-                  <Pressable 
-                    style={styles.buyButton}
-                    onPress={() => handleBuy(parcel)}
-                  >
-                    <Text style={styles.buyButtonText}>Purchase</Text>
-                    <MaterialIcons name="shopping-cart" size={16} color={Colors.white} />
-                  </Pressable>
-               </View>
-             </Pressable>
-           ))}
+                    {isOwner ? (
+                       <View style={[styles.buyButton, { backgroundColor: Colors.border }]}>
+                         <Text style={styles.buyButtonText}>Your Listing</Text>
+                         <MaterialIcons name="edit" size={16} color={Colors.white} />
+                       </View>
+                    ) : (
+                      <Pressable 
+                        style={styles.buyButton}
+                        onPress={() => handleBuy(parcel)}
+                      >
+                        <Text style={styles.buyButtonText}>Purchase</Text>
+                        <MaterialIcons name="shopping-cart" size={16} color={Colors.white} />
+                      </Pressable>
+                    )}
+                </View>
+              </Pressable>
+             );
+           })}
         </ScrollView>
       )}
     </View>
