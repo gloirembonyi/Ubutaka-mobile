@@ -70,7 +70,8 @@ const NotaryDashboardScreen: React.FC<NotaryDashboardScreenProps> = ({ onNavigat
   const stats = {
     pending: transactions.filter(tx => tx.status === 'PENDING_NOTARY' || tx.status === 'PENDING').length,
     completed: transactions.filter(tx => tx.status === 'COMPLETED').length,
-    totalValue: transactions.reduce((acc, tx) => acc + (parseInt(tx.price || '0')), 0).toLocaleString()
+    totalValue: transactions.reduce((acc, tx) => acc + (parseInt(tx.price || '0')), 0).toLocaleString(),
+    paymentPending: transactions.filter(tx => tx.step?.includes('Payment')).length,
   };
 
   const handleApprove = async (tx: Transaction) => {
@@ -181,6 +182,11 @@ const NotaryDashboardScreen: React.FC<NotaryDashboardScreenProps> = ({ onNavigat
               </View>
               <Text style={styles.statNumber}>{transactions.length}</Text>
               <Text style={styles.statLabel}>Total Volume</Text>
+              {stats.paymentPending > 0 && (
+                <View style={styles.notificationBadge}>
+                  <Text style={styles.badgeText}>{stats.paymentPending}</Text>
+                </View>
+              )}
             </View>
           </View>
 
@@ -284,6 +290,14 @@ const NotaryDashboardScreen: React.FC<NotaryDashboardScreenProps> = ({ onNavigat
                    <Text style={styles.priceValue}>{parseInt(tx.price || '0').toLocaleString()} RWF</Text>
                 </View>
 
+                {/* Payment Status Indicator */}
+                {tx.step?.toLowerCase().includes('payment') && (
+                  <View style={styles.paymentNotification}>
+                    <MaterialIcons name="payment" size={16} color={Colors.success} />
+                    <Text style={styles.paymentText}>Payment Received - Ready for Review</Text>
+                  </View>
+                )}
+
                 {tx.status !== 'COMPLETED' && (
                   <View style={styles.actionButtons}>
                     <Pressable 
@@ -297,7 +311,7 @@ const NotaryDashboardScreen: React.FC<NotaryDashboardScreenProps> = ({ onNavigat
                       onPress={() => onNavigate('transactions')}
                       style={styles.detailsButton}
                     >
-                      <Text style={styles.detailsButtonText}>View Vault</Text>
+                      <Text style={styles.detailsButtonText}>View Details</Text>
                     </Pressable>
                   </View>
                 )}
@@ -551,6 +565,38 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginTop: 16,
     textAlign: 'center',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: Colors.error,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  badgeText: {
+    color: Colors.white,
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  paymentNotification: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: getColorWithOpacity(Colors.success, 0.1),
+    padding: 12,
+    borderRadius: 8,
+    gap: 8,
+    marginBottom: 12,
+  },
+  paymentText: {
+    flex: 1,
+    fontSize: 13,
+    color: Colors.success,
+    fontWeight: '600',
   },
 });
 

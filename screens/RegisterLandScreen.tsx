@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Image, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Image, Alert, ActivityIndicator, Modal, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { Screen } from '../types';
 import { Colors, getColorWithOpacity } from '../styles/colors';
 import { GlobalStyles } from '../styles/globalStyles';
-import { API_ENDPOINTS } from '../config/api';
+import { API_ENDPOINTS, API_BASE_URL } from '../config/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { encryptData, encryptObject } from '../utils/encryption';
 import MainHeader from '../components/MainHeader';
@@ -20,10 +20,10 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     // Step 1: Parcel
-    province: 'Kigali City',
-    district: 'Gasabo',
-    sector: 'Remera',
-    cell: 'Nyabisindu',
+    province: '',
+    district: '',
+    sector: '',
+    cell: '',
     village: '',
     upi: '',
     landUse: 'Residential (R1)',
@@ -44,7 +44,82 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
     hasTaxClearance: false,
   });
 
+  // Location data states
+  const [provinces, setProvinces] = useState<string[]>([]);
+  const [districts, setDistricts] = useState<string[]>([]);
+  const [sectors, setSectors] = useState<string[]>([]);
+  const [cells, setCells] = useState<string[]>([]);
+  const [villages, setVillages] = useState<string[]>([]);
+
+  // Dropdown modal states
+  const [showProvinceModal, setShowProvinceModal] = useState(false);
+  const [showDistrictModal, setShowDistrictModal] = useState(false);
+  const [showSectorModal, setShowSectorModal] = useState(false);
+  const [showCellModal, setShowCellModal] = useState(false);
+  const [showVillageModal, setShowVillageModal] = useState(false);
+
   const [user, setUser] = useState<User | null>(null);
+
+  // Fetch location data
+  const fetchProvinces = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/locations?level=provinces`);
+      if (response.ok) {
+        const data = await response.json();
+        setProvinces(data.provinces || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch provinces:', error);
+    }
+  };
+
+  const fetchDistricts = async (province: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/locations?level=districts&province=${encodeURIComponent(province)}`);
+      if (response.ok) {
+        const data = await response.json();
+        setDistricts(data.districts || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch districts:', error);
+    }
+  };
+
+  const fetchSectors = async (province: string, district: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/locations?level=sectors&province=${encodeURIComponent(province)}&district=${encodeURIComponent(district)}`);
+      if (response.ok) {
+        const data = await response.json();
+        setSectors(data.sectors || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch sectors:', error);
+    }
+  };
+
+  const fetchCells = async (province: string, district: string, sector: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/locations?level=cells&province=${encodeURIComponent(province)}&district=${encodeURIComponent(district)}&sector=${encodeURIComponent(sector)}`);
+      if (response.ok) {
+        const data = await response.json();
+        setCells(data.cells || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch cells:', error);
+    }
+  };
+
+  const fetchVillages = async (province: string, district: string, sector: string, cell: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/locations?level=villages&province=${encodeURIComponent(province)}&district=${encodeURIComponent(district)}&sector=${encodeURIComponent(sector)}&cell=${encodeURIComponent(cell)}`);
+      if (response.ok) {
+        const data = await response.json();
+        setVillages(data.villages || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch villages:', error);
+    }
+  };
 
   React.useEffect(() => {
     const loadUser = async () => {
@@ -61,7 +136,37 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
       }
     };
     loadUser();
+    fetchProvinces();
   }, []);
+
+  // Cascade location data
+  React.useEffect(() => {
+    if (formData.province) {
+      fetchDistricts(formData.province);
+      setFormData(prev => ({ ...prev, district: '', sector: '', cell: '', village: '' }));
+    }
+  }, [formData.province]);
+
+  React.useEffect(() => {
+    if (formData.province && formData.district) {
+      fetchSectors(formData.province, formData.district);
+      setFormData(prev => ({ ...prev, sector: '', cell: '', village: '' }));
+    }
+  }, [formData.district]);
+
+  React.useEffect(() => {
+    if (formData.province && formData.district && formData.sector) {
+      fetchCells(formData.province, formData.district, formData.sector);
+      setFormData(prev => ({ ...prev, cell: '', village: '' }));
+    }
+  }, [formData.sector]);
+
+  React.useEffect(() => {
+    if (formData.province && formData.district && formData.sector && formData.cell) {
+      fetchVillages(formData.province, formData.district, formData.sector, formData.cell);
+      setFormData(prev => ({ ...prev, village: '' }));
+    }
+  }, [formData.cell]);
 
   const steps = ['PARCEL', 'OWNER', 'DOCS', 'REVIEW'];
 
@@ -268,47 +373,70 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
                 <View style={styles.row}>
                   <View style={styles.inputGroup}>
                     <Text style={styles.inputLabel}>PROVINCE</Text>
-                    <TextInput 
+                    <Pressable 
                       style={styles.selectInput}
-                      value={formData.province}
-                      onChangeText={(text: string) => setFormData({...formData, province: text})}
-                    />
+                      onPress={() => setShowProvinceModal(true)}
+                    >
+                      <Text style={formData.province ? styles.selectText : styles.selectPlaceholder}>
+                        {formData.province || 'Select Province'}
+                      </Text>
+                      <MaterialIcons name="arrow-drop-down" size={24} color={Colors.textTertiary} />
+                    </Pressable>
                   </View>
                   <View style={styles.inputGroup}>
                     <Text style={styles.inputLabel}>DISTRICT</Text>
-                    <TextInput 
-                      style={styles.selectInput}
-                      value={formData.district}
-                      onChangeText={(text: string) => setFormData({...formData, district: text})}
-                    />
+                    <Pressable 
+                      style={[styles.selectInput, !formData.province && styles.selectDisabled]}
+                      onPress={() => formData.province && setShowDistrictModal(true)}
+                      disabled={!formData.province}
+                    >
+                      <Text style={formData.district ? styles.selectText : styles.selectPlaceholder}>
+                        {formData.district || 'Select District'}
+                      </Text>
+                      <MaterialIcons name="arrow-drop-down" size={24} color={Colors.textTertiary} />
+                    </Pressable>
                   </View>
                 </View>
 
                 <View style={styles.row}>
                   <View style={styles.inputGroup}>
                     <Text style={styles.inputLabel}>SECTOR</Text>
-                    <TextInput 
-                      style={styles.selectInput}
-                      value={formData.sector}
-                      onChangeText={(text: string) => setFormData({...formData, sector: text})}
-                    />
+                    <Pressable 
+                      style={[styles.selectInput, !formData.district && styles.selectDisabled]}
+                      onPress={() => formData.district && setShowSectorModal(true)}
+                      disabled={!formData.district}
+                    >
+                      <Text style={formData.sector ? styles.selectText : styles.selectPlaceholder}>
+                        {formData.sector || 'Select Sector'}
+                      </Text>
+                      <MaterialIcons name="arrow-drop-down" size={24} color={Colors.textTertiary} />
+                    </Pressable>
                   </View>
                   <View style={styles.inputGroup}>
                     <Text style={styles.inputLabel}>CELL</Text>
-                    <TextInput 
-                      style={styles.selectInput}
-                      value={formData.cell}
-                      onChangeText={(text: string) => setFormData({...formData, cell: text})}
-                    />
+                    <Pressable 
+                      style={[styles.selectInput, !formData.sector && styles.selectDisabled]}
+                      onPress={() => formData.sector && setShowCellModal(true)}
+                      disabled={!formData.sector}
+                    >
+                      <Text style={formData.cell ? styles.selectText : styles.selectPlaceholder}>
+                        {formData.cell || 'Select Cell'}
+                      </Text>
+                      <MaterialIcons name="arrow-drop-down" size={24} color={Colors.textTertiary} />
+                    </Pressable>
                   </View>
                   <View style={styles.inputGroup}>
                     <Text style={styles.inputLabel}>VILLAGE</Text>
-                    <TextInput 
-                      style={styles.selectInput}
-                      placeholder="e.g. Isangano"
-                      value={formData.village}
-                      onChangeText={(text: string) => setFormData({...formData, village: text})}
-                    />
+                    <Pressable 
+                      style={[styles.selectInput, !formData.cell && styles.selectDisabled]}
+                      onPress={() => formData.cell && setShowVillageModal(true)}
+                      disabled={!formData.cell}
+                    >
+                      <Text style={formData.village ? styles.selectText : styles.selectPlaceholder}>
+                        {formData.village || 'Select Village'}
+                      </Text>
+                      <MaterialIcons name="arrow-drop-down" size={24} color={Colors.textTertiary} />
+                    </Pressable>
                   </View>
                 </View>
 
@@ -647,11 +775,167 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
             ) : (
               <>
                 <Text style={styles.nextButtonText}>{step < 4 ? 'Continue' : 'Register Parcel'}</Text>
-                <MaterialIcons name={step < 4 ? "arrow-forward" : "check"} size={20} color={Colors.white} />
+                  <MaterialIcons name={step < 4 ? "arrow-forward" : "check"} size={20} color={Colors.white} />
               </>
             )}
           </Pressable>
         </View>
+
+        {/* Location Picker Modals */}
+        <Modal visible={showProvinceModal} animationType="slide" transparent>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Province</Text>
+                <Pressable onPress={() => setShowProvinceModal(false)}>
+                  <MaterialIcons name="close" size={24} color={Colors.textPrimary} />
+                </Pressable>
+              </View>
+              <FlatList
+                data={provinces}
+                keyExtractor={(item) => item}
+                renderItem={({ item }) => (
+                  <Pressable
+                    style={styles.modalItem}
+                    onPress={() => {
+                      setFormData({ ...formData, province: item });
+                      setShowProvinceModal(false);
+                    }}
+                  >
+                    <Text style={styles.modalItemText}>{item}</Text>
+                    {formData.province === item && (
+                      <MaterialIcons name="check" size={20} color={Colors.primary} />
+                    )}
+                  </Pressable>
+                )}
+              />
+            </View>
+          </View>
+        </Modal>
+
+        <Modal visible={showDistrictModal} animationType="slide" transparent>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select District</Text>
+                <Pressable onPress={() => setShowDistrictModal(false)}>
+                  <MaterialIcons name="close" size={24} color={Colors.textPrimary} />
+                </Pressable>
+              </View>
+              <FlatList
+                data={districts}
+                keyExtractor={(item) => item}
+                renderItem={({ item }) => (
+                  <Pressable
+                    style={styles.modalItem}
+                    onPress={() => {
+                      setFormData({ ...formData, district: item });
+                      setShowDistrictModal(false);
+                    }}
+                  >
+                    <Text style={styles.modalItemText}>{item}</Text>
+                    {formData.district === item && (
+                      <MaterialIcons name="check" size={20} color={Colors.primary} />
+                    )}
+                  </Pressable>
+                )}
+              />
+            </View>
+          </View>
+        </Modal>
+
+        <Modal visible={showSectorModal} animationType="slide" transparent>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Sector</Text>
+                <Pressable onPress={() => setShowSectorModal(false)}>
+                  <MaterialIcons name="close" size={24} color={Colors.textPrimary} />
+                </Pressable>
+              </View>
+              <FlatList
+                data={sectors}
+                keyExtractor={(item) => item}
+                renderItem={({ item }) => (
+                  <Pressable
+                    style={styles.modalItem}
+                    onPress={() => {
+                      setFormData({ ...formData, sector: item });
+                      setShowSectorModal(false);
+                    }}
+                  >
+                    <Text style={styles.modalItemText}>{item}</Text>
+                    {formData.sector === item && (
+                      <MaterialIcons name="check" size={20} color={Colors.primary} />
+                    )}
+                  </Pressable>
+                )}
+              />
+            </View>
+          </View>
+        </Modal>
+
+        <Modal visible={showCellModal} animationType="slide" transparent>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Cell</Text>
+                <Pressable onPress={() => setShowCellModal(false)}>
+                  <MaterialIcons name="close" size={24} color={Colors.textPrimary} />
+                </Pressable>
+              </View>
+              <FlatList
+                data={cells}
+                keyExtractor={(item) => item}
+                renderItem={({ item }) => (
+                  <Pressable
+                    style={styles.modalItem}
+                    onPress={() => {
+                      setFormData({ ...formData, cell: item });
+                      setShowCellModal(false);
+                    }}
+                  >
+                    <Text style={styles.modalItemText}>{item}</Text>
+                    {formData.cell === item && (
+                      <MaterialIcons name="check" size={20} color={Colors.primary} />
+                    )}
+                  </Pressable>
+                )}
+              />
+            </View>
+          </View>
+        </Modal>
+
+        <Modal visible={showVillageModal} animationType="slide" transparent>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Village</Text>
+                <Pressable onPress={() => setShowVillageModal(false)}>
+                  <MaterialIcons name="close" size={24} color={Colors.textPrimary} />
+                </Pressable>
+              </View>
+              <FlatList
+                data={villages}
+                keyExtractor={(item) => item}
+                renderItem={({ item }) => (
+                  <Pressable
+                    style={styles.modalItem}
+                    onPress={() => {
+                      setFormData({ ...formData, village: item });
+                      setShowVillageModal(false);
+                    }}
+                  >
+                    <Text style={styles.modalItemText}>{item}</Text>
+                    {formData.village === item && (
+                      <MaterialIcons name="check" size={20} color={Colors.primary} />
+                    )}
+                  </Pressable>
+                )}
+              />
+            </View>
+          </View>
+        </Modal>
       </SafeAreaView>
     </View>
   );
@@ -998,6 +1282,62 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     fontSize: 12,
+    color: Colors.textPrimary,
+  },
+  
+  // Dropdown picker styles
+  selectText: {
+    fontSize: 14,
+    color: Colors.textPrimary,
+    fontWeight: '500',
+  },
+  selectPlaceholder: {
+    fontSize: 14,
+    color: Colors.textTertiary,
+  },
+  selectDisabled: {
+    opacity: 0.5,
+  },
+  
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '85%',
+    maxHeight: '70%',
+    backgroundColor: Colors.white,
+    borderRadius: 20,
+    padding: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.textPrimary,
+  },
+  modalItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderbottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
+  },
+  modalItemText: {
+    fontSize: 15,
     color: Colors.textPrimary,
   },
 });

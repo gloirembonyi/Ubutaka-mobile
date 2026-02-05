@@ -16,7 +16,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ current, onNavigate, user }) => {
   const insets = useSafeAreaInsets();
   
   const getActiveTab = (screen: Screen): Screen => {
-    if (['dashboard', 'abunzi-dashboard', 'parcel-details', 'report-anomaly', 'register-land'].includes(screen)) return 'dashboard';
+    if (['dashboard', 'abunzi-dashboard', 'notary-dashboard', 'parcel-details', 'report-anomaly', 'register-land'].includes(screen)) return 'dashboard';
     if (['marketplace', 'offline', 'buy-land', 'sell-land'].includes(screen)) return 'marketplace';
     if (['transactions', 'inheritance'].includes(screen)) return 'transactions';
     if (['support', 'dispute-list', 'dispute-detail', 'mediation-room'].includes(screen)) return 'support';
@@ -66,6 +66,8 @@ const BottomNav: React.FC<BottomNavProps> = ({ current, onNavigate, user }) => {
               onPress={() => {
                 if (item.id === 'dashboard' && user?.role === 'ABUNZI') {
                   onNavigate('abunzi-dashboard');
+                } else if (item.id === 'dashboard' && user?.role === 'NOTARY') {
+                  onNavigate('notary-dashboard');
                 } else {
                   onNavigate(item.id);
                 }
