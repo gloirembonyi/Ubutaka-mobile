@@ -105,10 +105,10 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onR
     { icon: 'sell', label: 'Sell Land', screen: 'sell-land' },
     { icon: 'qr-code-scanner', label: 'Verify Title', screen: 'qr-scanner' },
     { icon: 'receipt-long', label: 'Transactions', screen: 'transactions' },
-    { icon: 'account-tree', label: 'Inheritance', screen: 'inheritance' },
-    { icon: 'wifi-off', label: 'Offline Mode', screen: 'offline' },
+    { icon: 'announcement', label: 'My Reports', screen: 'dispute-list' },
     { icon: 'gavel', label: 'Report Dispute', screen: 'report-anomaly', params: { type: 'Dispute' } },
-    { icon: 'report-problem', label: 'Report Anomaly', screen: 'report-anomaly', params: { type: 'Anomaly' } }
+    { icon: 'report-problem', label: 'Report Anomaly', screen: 'report-anomaly', params: { type: 'Anomaly' } },
+    { icon: 'wifi-off', label: 'Offline Mode', screen: 'offline' },
   ];
 
   return (

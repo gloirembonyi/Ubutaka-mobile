@@ -38,6 +38,7 @@ import MyParcelsScreen from './screens/MyParcelsScreen';
 import ProfileCompletionScreen from './screens/ProfileCompletionScreen';
 import { isProfileComplete } from './utils/profileCompletion';
 import EditProfileScreen from './screens/EditProfileScreen';
+import NotaryDashboardScreen from './screens/NotaryDashboardScreen';
 
 
 const App: React.FC = () => {
@@ -68,6 +69,8 @@ const App: React.FC = () => {
           setUser(parsedUser);
           if (parsedUser.role === 'ABUNZI') {
             setCurrentScreen('abunzi-dashboard');
+          } else if (parsedUser.role === 'NOTARY') {
+            setCurrentScreen('notary-dashboard');
           } else {
             setCurrentScreen('dashboard');
           }
@@ -91,6 +94,8 @@ const App: React.FC = () => {
     AsyncStorage.setItem('user', JSON.stringify(userData));
     if (userData.role === 'ABUNZI') {
       setCurrentScreen('abunzi-dashboard');
+    } else if (userData.role === 'NOTARY') {
+      setCurrentScreen('notary-dashboard');
     } else {
       setCurrentScreen('dashboard');
     }
@@ -201,6 +206,7 @@ const App: React.FC = () => {
       case 'qr-scanner': return <QRScannerScreen onNavigate={handleNavigate} />;
       case 'land-map': return <LandMapScreen onNavigate={handleNavigate} />;
       case 'abunzi-dashboard': return <AbunziDashboardScreen onNavigate={handleNavigate} user={user} />;
+      case 'notary-dashboard': return <NotaryDashboardScreen onNavigate={handleNavigate} user={user} />;
       case 'land-vault': return <DocumentVaultScreen onNavigate={handleNavigate} user={user} />;
       case 'edit-profile': return <EditProfileScreen onNavigate={handleNavigate} user={user} onUpdate={refreshUser} />;
       default: return <LandingScreen onNavigate={handleNavigate} />;
@@ -216,6 +222,8 @@ const App: React.FC = () => {
     if (user && isPublicScreen(currentScreen)) {
        if (user.role === 'ABUNZI') {
         setCurrentScreen('abunzi-dashboard');
+       } else if (user.role === 'NOTARY') {
+        setCurrentScreen('notary-dashboard');
        } else {
         setCurrentScreen('dashboard');
        }

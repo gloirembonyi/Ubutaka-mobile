@@ -20,7 +20,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onNavigate, onLogin, type: init
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [nationalId, setNationalId] = useState('');
-  const [role, setRole] = useState<'USER' | 'ABUNZI'>('USER');
+  const [role, setRole] = useState<'USER' | 'ABUNZI' | 'NOTARY'>('USER');
   const [loading, setLoading] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -151,7 +151,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onNavigate, onLogin, type: init
           email,
           password,
           nationalId,
-          role: role === 'ABUNZI' ? 'ABUNZI' : 'USER',
+          role: role,
         });
 
         Alert.alert('Success', 'Account created successfully!', [
@@ -272,6 +272,13 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onNavigate, onLogin, type: init
                 >
                   <MaterialIcons name="gavel" size={24} color={role === 'ABUNZI' ? Colors.primary : Colors.textSecondary} />
                   <Text style={[styles.roleText, role === 'ABUNZI' && styles.roleTextActive]}>Abunzi</Text>
+                </Pressable>
+                <Pressable 
+                  onPress={() => setRole('NOTARY')}
+                  style={[styles.roleCard, role === 'NOTARY' && styles.roleCardActive]}
+                >
+                  <MaterialIcons name="verified-user" size={24} color={role === 'NOTARY' ? Colors.primary : Colors.textSecondary} />
+                  <Text style={[styles.roleText, role === 'NOTARY' && styles.roleTextActive]}>Notary</Text>
                 </Pressable>
               </View>
             </View>

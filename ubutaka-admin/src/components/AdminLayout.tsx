@@ -10,6 +10,7 @@ import {
   Map as MapIcon, 
   Receipt, 
   AlertTriangle, 
+  AlertCircle,
   Settings, 
   LogOut,
   Menu,
@@ -41,6 +42,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { icon: MapIcon, label: "Parcels", href: "/admin/parcels" },
     { icon: Receipt, label: "Transactions", href: "/admin/transactions" },
     { icon: AlertTriangle, label: "Disputes", href: "/admin/disputes" },
+    { icon: AlertCircle, label: "Anomalies", href: "/admin/anomalies" },
   ];
 
   return (

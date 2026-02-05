@@ -28,7 +28,8 @@ export type Screen =
   | 'my-parcels'
   | 'land-vault'
   | 'profile-completion'
-  | 'edit-profile';
+  | 'edit-profile'
+  | 'notary-dashboard';
 
 export type Language = 'RW' | 'EN';
 
@@ -40,7 +41,7 @@ export interface User {
   nationalId: string;
   isVerified: boolean;
   avatar: string;
-  role: 'USER' | 'ABUNZI' | 'ADMIN' | 'CITIZEN';
+  role: 'USER' | 'ABUNZI' | 'ADMIN' | 'CITIZEN' | 'NOTARY';
   district?: string;
   sector?: string;
   cell?: string;
@@ -123,6 +124,23 @@ export interface LandDocument {
   ownerId: string;
   fileDate?: string;
   description?: string;
+  status: string;
+  isCertified: boolean;
   isEncrypted: boolean;
   createdAt: string;
+}
+
+export interface AnomalyReport {
+  id: string;
+  upi?: string;
+  type: string;
+  description: string;
+  imageUrl?: string;
+  location?: string;
+  latitude?: number;
+  longitude?: number;
+  status: string;
+  reportedById?: string;
+  createdAt: string;
+  updatedAt: string;
 }

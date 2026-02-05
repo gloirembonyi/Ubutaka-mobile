@@ -40,7 +40,9 @@ const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate, user 
           to: tx.buyerName || 'Unassigned',
           value: tx.price || '0',
           gasUsed: 42000,
-          status: tx.status.toLowerCase() === 'completed' ? 'confirmed' : 'pending',
+          status: tx.status === 'COMPLETED' ? 'confirmed' : 'pending',
+          detailedStatus: tx.status,
+          step: tx.step,
           contractAddress: '0xRegistry'
         }));
         setHistory(mappedData);
@@ -77,6 +79,82 @@ const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate, user 
 
   const openExplorer = (hash: string) => {
      Linking.openURL(BlockchainService.getExplorerUrl(hash));
+  };
+
+  const handleUpdateStatus = async (tx: any, newStatus: string, newStep: string, newProgress: number) => {
+    setVerifying(true);
+    try {
+      // Find the ID by matching the hash since mappedData loses the original ID
+      // We need to fetch the original list to get the ID, or use a better mapping.
+      // For now, let's assume hash is unique and we can find by it.
+      const resp = await fetch(`${API_ENDPOINTS.TRANSACTIONS}`);
+      if (!resp.ok) throw new Error("Failed to fetch");
+      const data = await resp.json();
+      const originalTx = data.find((d: any) => d.txHash === tx.hash);
+      
+      if (!originalTx) throw new Error("Transaction not found");
+
+      const updateResp = await fetch(`${API_ENDPOINTS.TRANSACTIONS}/${originalTx.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: newStatus,
+          step: newStep,
+          progress: newProgress
+        })
+      });
+
+      if (updateResp.ok) {
+        Alert.alert("Success", "Transaction status updated. Proceeding to next step.");
+        fetchHistory();
+      }
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Error", "Failed to update transaction status.");
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const getNextSteps = (status?: string) => {
+    switch (status) {
+      case 'PENDING_PAYMENT':
+        return {
+          text: 'Await Payment Confirmation',
+          icon: 'payments',
+          color: Colors.warning
+        };
+      case 'PAYMENT_RECEIVED':
+        return {
+          text: 'Proceed to Notary',
+          icon: 'gavel',
+          color: Colors.primary
+        };
+      case 'NOTARY_VERIFIED':
+        return {
+          text: 'Await Title Issuance',
+          icon: 'description',
+          color: Colors.secondary
+        };
+      case 'COMPLETED':
+        return {
+          text: 'Transaction Complete',
+          icon: 'check-circle',
+          color: Colors.success
+        };
+      case 'PENDING_NOTARY':
+        return {
+          text: 'Awaiting Notary Review',
+          icon: 'hourglass-empty',
+          color: Colors.warning
+        };
+      default:
+        return {
+          text: 'Follow System Instructions',
+          icon: 'info',
+          color: Colors.textSecondary
+        };
+    }
   };
 
 
@@ -165,31 +243,60 @@ const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate, user 
                     <Text style={{ color: Colors.textTertiary }}>No transactions found</Text>
                 </View>
             ) : (
-                history.map((tx, index) => (
-                    <Pressable 
-                        key={index}
-                        style={styles.txCard}
-                        onPress={() => handleVerify(tx)}
-                    >
-                        <View style={styles.txRow}>
-                            <View style={styles.txIcon}>
-                                <FontAwesome5 name="cube" size={16} color={Colors.primary} />
+                history.map((tx, index) => {
+                    const nextStep = getNextSteps(tx.detailedStatus);
+                    return (
+                        <Pressable 
+                            key={index}
+                            style={styles.txCard}
+                            onPress={() => handleVerify(tx)}
+                        >
+                            <View style={styles.txRow}>
+                                <View style={styles.txIcon}>
+                                    <FontAwesome5 name="cube" size={16} color={Colors.primary} />
+                                </View>
+                                <View style={styles.txInfo}>
+                                    <Text style={styles.txType}>{tx.detailedStatus?.replace('_', ' ') || 'Land Operation'}</Text>
+                                    <View style={styles.hashContainer}>
+                                        <Text style={styles.txHash} numberOfLines={1} ellipsizeMode="middle">{tx.hash}</Text>
+                                        <Text style={styles.txStep}>{tx.step}</Text>
+                                    </View>
+                                </View>
+                                <View style={[styles.badge, { backgroundColor: getColorWithOpacity(nextStep.color, 0.1) }]}>
+                                    <MaterialIcons name={tx.status === 'confirmed' ? 'check-circle' : 'hourglass-empty'} size={14} color={nextStep.color} />
+                                    <Text style={[styles.badgeText, { color: nextStep.color }]}>
+                                        {tx.status === 'confirmed' ? 'Confirmed' : 'Pending'}
+                                    </Text>
+                                </View>
                             </View>
-                            <View style={styles.txInfo}>
-                                <Text style={styles.txType}>Land Operation</Text>
-                                <Text style={styles.txHash} numberOfLines={1} ellipsizeMode="middle">{tx.hash}</Text>
+
+                            <View style={styles.nextStepContainer}>
+                                <View style={[styles.nextStepIcon, { backgroundColor: getColorWithOpacity(nextStep.color, 0.1) }]}>
+                                    <MaterialIcons name={nextStep.icon as any} size={18} color={nextStep.color} />
+                                </View>
+                                <View>
+                                    <Text style={styles.nextStepLabel}>Next Step:</Text>
+                                    <Text style={[styles.nextStepText, { color: nextStep.color }]}>{nextStep.text}</Text>
+                                </View>
                             </View>
-                            <View style={styles.badge}>
-                                <MaterialIcons name="check-circle" size={14} color={Colors.success} />
-                                <Text style={styles.badgeText}>Verified</Text>
+
+                            <View style={styles.txDetails}>
+                                <Text style={styles.detailText}>Block: #{tx.blockNumber}</Text>
+                                <Text style={styles.detailText}>{new Date(tx.timestamp).toLocaleTimeString()}</Text>
                             </View>
-                        </View>
-                        <View style={styles.txDetails}>
-                            <Text style={styles.detailText}>Block: #{tx.blockNumber}</Text>
-                            <Text style={styles.detailText}>{new Date(tx.timestamp).toLocaleTimeString()}</Text>
-                        </View>
-                    </Pressable>
-                ))
+
+                            {tx.detailedStatus === 'PENDING_PAYMENT' && (
+                                <Pressable 
+                                    style={styles.payButton}
+                                    onPress={() => handleUpdateStatus(tx, 'PENDING_NOTARY', 'Notary Verification', 60)}
+                                >
+                                    <MaterialIcons name="payment" size={18} color={Colors.white} />
+                                    <Text style={styles.payButtonText}>Pay Fees & Send to Notary</Text>
+                                </Pressable>
+                            )}
+                        </Pressable>
+                    );
+                })
             )}
         </View>
 
@@ -417,6 +524,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 12,
   },
+  payButton: {
+    marginTop: 16,
+    backgroundColor: Colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 8,
+  },
+  payButtonText: {
+    color: Colors.white,
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
   txInfo: {
     flex: 1,
     marginRight: 8,
@@ -427,10 +549,52 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     marginBottom: 2,
   },
+  hashContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   txHash: {
     fontSize: 11,
     color: Colors.textSecondary,
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    flex: 1,
+  },
+  txStep: {
+    fontSize: 10,
+    color: Colors.primary,
+    fontWeight: 'bold',
+    backgroundColor: getColorWithOpacity(Colors.primary, 0.1),
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  nextStepContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: Colors.backgroundLight,
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  nextStepIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nextStepLabel: {
+    fontSize: 10,
+    color: Colors.textTertiary,
+    textTransform: 'uppercase',
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
+  },
+  nextStepText: {
+    fontSize: 14,
+    fontWeight: 'bold',
   },
   badge: {
     flexDirection: 'row',

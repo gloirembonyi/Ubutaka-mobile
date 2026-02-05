@@ -131,6 +131,8 @@ model LandDocument {
   ownerId      String
   fileDate     String?
   description  String?
+  status       String   @default("PENDING") // PENDING, CERTIFIED
+  isCertified  Boolean  @default(false)
   isEncrypted  Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

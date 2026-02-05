@@ -260,11 +260,14 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme, onLogo
             </View>
             <Text style={[styles.menuLabel, isDark && styles.textDark]}>Complete Profile</Text>
           </Pressable>
-          <Pressable style={[styles.menuItem, isDark && styles.menuItemDark]}>
-            <View style={[styles.menuIcon, { backgroundColor: getColorWithOpacity(Colors.primary, 0.1) }]}>
-              <MaterialIcons name="folder-shared" size={24} color={Colors.primary} />
+          <Pressable 
+            style={[styles.menuItem, isDark && styles.menuItemDark]}
+            onPress={() => onNavigate('dispute-list')}
+          >
+            <View style={[styles.menuIcon, { backgroundColor: getColorWithOpacity(Colors.accent, 0.1) }]}>
+              <MaterialIcons name="announcement" size={24} color={Colors.accent} />
             </View>
-            <Text style={[styles.menuLabel, isDark && styles.textDark]}>My Documents</Text>
+            <Text style={[styles.menuLabel, isDark && styles.textDark]}>My Reports</Text>
           </Pressable>
           <Pressable 
             style={[styles.menuItem, isDark && styles.menuItemDark]}

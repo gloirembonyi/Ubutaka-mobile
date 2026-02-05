@@ -2,9 +2,13 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const reportedById = searchParams.get('reportedById');
+
     const anomalies = await prisma.anomalyReport.findMany({
+      where: reportedById ? { reportedById } : {},
       orderBy: { createdAt: 'desc' }
     });
     return NextResponse.json(anomalies);
