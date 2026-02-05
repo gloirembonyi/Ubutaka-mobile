@@ -8,28 +8,24 @@ datasource db {
 }
 
 model User {
-  id         String   @id @default(cuid())
-  name       String
-  nationalId String   @unique
-  isVerified Boolean  @default(false)
-  avatar     String?
-  role       String   @default("USER")
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  email      String   @unique @default("admin@ubutaka.gov.rw")
-  password   String   @default("password123")
-  
-  // Location for Abunzi or User context
-  district   String?
-  sector     String?
-  cell       String?
-  village    String?
-  
-  // Profile Completion Fields
-  idPictureUrl      String?  // URL to uploaded ID picture
-  biometricRegistered Boolean @default(false)  // Face/biometric registered
-  digitalSignature   String?  // Digital signature data (base64 or URL)
-  profileCompleted   Boolean  @default(false)  // Overall profile completion status
+  id                  String   @id @default(cuid())
+  name                String
+  nationalId          String   @unique
+  isVerified          Boolean  @default(false)
+  avatar              String?
+  role                String   @default("USER")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  email               String   @unique @default("admin@ubutaka.gov.rw")
+  password            String   @default("password123")
+  cell                String?
+  district            String?
+  sector              String?
+  village             String?
+  biometricRegistered Boolean  @default(false)
+  digitalSignature    String?
+  idPictureUrl        String?
+  profileCompleted    Boolean  @default(false)
 }
 
 model Parcel {
@@ -37,49 +33,44 @@ model Parcel {
   size          String
   use           String
   district      String
-  sector        String?
-  cell          String?
-  village       String?
   location      String
   status        String    @default("Pending Verification")
   ownerName     String
   imageUrl      String
   price         String?
-  isVerified    Boolean   @default(false)
-  verifiedAt    DateTime?
-  certificateId String?   @unique
-  documents     String?   // JSON string of documents
-  coordinates   String?   // JSON string of boundary coordinates
-  partners      String?   // JSON string of joint owners/partners
-  children      String?   // JSON string of children/dependents
-  userId        String?   // Link to User model
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  certificateId String?   @unique
+  coordinates   String?
+  documents     String?
+  isVerified    Boolean   @default(false)
+  userId        String?
+  verifiedAt    DateTime?
+  cell          String?
+  sector        String?
+  village       String?
+  children      String?
+  partners      String?
 }
 
 model Transaction {
   id           String   @id @default(cuid())
   title        String
   upi          String
-  type         String   @default("TRANSFER") // TRANSFER, REGISTRATION
-  status       String   // PENDING_NOTARY, COMPLETED, etc.
+  status       String
   date         String
-  step         String   // Current step description
+  step         String
   progress     Int
-  
-  // Smart Flow Fields
-  sellerName   String?
-  buyerName    String?
-  price        String?
-  
-  // Blockchain Fields
-  txHash       String?  @unique
-  blockNumber  Int?
-  previousHash String?
-  gasFee       String?
-  
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  blockNumber  Int?
+  buyerName    String?
+  gasFee       String?
+  previousHash String?
+  price        String?
+  sellerName   String?
+  txHash       String?  @unique
+  type         String   @default("TRANSFER")
 }
 
 model Dispute {
@@ -91,21 +82,18 @@ model Dispute {
   parties          String
   description      String
   location         String
-  district         String?
-  sector           String?
-  cell             String?
-  village          String?
-  assignedAbunziId String?
-  
-  // Abunzi Portal Fields
-  statements       String?  // JSON string
-  evidence         String?  // JSON string
-  decisions        String?  // JSON string
-  familyTree       String?  // JSON string
-  
-  reportedById     String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+  assignedAbunziId String?
+  cell             String?
+  district         String?
+  sector           String?
+  village          String?
+  decisions        String?
+  evidence         String?
+  familyTree       String?
+  reportedById     String?
+  statements       String?
 }
 
 model AnomalyReport {
@@ -122,18 +110,19 @@ model AnomalyReport {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
+
 model LandDocument {
-  id           String   @id @default(cuid())
-  name         String
-  category     String   // Title Deed, Permit, Tax, Evidence, Historical
-  url          String
-  upi          String?
-  ownerId      String
-  fileDate     String?
-  description  String?
-  status       String   @default("PENDING") // PENDING, CERTIFIED
-  isCertified  Boolean  @default(false)
-  isEncrypted  Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id          String   @id @default(cuid())
+  name        String
+  category    String
+  url         String
+  upi         String?
+  ownerId     String
+  fileDate    String?
+  description String?
+  status      String   @default("PENDING") // PENDING, CERTIFIED
+  isCertified Boolean  @default(false)
+  isEncrypted Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
