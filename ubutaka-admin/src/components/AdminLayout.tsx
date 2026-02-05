@@ -87,6 +87,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <button 
               onClick={() => setSidebarOpen(!isSidebarOpen)}
               className="lg:hidden p-2 text-slate-500 hover:bg-slate-50 rounded-lg"
+              title="Toggle Sidebar"
+              aria-label="Toggle Sidebar"
             >
               <Menu size={20} />
             </button>
@@ -101,7 +103,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
 
           <div className="flex items-center gap-4">
-            <button className="p-2 text-slate-500 hover:bg-slate-50 rounded-lg relative">
+            <button 
+              className="p-2 text-slate-500 hover:bg-slate-50 rounded-lg relative"
+              title="Notifications"
+              aria-label="Notifications"
+            >
               <Bell size={18} />
               <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-red-500 rounded-full border-2 border-white"></span>
             </button>
