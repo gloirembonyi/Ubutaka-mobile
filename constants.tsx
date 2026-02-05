@@ -11,6 +11,16 @@ export const MOCK_USER: User = {
   role: "CITIZEN"
 };
 
+export const MOCK_NOTARY: User = {
+  id: "USR-NOTARY",
+  name: "Notary Claire",
+  email: "notary@gov.rw",
+  nationalId: "1 1985 8 0000000 0 00",
+  isVerified: true,
+  avatar: "https://ui-avatars.com/api/?background=EB5757&color=fff&name=Notary+Claire",
+  role: "NOTARY"
+};
+
 export const MOCK_PARCELS: Parcel[] = [
   {
     upi: "5/03/12/04/111",

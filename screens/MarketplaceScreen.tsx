@@ -84,9 +84,36 @@ const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ onNavigate, user 
         </Pressable>
       </View>
 
-      <View style={styles.searchBar}>
-        <MaterialIcons name="search" size={20} color={Colors.textTertiary} />
-        <Text style={styles.searchText}>Search by location, size, or price...</Text>
+      <View style={styles.marketStats}>
+        <View style={styles.statItem}>
+          <Text style={styles.statValue}>{parcels.length}</Text>
+          <Text style={styles.statLabel}>Active listings</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statItem}>
+          <Text style={styles.statValue}>~2.4M</Text>
+          <Text style={styles.statLabel}>Avg Price (RWF)</Text>
+        </View>
+      </View>
+
+      <View style={styles.searchSection}>
+        <View style={styles.searchBar}>
+            <MaterialIcons name="search" size={20} color={Colors.textTertiary} />
+            <Text style={styles.searchText}>Search area or UPI...</Text>
+        </View>
+        <Pressable style={styles.filterButton}>
+          <MaterialIcons name="tune" size={20} color={Colors.white} />
+        </Pressable>
+      </View>
+
+      <View style={styles.filterChips}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsContent}>
+            {['All Land', 'Residential', 'Agricultural', 'Commercial', 'Industrial'].map((chip, i) => (
+                <Pressable key={chip} style={[styles.chip, i === 0 && styles.chipActive]}>
+                    <Text style={[styles.chipText, i === 0 && styles.chipTextActive]}>{chip}</Text>
+                </Pressable>
+            ))}
+        </ScrollView>
       </View>
 
       {loading ? (
@@ -162,55 +189,141 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: 'bold', color: Colors.textPrimary },
   backButton: { width: 40, alignItems: 'center' },
   headerButton: { width: 40, alignItems: 'center' },
+  marketStats: {
+    flexDirection: 'row',
+    backgroundColor: Colors.primary,
+    marginHorizontal: 16,
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'space-around',
+  },
+  statItem: {
+    alignItems: 'center',
+  },
+  statValue: {
+    color: Colors.white,
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  statLabel: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 10,
+    marginTop: 2,
+    textTransform: 'uppercase',
+  },
+  statDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  searchSection: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    marginTop: 16,
+    gap: 12,
+  },
   searchBar: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.white,
-    margin: 16,
     padding: 12,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: Colors.borderLight,
     gap: 8,
   },
-  searchText: { color: Colors.textTertiary },
+  filterButton: {
+    width: 48,
+    height: 48,
+    backgroundColor: Colors.secondary,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterChips: {
+    marginTop: 16,
+  },
+  chipsContent: {
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  chip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  chipActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  chipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+  },
+  chipTextActive: {
+    color: Colors.white,
+  },
+  searchText: { color: Colors.textTertiary, fontSize: 13 },
   content: { padding: 16, gap: 16, paddingBottom: 160 },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   loadingText: { marginTop: 12, color: Colors.textSecondary },
   
   card: {
     backgroundColor: Colors.white,
-    borderRadius: 20,
+    borderRadius: 24,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: Colors.borderLight,
     shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
+    shadowRadius: 12,
     elevation: 4,
   },
-  cardImage: { width: '100%', height: 180 },
-  cardContent: { padding: 16 },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  cardPrice: { fontSize: 20, fontWeight: '900', color: Colors.primary },
-  verifiedBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.success, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, gap: 4 },
+  cardImage: { width: '100%', height: 200 },
+  cardContent: { padding: 20 },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  cardPrice: { fontSize: 22, fontWeight: '900', color: Colors.primary },
+  verifiedBadge: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: Colors.success, 
+    paddingHorizontal: 10, 
+    paddingVertical: 5, 
+    borderRadius: 12, 
+    gap: 4 
+  },
   verifiedText: { color: Colors.white, fontSize: 10, fontWeight: 'bold' },
   
-  cardLocation: { fontSize: 16, fontWeight: 'bold', color: Colors.textPrimary, marginBottom: 4 },
-  cardDetails: { fontSize: 14, color: Colors.textSecondary, marginBottom: 8 },
-  cardOwner: { fontSize: 12, color: Colors.textTertiary, marginBottom: 16 },
+  cardLocation: { fontSize: 17, fontWeight: '800', color: Colors.textPrimary, marginBottom: 4 },
+  cardDetails: { fontSize: 14, color: Colors.textSecondary, marginBottom: 12 },
+  cardOwner: { 
+    fontSize: 12, 
+    color: Colors.textTertiary, 
+    marginBottom: 20,
+    backgroundColor: Colors.backgroundLight,
+    padding: 8,
+    borderRadius: 8,
+    alignSelf: 'flex-start'
+  },
   
   buyButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: Colors.primary,
-    padding: 12,
-    borderRadius: 12,
-    gap: 8,
+    padding: 16,
+    borderRadius: 16,
+    gap: 10,
   },
-  buyButtonText: { color: Colors.white, fontWeight: 'bold', fontSize: 14 },
+  buyButtonText: { color: Colors.white, fontWeight: '800', fontSize: 15 },
 });
 
 export default MarketplaceScreen;

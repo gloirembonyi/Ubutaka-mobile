@@ -2,51 +2,61 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, TextInput } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Screen, User, Dispute } from '../types';
+import { Screen, User, Dispute, AnomalyReport } from '../types';
 import { Colors, getColorWithOpacity } from '../styles/colors';
 import { GlobalStyles } from '../styles/globalStyles';
 import { API_ENDPOINTS } from '../config/api';
-import { ActivityIndicator } from 'react-native';
+import { ActivityIndicator, Alert } from 'react-native';
 
 interface DisputeListScreenProps {
-  onNavigate: (screen: Screen) => void;
+  onNavigate: (screen: Screen, params?: any) => void;
   onSelectDispute: (id: string) => void;
   user: User | null;
 }
 
 const DisputeListScreen: React.FC<DisputeListScreenProps> = ({ onNavigate, onSelectDispute, user }) => {
-  const [activeTab, setActiveTab] = useState<'citizen' | 'abunzi'>(user?.role === 'ABUNZI' ? 'abunzi' : 'citizen');
+  const [activeTab, setActiveTab] = useState<'disputes' | 'reports' | 'abunzi'>(user?.role === 'ABUNZI' ? 'abunzi' : 'disputes');
   const [disputes, setDisputes] = useState<Dispute[]>([]);
+  const [anomalies, setAnomalies] = useState<AnomalyReport[]>([]);
   const [loading, setLoading] = useState(true);
 
   React.useEffect(() => {
-    const fetchDisputes = async () => {
-      try {
-        const url = API_ENDPOINTS.DISPUTES;
-        console.log('Fetching disputes from:', url);
-        const resp = await fetch(url);
-        if (resp.ok) {
-          const data = await resp.json();
-          setDisputes(data);
-        } else {
-          console.error('Failed to fetch disputes:', resp.status, resp.statusText);
-        }
-      } catch (err) {
-        console.error('Fetch disputes error:', err);
-      } finally {
-        setLoading(false);
+    fetchData();
+  }, [user?.id]);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      // Fetch Disputes
+      const disputeUrl = `${API_ENDPOINTS.DISPUTES}${user?.role !== 'ADMIN' ? `?reportedById=${user?.id}` : ''}`;
+      const disputeResp = await fetch(disputeUrl);
+      if (disputeResp.ok) {
+        const data = await disputeResp.json();
+        setDisputes(data);
       }
-    };
-    fetchDisputes();
-  }, []);
+
+      // Fetch Anomalies
+      const anomalyUrl = `${API_ENDPOINTS.ANOMALIES}${user?.role !== 'ADMIN' ? `?reportedById=${user?.id}` : ''}`;
+      const anomalyResp = await fetch(anomalyUrl);
+      if (anomalyResp.ok) {
+        const data = await anomalyResp.json();
+        setAnomalies(data);
+      }
+    } catch (err) {
+      console.error('Fetch reports error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredDisputes = disputes.filter(d => {
-    if (activeTab === 'citizen') {
+    if (activeTab === 'disputes') {
       return d.reportedById === user?.id;
-    } else {
+    } else if (activeTab === 'abunzi') {
       // For Abunzi tab, show based on district
       return d.district?.toLowerCase() === user?.district?.toLowerCase();
     }
+    return false;
   });
 
   return (
@@ -65,17 +75,25 @@ const DisputeListScreen: React.FC<DisputeListScreenProps> = ({ onNavigate, onSel
 
         <View style={styles.tabs}>
            <Pressable 
-            style={[styles.tab, activeTab === 'citizen' && styles.tabActive]}
-            onPress={() => setActiveTab('citizen')}
+            style={[styles.tab, activeTab === 'disputes' && styles.tabActive]}
+            onPress={() => setActiveTab('disputes')}
            >
-             <Text style={[styles.tabText, activeTab === 'citizen' && styles.tabTextActive]}>My Disputes</Text>
+             <Text style={[styles.tabText, activeTab === 'disputes' && styles.tabTextActive]}>My Disputes</Text>
            </Pressable>
            <Pressable 
-            style={[styles.tab, activeTab === 'abunzi' && styles.tabActive]}
-            onPress={() => setActiveTab('abunzi')}
+            style={[styles.tab, activeTab === 'reports' && styles.tabActive]}
+            onPress={() => setActiveTab('reports')}
            >
-             <Text style={[styles.tabText, activeTab === 'abunzi' && styles.tabTextActive]}>Abunzi Dashboard</Text>
+             <Text style={[styles.tabText, activeTab === 'reports' && styles.tabTextActive]}>General Reports</Text>
            </Pressable>
+           {user?.role === 'ABUNZI' && (
+             <Pressable 
+              style={[styles.tab, activeTab === 'abunzi' && styles.tabActive]}
+              onPress={() => setActiveTab('abunzi')}
+             >
+               <Text style={[styles.tabText, activeTab === 'abunzi' && styles.tabTextActive]}>Abunzi Operations</Text>
+             </Pressable>
+           )}
         </View>
       </View>
 
@@ -108,49 +126,96 @@ const DisputeListScreen: React.FC<DisputeListScreenProps> = ({ onNavigate, onSel
 
         {loading ? (
            <ActivityIndicator color={Colors.primary} style={{ marginTop: 40 }} />
-        ) : filteredDisputes.map((dispute) => (
-          <Pressable
-            key={dispute.id}
-            onPress={() => onSelectDispute(dispute.id)}
-            style={({ pressed }: { pressed: boolean }) => [
-              styles.disputeCard,
-              pressed && GlobalStyles.pressed
-            ]}
-          >
-            <View style={styles.cardHeader}>
-              <View style={styles.idContainer}>
-                <MaterialIcons name="gavel" size={16} color={Colors.primary} />
-                <Text style={styles.disputeId}>#{dispute.id.slice(-6).toUpperCase()}</Text>
-              </View>
-              <View style={[
-                styles.statusBadge, 
-                dispute.status === 'Resolved' ? styles.statusResolved : 
-                dispute.status === 'Mediation' ? styles.statusMediation : styles.statusInvestigation
-              ]}>
-                <Text style={[
-                  styles.statusText,
-                  dispute.status === 'Resolved' ? styles.statusTextResolved : 
-                  dispute.status === 'Mediation' ? styles.statusTextMediation : styles.statusTextInvestigation
-                ]}>{dispute.status}</Text>
-              </View>
-            </View>
+        ) : activeTab === 'disputes' || activeTab === 'abunzi' ? (
+          disputes
+            .filter(d => activeTab === 'abunzi' ? d.district?.toLowerCase() === user?.district?.toLowerCase() : d.reportedById === user?.id)
+            .map((dispute) => (
+              <Pressable
+                key={dispute.id}
+                onPress={() => onSelectDispute(dispute.id)}
+                style={({ pressed }: { pressed: boolean }) => [
+                  styles.disputeCard,
+                  pressed && GlobalStyles.pressed
+                ]}
+              >
+                <View style={styles.cardHeader}>
+                  <View style={styles.idContainer}>
+                    <MaterialIcons name="gavel" size={16} color={Colors.primary} />
+                    <Text style={styles.disputeId}>#{dispute.id.slice(-6).toUpperCase()}</Text>
+                  </View>
+                  <View style={[
+                    styles.statusBadge, 
+                    dispute.status === 'Resolved' ? styles.statusResolved : 
+                    dispute.status === 'Mediation' ? styles.statusMediation : styles.statusInvestigation
+                  ]}>
+                    <Text style={[
+                      styles.statusText,
+                      dispute.status === 'Resolved' ? styles.statusTextResolved : 
+                      dispute.status === 'Mediation' ? styles.statusTextMediation : styles.statusTextInvestigation
+                    ]}>{dispute.status}</Text>
+                  </View>
+                </View>
 
-            <Text style={styles.disputeType}>{dispute.type} Dispute</Text>
-            <Text style={styles.disputeDescription} numberOfLines={2}>{dispute.description}</Text>
-            
-            <View style={styles.divider} />
-            
-            <View style={styles.cardFooter}>
-              <View style={styles.locationRow}>
-                <MaterialIcons name="location-on" size={14} color={Colors.textTertiary} />
-                <Text style={styles.disputeLocation}>{dispute.location}</Text>
+                <Text style={styles.disputeType}>{dispute.type} Dispute</Text>
+                <Text style={styles.disputeDescription} numberOfLines={2}>{dispute.description}</Text>
+                
+                <View style={styles.divider} />
+                
+                <View style={styles.cardFooter}>
+                  <View style={styles.locationRow}>
+                    <MaterialIcons name="location-on" size={14} color={Colors.textTertiary} />
+                    <Text style={styles.disputeLocation}>{dispute.location}</Text>
+                  </View>
+                  <Text style={styles.dateText}>{dispute.dateOpened}</Text>
+                </View>
+              </Pressable>
+            ))
+        ) : (
+          anomalies.map((anomaly) => (
+            <View key={anomaly.id} style={styles.disputeCard}>
+              <View style={styles.cardHeader}>
+                <View style={styles.idContainer}>
+                  <MaterialIcons name="report-problem" size={16} color={Colors.accent} />
+                  <Text style={[styles.disputeId, { color: Colors.accent }]}>#{anomaly.id.slice(-6).toUpperCase()}</Text>
+                </View>
+                <View style={[styles.statusBadge, anomaly.status === 'PENDING' ? styles.statusInvestigation : styles.statusResolved]}>
+                    <Text style={[styles.statusText, anomaly.status === 'PENDING' ? styles.statusTextInvestigation : styles.statusTextResolved]}>
+                      {anomaly.status}
+                    </Text>
+                </View>
               </View>
-              <Text style={styles.dateText}>{dispute.dateOpened}</Text>
+
+              <Text style={styles.disputeType}>{anomaly.type}</Text>
+              <Text style={styles.disputeDescription}>{anomaly.description}</Text>
+              
+              {anomaly.imageUrl && (
+                <Pressable onPress={() => Alert.alert("Evidence", "Image URL: " + anomaly.imageUrl)}>
+                  <Text style={{ color: Colors.primary, fontSize: 12, marginBottom: 12, fontWeight: 'bold' }}>View Attached Photo</Text>
+                </Pressable>
+              )}
+
+              <View style={styles.divider} />
+              
+              <View style={styles.cardFooter}>
+                <View style={styles.locationRow}>
+                  <MaterialIcons name="map" size={14} color={Colors.textTertiary} />
+                  <Text style={styles.disputeLocation}>{anomaly.location?.split(',')[0]}...</Text>
+                </View>
+                <Text style={styles.dateText}>{new Date(anomaly.createdAt).toLocaleDateString()}</Text>
+              </View>
             </View>
-          </Pressable>
-        ))}
-        {!loading && filteredDisputes.length === 0 && (
-           <Text style={{ textAlign: 'center', marginTop: 40, color: Colors.textSecondary }}>No disputes found.</Text>
+          ))
+        )}
+
+        {!loading && (
+          (activeTab === 'disputes' && disputes.filter(d => d.reportedById === user?.id).length === 0) ||
+          (activeTab === 'reports' && anomalies.length === 0) ||
+          (activeTab === 'abunzi' && disputes.filter(d => d.district?.toLowerCase() === user?.district?.toLowerCase()).length === 0)
+        ) && (
+           <View style={{ alignItems: 'center', marginTop: 60 }}>
+              <MaterialIcons name="inbox" size={64} color={Colors.border} />
+              <Text style={{ textAlign: 'center', marginTop: 12, color: Colors.textSecondary, fontWeight: 'bold' }}>No records found in this category.</Text>
+           </View>
         )}
 
       </ScrollView>

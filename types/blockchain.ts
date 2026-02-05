@@ -8,6 +8,8 @@ export interface BlockchainTransaction {
   value: string; // in wei/gwei or just standard currency string
   gasUsed: number;
   status: 'confirmed' | 'pending' | 'failed';
+  detailedStatus?: string;
+  step?: string;
   contractAddress?: string;
 }
 
