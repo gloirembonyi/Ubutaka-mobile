@@ -808,6 +808,9 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
                     )}
                   </Pressable>
                 )}
+                style={{ flex: 1 }}
+                contentContainerStyle={{ paddingBottom: 20 }}
+                showsVerticalScrollIndicator={true}
               />
             </View>
           </View>
@@ -839,6 +842,9 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
                     )}
                   </Pressable>
                 )}
+                style={{ flex: 1 }}
+                contentContainerStyle={{ paddingBottom: 20 }}
+                showsVerticalScrollIndicator={true}
               />
             </View>
           </View>
@@ -870,6 +876,9 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
                     )}
                   </Pressable>
                 )}
+                style={{ flex: 1 }}
+                contentContainerStyle={{ paddingBottom: 20 }}
+                showsVerticalScrollIndicator={true}
               />
             </View>
           </View>
@@ -901,6 +910,9 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
                     )}
                   </Pressable>
                 )}
+                style={{ flex: 1 }}
+                contentContainerStyle={{ paddingBottom: 20 }}
+                showsVerticalScrollIndicator={true}
               />
             </View>
           </View>
@@ -932,6 +944,9 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
                     )}
                   </Pressable>
                 )}
+                style={{ flex: 1 }}
+                contentContainerStyle={{ paddingBottom: 20 }}
+                showsVerticalScrollIndicator={true}
               />
             </View>
           </View>
@@ -1307,11 +1322,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    width: '85%',
-    maxHeight: '70%',
+    width: '90%',
+    maxHeight: '80%',
     backgroundColor: Colors.white,
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: 24,
+    padding: 24,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 15,
+    elevation: 10,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1333,7 +1353,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 14,
     paddingHorizontal: 16,
-    borderbottomWidth: 1,
+    borderBottomWidth: 1,
     borderBottomColor: Colors.borderLight,
   },
   modalItemText: {

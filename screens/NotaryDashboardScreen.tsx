@@ -28,7 +28,25 @@ const NotaryDashboardScreen: React.FC<NotaryDashboardScreenProps> = ({ onNavigat
       const resp = await fetch(url);
       if (resp.ok) {
         const data: Transaction[] = await resp.json();
-        setTransactions(data);
+        // Fallback to mock data if empty for demo purposes
+        if (data.length === 0) {
+           setTransactions([
+             { 
+               id: '1', 
+               title: 'Sale of Parcel 48388hdjsj', 
+               upi: '48388hdjsj', 
+               status: 'PENDING_NOTARY', 
+               sellerName: 'Gloire Mbonyi', 
+               buyerName: '1846464949', 
+               price: '5464644', 
+               date: new Date().toISOString(),
+               step: 'Payment Received',
+               progress: 60
+             }
+           ]);
+        } else {
+           setTransactions(data);
+        }
       }
     } catch (err) {
       console.error('Fetch transactions error:', err);
@@ -63,42 +81,68 @@ const NotaryDashboardScreen: React.FC<NotaryDashboardScreenProps> = ({ onNavigat
 
   const filteredTransactions = transactions.filter((tx: Transaction) => 
     activeTab === 'pending' 
-      ? (tx.status === 'PENDING_NOTARY' || tx.status === 'PENDING') 
+      ? (tx.status === 'PENDING_NOTARY' || tx.status === 'PENDING' || tx.status === 'PENDING_SELLER' || tx.status === 'PENDING_PAYMENT' || tx.status === 'PENDING_SELLER_APPROVAL') 
       : tx.status === 'COMPLETED'
   );
+
+  const cleanPrice = (price?: string) => {
+    if (!price) return 0;
+    return parseInt(price.toString().replace(/[^0-9]/g, ''), 10) || 0;
+  };
 
   const stats = {
     pending: transactions.filter(tx => tx.status === 'PENDING_NOTARY' || tx.status === 'PENDING').length,
     completed: transactions.filter(tx => tx.status === 'COMPLETED').length,
-    totalValue: transactions.reduce((acc, tx) => acc + (parseInt(tx.price || '0')), 0).toLocaleString(),
+    totalValue: transactions.reduce((acc, tx) => acc + cleanPrice(tx.price), 0).toLocaleString(),
     paymentPending: transactions.filter(tx => tx.step?.includes('Payment')).length,
+  };
+
+  const handleViewDetails = async (tx: Transaction) => {
+    try {
+      setLoading(true);
+      const resp = await fetch(`${API_ENDPOINTS.PARCELS}?upi=${tx.upi}`);
+      if (resp.ok) {
+        const parcels = await resp.json();
+        const fullParcel = Array.isArray(parcels) ? parcels.find(p => p.upi === tx.upi) : parcels;
+        if (fullParcel) {
+          onNavigate('parcel-details', { parcel: fullParcel });
+          return;
+        }
+      }
+      // Fallback if parcel not found in search
+      onNavigate('parcel-details', { parcel: { upi: tx.upi, ownerName: tx.sellerName, price: tx.price } });
+    } catch (err) {
+      onNavigate('parcel-details', { parcel: { upi: tx.upi, ownerName: tx.sellerName, price: tx.price } });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleApprove = async (tx: Transaction) => {
     Alert.alert(
       "Confirm Notarization",
-      `Are you sure you want to notarize the transfer of UPI ${tx.upi} from ${tx.sellerName} to ${tx.buyerName}?`,
+      `By certifying this, you verify that all documents are legal. The seller will be notified to give their final confirmation. Proceed?`,
       [
         { text: "Cancel", style: "cancel" },
         { 
-          text: "Notarize", 
+          text: "Certify & Notify Seller", 
           onPress: async () => {
             try {
               const resp = await fetch(`${API_ENDPOINTS.TRANSACTIONS}/${tx.id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
-                  status: 'COMPLETED',
-                  step: 'Notarized & Registered',
-                  progress: 100
+                  status: 'PENDING_SELLER',
+                  step: 'Awaiting Seller Confirmation',
+                  progress: 80
                 })
               });
               if (resp.ok) {
-                Alert.alert("Success", "Transaction has been notarized and recorded on the blockchain.");
+                Alert.alert("Certified", "You have notarized this transaction. We have sent a notification to the seller for final approval.");
                 fetchTransactions();
               }
             } catch (err) {
-              Alert.alert("Error", "Failed to finalize notarization.");
+              Alert.alert("Error", "Failed to process notarization.");
             }
           }
         }
@@ -156,29 +200,29 @@ const NotaryDashboardScreen: React.FC<NotaryDashboardScreenProps> = ({ onNavigat
 
           <View style={styles.statsRow}>
             <View style={styles.statCard}>
-              <View style={[styles.statIcon, { backgroundColor: getColorWithOpacity(Colors.primary, 0.1) }]}>
-                <MaterialIcons name="pending-actions" size={20} color={Colors.primary} />
+              <View style={[styles.statIcon, { backgroundColor: '#F0F9FF' }]}>
+                <MaterialIcons name="fact-check" size={20} color="#0369A1" />
               </View>
               <Text style={styles.statNumber}>{stats.pending}</Text>
               <Text style={styles.statLabel}>To Review</Text>
             </View>
             <View style={styles.statCard}>
-              <View style={[styles.statIcon, { backgroundColor: getColorWithOpacity(Colors.warning, 0.1) }]}>
-                <MaterialIcons name="description" size={20} color={Colors.warning} />
+              <View style={[styles.statIcon, { backgroundColor: '#FFFBEB' }]}>
+                <MaterialIcons name="insert-drive-file" size={20} color="#B45309" />
               </View>
               <Text style={styles.statNumber}>{documents.filter(d => !d.isCertified).length}</Text>
               <Text style={styles.statLabel}>Docs Pending</Text>
             </View>
             <View style={styles.statCard}>
-              <View style={[styles.statIcon, { backgroundColor: getColorWithOpacity(Colors.success, 0.1) }]}>
-                <MaterialIcons name="verified" size={20} color={Colors.success} />
+              <View style={[styles.statIcon, { backgroundColor: '#F0FDF4' }]}>
+                <MaterialIcons name="verified" size={20} color="#15803D" />
               </View>
               <Text style={styles.statNumber}>{stats.completed}</Text>
               <Text style={styles.statLabel}>Certified</Text>
             </View>
             <View style={styles.statCard}>
-              <View style={[styles.statIcon, { backgroundColor: getColorWithOpacity(Colors.accent, 0.1) }]}>
-                <FontAwesome5 name="hand-holding-usd" size={16} color={Colors.accent} />
+              <View style={[styles.statIcon, { backgroundColor: '#FFF7ED' }]}>
+                <MaterialIcons name="payments" size={20} color="#C2410C" />
               </View>
               <Text style={styles.statNumber}>{transactions.length}</Text>
               <Text style={styles.statLabel}>Total Volume</Text>
@@ -271,23 +315,23 @@ const NotaryDashboardScreen: React.FC<NotaryDashboardScreenProps> = ({ onNavigat
                   </View>
                 </View>
 
-                <View style={styles.partiesContainer}>
-                  <View style={styles.partyItem}>
-                     <Text style={styles.partyLabel}>Seller</Text>
-                     <Text style={styles.partyName}>{tx.sellerName}</Text>
+                <View style={styles.partiesCompactContainer}>
+                  <View style={styles.partyCompact}>
+                     <Text style={styles.partyCompactLabel}>SELLER</Text>
+                     <Text style={styles.partyCompactName} numberOfLines={1}>{tx.sellerName}</Text>
                   </View>
-                  <MaterialIcons name="arrow-forward" size={16} color={Colors.textTertiary} />
-                  <View style={styles.partyItem}>
-                     <Text style={styles.partyLabel}>Buyer</Text>
-                     <Text style={styles.partyName}>{tx.buyerName}</Text>
+                  <MaterialIcons name="arrow-forward" size={14} color={Colors.textTertiary} style={{ marginHorizontal: 8 }} />
+                  <View style={styles.partyCompact}>
+                     <Text style={styles.partyCompactLabel}>BUYER</Text>
+                     <Text style={styles.partyCompactName} numberOfLines={1}>{tx.buyerName}</Text>
                   </View>
                 </View>
 
                 <View style={styles.divider} />
                 
-                <View style={styles.priceRow}>
-                   <Text style={styles.priceLabel}>Transaction Value</Text>
-                   <Text style={styles.priceValue}>{parseInt(tx.price || '0').toLocaleString()} RWF</Text>
+                <View style={styles.priceRowCompact}>
+                   <Text style={styles.priceLabelCompact}>Transaction Value</Text>
+                   <Text style={styles.priceValueCompact}>{parseInt(tx.price || '0').toLocaleString()} RWF</Text>
                 </View>
 
                 {/* Payment Status Indicator */}
@@ -298,7 +342,7 @@ const NotaryDashboardScreen: React.FC<NotaryDashboardScreenProps> = ({ onNavigat
                   </View>
                 )}
 
-                {tx.status !== 'COMPLETED' && (
+                {tx.status !== 'COMPLETED' && tx.status !== 'PENDING_SELLER' && (
                   <View style={styles.actionButtons}>
                     <Pressable 
                       onPress={() => handleApprove(tx)}
@@ -308,10 +352,25 @@ const NotaryDashboardScreen: React.FC<NotaryDashboardScreenProps> = ({ onNavigat
                       <Text style={styles.buttonText}>Certify Transaction</Text>
                     </Pressable>
                     <Pressable 
-                      onPress={() => onNavigate('transactions')}
+                      onPress={() => handleViewDetails(tx)}
                       style={styles.detailsButton}
                     >
                       <Text style={styles.detailsButtonText}>View Details</Text>
+                    </Pressable>
+                  </View>
+                )}
+
+                {tx.status === 'PENDING_SELLER' && (
+                  <View style={styles.pendingSellerContainer}>
+                    <View style={styles.pendingSellerBadge}>
+                      <MaterialIcons name="hourglass-top" size={16} color={Colors.warning} />
+                      <Text style={styles.pendingSellerText}>Awaiting Seller Final Signature</Text>
+                    </View>
+                    <Pressable 
+                      onPress={() => onNavigate('parcel-details', { parcel: { upi: tx.upi, ownerName: tx.sellerName } })}
+                      style={[styles.detailsButton, { width: '100%' }]}
+                    >
+                      <Text style={styles.detailsButtonText}>Monitor Progress</Text>
                     </Pressable>
                   </View>
                 )}
@@ -344,61 +403,70 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   welcomeText: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 28,
+    fontWeight: '900',
     color: Colors.textPrimary,
   },
   subtext: {
-    fontSize: 14,
+    fontSize: 15,
     color: Colors.textSecondary,
     marginTop: 4,
+    lineHeight: 22,
   },
   statsRow: {
     flexDirection: 'row',
-    paddingHorizontal: 24,
-    gap: 12,
+    paddingHorizontal: 20,
+    gap: 10,
     marginBottom: 24,
   },
   statCard: {
     flex: 1,
     backgroundColor: Colors.white,
-    padding: 16,
+    paddingVertical: 14,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: Colors.border,
-    alignItems: 'center',
-  },
-  statIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    borderColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  statIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
   },
   statNumber: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontWeight: '900',
     color: Colors.textPrimary,
   },
   statLabel: {
-    fontSize: 10,
+    fontSize: 8,
     color: Colors.textTertiary,
     textTransform: 'uppercase',
-    fontWeight: '700',
-    marginTop: 2,
+    fontWeight: '800',
+    marginTop: 4,
+    textAlign: 'center',
+    letterSpacing: 0.5,
   },
   tabs: {
     flexDirection: 'row',
     paddingHorizontal: 24,
-    marginBottom: 16,
+    marginBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: '#F1F5F9',
   },
   tab: {
-    paddingVertical: 12,
+    paddingVertical: 14,
     marginRight: 24,
-    borderBottomWidth: 2,
+    borderBottomWidth: 3,
     borderBottomColor: 'transparent',
   },
   tabActive: {
@@ -406,54 +474,56 @@ const styles = StyleSheet.create({
   },
   tabText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: Colors.textSecondary,
+    fontWeight: '700',
+    color: Colors.textTertiary,
   },
   tabTextActive: {
     color: Colors.primary,
-    fontWeight: 'bold',
+    fontWeight: '900',
   },
   listContainer: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
   },
   txCard: {
     backgroundColor: Colors.white,
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
+    borderRadius: 24,
+    padding: 24,
+    marginBottom: 20,
     borderWidth: 1,
-    borderColor: Colors.border,
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 3,
   },
   txHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 16,
+    marginBottom: 18,
   },
   txTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '800',
     color: Colors.textPrimary,
   },
   txUpi: {
-    fontSize: 12,
+    fontSize: 13,
     color: Colors.textSecondary,
     marginTop: 2,
+    fontWeight: '500',
   },
   statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
   },
   statusText: {
     fontSize: 10,
-    fontWeight: 'bold',
+    fontWeight: '900',
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   docCategory: {
     fontSize: 11,
@@ -467,136 +537,160 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     marginTop: 8,
   },
-  partiesContainer: {
+  partiesCompactContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: Colors.backgroundLight,
-    padding: 12,
+    backgroundColor: '#F8FAFC',
+    padding: 16,
     borderRadius: 12,
-    marginBottom: 16,
+    marginBottom: 20,
   },
-  partyItem: {
+  partyCompact: {
     flex: 1,
   },
-  partyLabel: {
-    fontSize: 10,
+  partyCompactLabel: {
+    fontSize: 9,
     color: Colors.textTertiary,
-    textTransform: 'uppercase',
-    marginBottom: 2,
+    fontWeight: '800',
+    marginBottom: 4,
+    letterSpacing: 0.5,
   },
-  partyName: {
-    fontSize: 13,
-    fontWeight: 'bold',
+  partyCompactName: {
+    fontSize: 14,
+    fontWeight: '900',
     color: Colors.textPrimary,
   },
   divider: {
     height: 1,
-    backgroundColor: Colors.border,
-    marginBottom: 12,
+    backgroundColor: '#F1F5F9',
+    marginBottom: 16,
   },
-  priceRow: {
+  priceRowCompact: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
   },
-  priceLabel: {
-    fontSize: 12,
+  priceLabelCompact: {
+    fontSize: 14,
     color: Colors.textSecondary,
+    fontWeight: '500',
   },
-  priceValue: {
-    fontSize: 16,
+  priceValueCompact: {
+    fontSize: 18,
     fontWeight: '900',
-    color: Colors.primary,
+    color: Colors.success,
   },
   actionButtons: {
     flexDirection: 'row',
     gap: 12,
   },
   approveButton: {
-    flex: 2,
+    flex: 1,
     backgroundColor: Colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderRadius: 12,
-    gap: 8,
+    gap: 10,
   },
   buttonText: {
     color: Colors.white,
-    fontSize: 13,
-    fontWeight: 'bold',
+    fontSize: 14,
+    fontWeight: '800',
   },
   detailsButton: {
-    flex: 1,
-    backgroundColor: Colors.backgroundLight,
+    paddingHorizontal: 16,
+    backgroundColor: '#F8FAFC',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#E2E8F0',
   },
   detailsButtonText: {
     color: Colors.textPrimary,
-    fontSize: 13,
-    fontWeight: 'bold',
+    fontSize: 14,
+    fontWeight: '700',
   },
   certifiedRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
     justifyContent: 'center',
+    backgroundColor: '#F0FDF4',
+    padding: 10,
+    borderRadius: 10,
   },
   certifiedText: {
-    fontSize: 12,
+    fontSize: 13,
     color: Colors.success,
-    fontWeight: 'bold',
+    fontWeight: '800',
   },
   emptyState: {
-    padding: 60,
+    padding: 80,
     alignItems: 'center',
     justifyContent: 'center',
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: 15,
     color: Colors.textSecondary,
-    marginTop: 16,
+    marginTop: 20,
     textAlign: 'center',
+    lineHeight: 22,
   },
   notificationBadge: {
     position: 'absolute',
-    top: -4,
-    right: -4,
+    top: -6,
+    right: -6,
     backgroundColor: Colors.error,
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
+    borderRadius: 12,
+    minWidth: 22,
+    height: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 6,
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: Colors.white,
   },
   badgeText: {
     color: Colors.white,
     fontSize: 10,
-    fontWeight: 'bold',
+    fontWeight: '900',
   },
   paymentNotification: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: getColorWithOpacity(Colors.success, 0.1),
-    padding: 12,
-    borderRadius: 8,
-    gap: 8,
-    marginBottom: 12,
+    backgroundColor: '#F0F9FF',
+    padding: 14,
+    borderRadius: 12,
+    gap: 10,
+    marginBottom: 16,
   },
   paymentText: {
     flex: 1,
     fontSize: 13,
-    color: Colors.success,
-    fontWeight: '600',
+    color: '#0369A1',
+    fontWeight: '700',
+  },
+  pendingSellerContainer: {
+    gap: 10,
+  },
+  pendingSellerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFBEB',
+    padding: 12,
+    borderRadius: 12,
+    gap: 8,
+  },
+  pendingSellerText: {
+    fontSize: 13,
+    color: '#B45309',
+    fontWeight: '800',
   },
 });
 

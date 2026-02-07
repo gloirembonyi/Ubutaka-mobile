@@ -42,10 +42,10 @@ const BuyLandScreen: React.FC<any> = ({ onNavigate, params }) => {
           title: `Purchase of ${parcel.upi}`,
           upi: parcel.upi,
           type: 'SALE',
-          status: 'PENDING_PAYMENT',
+          status: 'PENDING_SELLER_APPROVAL',
           date: new Date().toISOString(),
-          step: 'Payment Verification',
-          progress: 40,
+          step: 'Awaiting Seller Approval',
+          progress: 20,
           sellerName: parcel.ownerName,
           buyerName: user?.name || "Me",
           price: parcel.price
@@ -75,7 +75,7 @@ const BuyLandScreen: React.FC<any> = ({ onNavigate, params }) => {
                 response.queued ? "Offline Mode" : "Offer Submitted", 
                 response.queued 
                     ? "You are currently offline. Your purchase offer has been saved and will be sent automatically when you have signal."
-                    : "The seller has been notified. Please proceed to payment."
+                    : "Your purchase offer has been sent to the seller. Once the seller approves, you'll be able to proceed with payment."
             );
             onNavigate('dashboard');
         } else {
@@ -98,42 +98,60 @@ const BuyLandScreen: React.FC<any> = ({ onNavigate, params }) => {
         <View style={{width: 40}} />
       </View>
 
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: 150 }]}>
-        <Image source={{ uri: parcel.imageUrl }} style={styles.image} />
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: 150 }]} showsVerticalScrollIndicator={false}>
+        <View style={styles.imageContainer}>
+          <Image source={{ uri: parcel.imageUrl }} style={styles.image} />
+          <View style={styles.imageOverlay}>
+              <View style={styles.priceBadge}>
+                <Text style={styles.priceBadgeText}>{parcel.price}</Text>
+              </View>
+          </View>
+        </View>
         
         <View style={styles.detailsCard}>
-           <Text style={styles.upi}>UPI: {parcel.upi}</Text>
-           <Text style={styles.price}>{parcel.price}</Text>
+           <View style={styles.detailsHeader}>
+             <Text style={styles.upiLabel}>UPI: {parcel.upi}</Text>
+             <View style={styles.idBadge}>
+               <Text style={styles.idBadgeText}>REGISTERED</Text>
+             </View>
+           </View>
+           
+           <Text style={styles.priceMain}>{parcel.price}</Text>
            
            <View style={styles.divider} />
            
-           <View style={styles.row}>
-               <Text style={styles.label}>Location</Text>
-               <Text style={styles.value}>{parcel.district}, {parcel.location}</Text>
-           </View>
-           <View style={styles.row}>
-               <Text style={styles.label}>Size</Text>
-               <Text style={styles.value}>{parcel.size}</Text>
-           </View>
-           <View style={styles.row}>
-               <Text style={styles.label}>Seller</Text>
-               <Text style={styles.value}>Verified Seller (Hidden)</Text>
+           <View style={styles.infoGrid}>
+             <View style={styles.infoItem}>
+                 <Text style={styles.label}>Location</Text>
+                 <Text style={styles.value} numberOfLines={1}>{parcel.district}, {parcel.location}</Text>
+             </View>
+             <View style={styles.infoItem}>
+                 <Text style={styles.label}>Size</Text>
+                 <Text style={styles.value}>{parcel.size}</Text>
+             </View>
+             <View style={styles.infoItem}>
+                 <Text style={styles.label}>Seller</Text>
+                 <Text style={[styles.value, { color: AppColors.success }]}>Verified Seller</Text>
+             </View>
            </View>
            
            <Pressable 
                 style={styles.historyBtn}
-                onPress={() => onNavigate('parcel-detail', { parcelData: parcel })}
+                onPress={() => onNavigate('parcel-details', { parcel: parcel })}
            >
-                <MaterialIcons name="history" size={18} color={AppColors.primary} />
+                <MaterialIcons name="history" size={20} color={AppColors.primary} />
                 <Text style={styles.historyBtnText}>Check Ownership History & Disputes</Text>
+                <MaterialIcons name="chevron-right" size={18} color={AppColors.primary} />
            </Pressable>
         </View>
 
         <View style={styles.trustCard}>
-            <MaterialIcons name="security" size={32} color={AppColors.success} />
-            <Text style={styles.trustTitle}>Blockchain Secured</Text>
+            <View style={styles.trustHeader}>
+              <MaterialIcons name="security" size={28} color={AppColors.success} />
+              <Text style={styles.trustTitle}>Blockchain Secured</Text>
+            </View>
             <Text style={styles.trustText}>
-                This transaction will be immutably recorded on the Ubutaka Blockchain. Ownership transfer is guaranteed upon payment.
+                Your purchase offer will be immutably recorded. Transfer of title happens automatically upon final notary and seller verification.
             </Text>
         </View>
       </ScrollView>
@@ -158,56 +176,124 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: 'bold' },
   backButton: { padding: 4 },
   content: { padding: 20 },
-  image: { width: '100%', height: 200, borderRadius: 16, marginBottom: 20 },
+  imageContainer: {
+    width: '100%',
+    height: 240,
+    borderRadius: 24,
+    overflow: 'hidden',
+    marginBottom: 20,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+  },
+  image: { width: '100%', height: '100%' },
+  imageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'flex-end',
+    padding: 16,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+  priceBadge: {
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  priceBadgeText: {
+    color: AppColors.primary,
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
   detailsCard: {
       backgroundColor: AppColors.white,
-      padding: 20,
-      borderRadius: 16,
+      padding: 24,
+      borderRadius: 24,
       elevation: 2,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      borderWidth: 1,
+      borderColor: '#F1F5F9',
       marginBottom: 20
   },
-  upi: { fontSize: 14, color: AppColors.textSecondary, marginBottom: 4 },
-  price: { fontSize: 24, fontWeight: 'bold', color: AppColors.primary, marginBottom: 16 },
-  divider: { height: 1, backgroundColor: AppColors.borderLight, marginBottom: 16 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
-  label: { color: AppColors.textSecondary },
-  value: { fontWeight: 'bold', color: AppColors.textPrimary },
+  detailsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  upiLabel: { fontSize: 13, color: AppColors.textTertiary, fontWeight: '600' },
+  idBadge: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  idBadgeText: { fontSize: 9, fontWeight: 'bold', color: AppColors.textSecondary },
+  priceMain: { fontSize: 28, fontWeight: '900', color: AppColors.primary, marginBottom: 20 },
+  divider: { height: 1, backgroundColor: '#F1F5F9', marginBottom: 20 },
+  infoGrid: { gap: 16 },
+  infoItem: { gap: 4 },
+  label: { color: AppColors.textTertiary, fontSize: 12, fontWeight: '500' },
+  value: { fontWeight: '700', color: AppColors.textPrimary, fontSize: 15 },
   historyBtn: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 8,
-      padding: 12,
-      backgroundColor: '#F1F5F9',
-      borderRadius: 12,
-      marginTop: 20
+      gap: 10,
+      padding: 16,
+      backgroundColor: '#F8FAFC',
+      borderRadius: 16,
+      marginTop: 24,
+      borderWidth: 1,
+      borderColor: '#E2E8F0',
   },
   historyBtnText: {
       color: AppColors.primary,
       fontWeight: 'bold',
-      fontSize: 13
+      fontSize: 14,
+      flex: 1,
   },
   
   trustCard: {
       backgroundColor: '#F0FDF4',
-      padding: 20,
-      borderRadius: 16,
-      alignItems: 'center',
+      padding: 24,
+      borderRadius: 24,
       gap: 12,
       borderWidth: 1,
-      borderColor: AppColors.success
+      borderColor: '#DCFCE7',
   },
-  trustTitle: { fontSize: 16, fontWeight: 'bold', color: AppColors.success },
-  trustText: { textAlign: 'center', color: '#166534', fontSize: 13, lineHeight: 20 },
+  trustHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  trustTitle: { fontSize: 17, fontWeight: 'bold', color: '#166534' },
+  trustText: { color: '#166534', fontSize: 14, lineHeight: 22 },
   
-  footer: { padding: 20, paddingBottom: 40, backgroundColor: AppColors.white, borderTopWidth: 1, borderColor: AppColors.borderLight },
+  footer: { 
+    padding: 20, 
+    paddingBottom: 40, 
+    backgroundColor: AppColors.white, 
+    borderTopWidth: 1, 
+    borderColor: '#F1F5F9' 
+  },
   button: {
       backgroundColor: AppColors.primary,
-      padding: 16,
-      borderRadius: 16,
-      alignItems: 'center'
+      padding: 18,
+      borderRadius: 20,
+      alignItems: 'center',
+      shadowColor: AppColors.primary,
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.2,
+      shadowRadius: 12,
+      elevation: 6,
   },
-  buttonText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 }
+  buttonText: { color: '#FFF', fontWeight: '800', fontSize: 17 }
 });
 
 export default BuyLandScreen;

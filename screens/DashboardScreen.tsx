@@ -22,6 +22,7 @@ const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?background=0D8ABC&color=fff&
 
 const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onRefreshUser }) => {
   const [parcels, setParcels] = useState<Parcel[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [verifying, setVerifying] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
@@ -33,6 +34,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onR
       setIsOffline(!state.isConnected);
     });
     fetchParcels();
+    fetchTransactions();
     return () => unsubscribe();
   }, [user]);
 
@@ -41,6 +43,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onR
     // This will be called when component mounts or user changes
     const interval = setInterval(() => {
       fetchParcels();
+      fetchTransactions();
     }, 5000); // Refresh every 5 seconds for real-time feel
 
     return () => clearInterval(interval);
@@ -63,6 +66,26 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onR
       console.error('Dashboard: Fetch parcels error:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchTransactions = async () => {
+    if (!displayUser.name) return;
+    try {
+      const url = `${API_ENDPOINTS.TRANSACTIONS}?name=${encodeURIComponent(displayUser.name)}`;
+      const resp = await fetch(url);
+      if (resp.ok) {
+        const data = await resp.json();
+        // Filter for pending transactions that need user action
+        const pendingTx = data.filter((tx: any) => 
+          (tx.status === 'PENDING_SELLER_APPROVAL' && tx.sellerName === displayUser.name) ||
+          (tx.status === 'PENDING_PAYMENT' && tx.buyerName === displayUser.name) ||
+          (tx.status === 'PENDING_SELLER' && tx.sellerName === displayUser.name)
+        );
+        setTransactions(pendingTx);
+      }
+    } catch (err) {
+      console.error('Dashboard: Fetch transactions error:', err);
     }
   };
 
@@ -154,6 +177,54 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onR
                 color={displayUser.isVerified ? Colors.success : Colors.neutral} 
               />
             </Pressable>
+
+        {/* Transaction Notifications */}
+        {transactions.length > 0 && (
+          <View style={styles.notificationsSection}>
+            <Text style={styles.sectionTitle}>Action Required</Text>
+            {transactions.map((tx: any, idx: number) => (
+              <Pressable 
+                key={idx}
+                onPress={() => onNavigate('transactions')}
+                style={({ pressed }) => [
+                  styles.notificationCard,
+                  pressed && GlobalStyles.pressed
+                ]}
+              >
+                <View style={styles.notificationIcon}>
+                  <MaterialIcons 
+                    name={
+                      tx.status === 'PENDING_SELLER_APPROVAL' ? 'rate-review' :
+                      tx.status === 'PENDING_PAYMENT' ? 'payment' :
+                      'edit-note'
+                    } 
+                    size={24} 
+                    color={
+                      tx.status === 'PENDING_SELLER_APPROVAL' ? '#F59E0B' :
+                      tx.status === 'PENDING_PAYMENT' ? Colors.primary :
+                      Colors.success
+                    } 
+                  />
+                </View>
+                <View style={styles.notificationContent}>
+                  <Text style={styles.notificationTitle}>{tx.title}</Text>
+                  <Text style={styles.notificationSubtitle}>
+                    {tx.status === 'PENDING_SELLER_APPROVAL' && tx.sellerName === displayUser.name 
+                      ? `📥 Buyer ${tx.buyerName} sent an offer`
+                      : tx.status === 'PENDING_PAYMENT' && tx.buyerName === displayUser.name
+                      ? `✅ Seller approved! Pay fees to proceed`
+                      : tx.status === 'PENDING_SELLER' && tx.sellerName === displayUser.name
+                      ? `✍️ Notary certified. Provide final signature`
+                      : tx.step
+                    }
+                  </Text>
+                  <Text style={styles.notificationUpi}>Parcel: {tx.upi}</Text>
+                </View>
+                <MaterialIcons name="chevron-right" size={24} color={Colors.neutral} />
+              </Pressable>
+            ))}
+          </View>
+        )}
 
         {/* Hero Card */}
         <Pressable 
@@ -687,6 +758,54 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontSize: 12,
     fontWeight: 'bold',
+  },
+  notificationsSection: {
+    gap: 12,
+  },
+  notificationCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderLeftWidth: 4,
+    borderColor: Colors.border,
+    borderLeftColor: Colors.accent,
+    gap: 12,
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  notificationIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: Colors.backgroundLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notificationContent: {
+    flex: 1,
+    gap: 4,
+  },
+  notificationTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: Colors.textPrimary,
+  },
+  notificationSubtitle: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    lineHeight: 18,
+  },
+  notificationUpi: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: Colors.textTertiary,
+    marginTop: 2,
   },
 });
 
