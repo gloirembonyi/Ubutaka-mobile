@@ -81,72 +81,223 @@ const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate, user 
      Linking.openURL(BlockchainService.getExplorerUrl(hash));
   };
 
-  const handleUpdateStatus = async (tx: any, newStatus: string, newStep: string, newProgress: number) => {
-    setVerifying(true);
-    try {
-      // Find the ID by matching the hash since mappedData loses the original ID
-      // We need to fetch the original list to get the ID, or use a better mapping.
-      // For now, let's assume hash is unique and we can find by it.
-      const resp = await fetch(`${API_ENDPOINTS.TRANSACTIONS}`);
-      if (!resp.ok) throw new Error("Failed to fetch");
-      const data = await resp.json();
-      const originalTx = data.find((d: any) => d.txHash === tx.hash);
-      
-      if (!originalTx) throw new Error("Transaction not found");
+  const handleSellerApproval = async (tx: any) => {
+    Alert.alert(
+      "Approve Buyer's Offer",
+      "By approving this offer, you agree to sell this land to the buyer at the stated price. The buyer will then be required to pay transaction fees before proceeding to notary certification. Proceed?",
+      [
+        { text: "Reject", style: "cancel", onPress: async () => {
+          try {
+            const originalResp = await fetch(`${API_ENDPOINTS.TRANSACTIONS}`);
+            const data = await originalResp.json();
+            const originalTx = data.find((d: any) => d.txHash === tx.hash || d.id === tx.id);
+            if (!originalTx) throw new Error("Transaction not found");
 
-      const updateResp = await fetch(`${API_ENDPOINTS.TRANSACTIONS}/${originalTx.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          status: newStatus,
-          step: newStep,
-          progress: newProgress
-        })
-      });
+            await fetch(`${API_ENDPOINTS.TRANSACTIONS}/${originalTx.id}`, {
+              method: 'DELETE',
+            });
+            Alert.alert("Offer Rejected", "The buyer's offer has been rejected.");
+            fetchHistory();
+          } catch (err) {
+            Alert.alert("Error", "Failed to reject offer.");
+          }
+        }},
+        { 
+          text: "Approve & Continue", 
+          onPress: async () => {
+            setVerifying(true);
+            try {
+              const originalResp = await fetch(`${API_ENDPOINTS.TRANSACTIONS}`);
+              const data = await originalResp.json();
+              const originalTx = data.find((d: any) => d.txHash === tx.hash || d.id === tx.id);
+              
+              if (!originalTx) throw new Error("Transaction not found");
 
-      if (updateResp.ok) {
-        Alert.alert("Success", "Transaction status updated. Proceeding to next step.");
-        fetchHistory();
-      }
-    } catch (err) {
-      console.error(err);
-      Alert.alert("Error", "Failed to update transaction status.");
-    } finally {
-      setVerifying(false);
-    }
+              const updateResp = await fetch(`${API_ENDPOINTS.TRANSACTIONS}/${originalTx.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  status: 'PENDING_PAYMENT',
+                  step: 'Awaiting Buyer Payment',
+                  progress: 40
+                })
+              });
+
+              if (updateResp.ok) {
+                Alert.alert("Offer Approved", "You have approved the buyer's offer. The buyer has been notified to proceed with payment.");
+                fetchHistory();
+              }
+            } catch (err) {
+              Alert.alert("Error", "Failed to approve offer.");
+            } finally {
+              setVerifying(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleBuyerPayment = async (tx: any) => {
+    Alert.alert(
+      "Confirm Payment",
+      "You are about to pay the transaction fees. Once paid, this will be sent to the Notary for official certification. Proceed?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Pay Fees & Submit", 
+          onPress: async () => {
+            setVerifying(true);
+            try {
+              const originalResp = await fetch(`${API_ENDPOINTS.TRANSACTIONS}`);
+              const data = await originalResp.json();
+              const originalTx = data.find((d: any) => d.txHash === tx.hash || d.id === tx.id);
+              
+              if (!originalTx) throw new Error("Transaction not found");
+
+              const updateResp = await fetch(`${API_ENDPOINTS.TRANSACTIONS}/${originalTx.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  status: 'PENDING_NOTARY',
+                  step: 'Awaiting Notary Certification',
+                  progress: 60
+                })
+              });
+
+              if (updateResp.ok) {
+                Alert.alert("Payment Successful", "Fees paid. The transaction has been submitted to the Notary for review.");
+                fetchHistory();
+              }
+            } catch (err) {
+              Alert.alert("Error", "Payment failed.");
+            } finally {
+              setVerifying(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleSellerFinalSign = async (tx: any) => {
+    Alert.alert(
+      "Final Confirmation",
+      "As the seller, by signing this you agree to transfer all rights of this parcel to the buyer. This action is recorded on the blockchain and is irreversible. Proceed?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Confirm & Sign", 
+          onPress: async () => {
+            setVerifying(true);
+            try {
+              const originalResp = await fetch(`${API_ENDPOINTS.TRANSACTIONS}`);
+              const data = await originalResp.json();
+              const originalTx = data.find((d: any) => d.txHash === tx.hash || d.id === tx.id);
+              
+              if (!originalTx) throw new Error("Transaction not found");
+
+              // Complete the transaction
+              const updateResp = await fetch(`${API_ENDPOINTS.TRANSACTIONS}/${originalTx.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  status: 'COMPLETED',
+                  step: 'Transfer Complete',
+                  progress: 100
+                })
+              });
+
+              if (updateResp.ok) {
+                console.log('Transaction completed, now updating parcel ownership...');
+                
+                // Fetch current parcel to get ownership history
+                const parcelResp = await fetch(`${API_ENDPOINTS.PARCELS}?upi=${encodeURIComponent(originalTx.upi)}`);
+                let currentParcel = null;
+                
+                if (parcelResp.ok) {
+                  const parcels = await parcelResp.json();
+                  currentParcel = Array.isArray(parcels) ? parcels[0] : parcels;
+                }
+
+                // Build ownership history
+                let ownerHistory = [];
+                try {
+                  if (currentParcel?.ownerHistory) {
+                    ownerHistory = JSON.parse(currentParcel.ownerHistory);
+                  }
+                } catch (e) {
+                  console.log('Failed to parse ownership history, starting fresh');
+                }
+
+                // Add new ownership record
+                ownerHistory.push({
+                  timestamp: new Date().toISOString(),
+                  previousOwner: originalTx.sellerName,
+                  newOwner: originalTx.buyerName,
+                  transactionId: originalTx.id,
+                  price: originalTx.price
+                });
+
+                // Update Parcel Ownership
+                const parcelUpdateResp = await fetch(`${API_ENDPOINTS.PARCELS}/${encodeURIComponent(originalTx.upi)}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ 
+                    status: 'Verified', 
+                    ownerName: originalTx.buyerName,
+                    price: null, // Remove from marketplace
+                    ownerHistory: JSON.stringify(ownerHistory)
+                  })
+                });
+
+                if (parcelUpdateResp.ok) {
+                  console.log('Parcel ownership successfully transferred to:', originalTx.buyerName);
+                  Alert.alert("Success", "Ownership transferred! The land has been officially updated in the registry.");
+                } else {
+                  console.error('Failed to update parcel ownership:', await parcelUpdateResp.text());
+                  Alert.alert("Warning", "Transaction completed but parcel update failed. Please contact support.");
+                }
+                
+                fetchHistory();
+              }
+            } catch (err) {
+              console.error('Transfer error:', err);
+              Alert.alert("Error", "Failed to complete transfer.");
+            } finally {
+              setVerifying(false);
+            }
+          }
+        }
+      ]
+    );
   };
 
   const getNextSteps = (status?: string) => {
     switch (status) {
+      case 'PENDING_SELLER_APPROVAL':
+        return {
+          text: 'Awaiting Seller Approval',
+          icon: 'person-outline',
+          color: '#F59E0B'
+        };
       case 'PENDING_PAYMENT':
         return {
-          text: 'Await Payment Confirmation',
+          text: 'Payment Required',
           icon: 'payments',
-          color: Colors.warning
-        };
-      case 'PAYMENT_RECEIVED':
-        return {
-          text: 'Proceed to Notary',
-          icon: 'gavel',
-          color: Colors.primary
-        };
-      case 'NOTARY_VERIFIED':
-        return {
-          text: 'Await Title Issuance',
-          icon: 'description',
-          color: Colors.secondary
-        };
-      case 'COMPLETED':
-        return {
-          text: 'Transaction Complete',
-          icon: 'check-circle',
-          color: Colors.success
+          color: Colors.error
         };
       case 'PENDING_NOTARY':
         return {
-          text: 'Awaiting Notary Review',
-          icon: 'hourglass-empty',
-          color: Colors.warning
+          text: 'Under Notary Review',
+          icon: 'gavel',
+          color: Colors.primary
+        };
+      case 'PENDING_SELLER':
+        return {
+          text: 'Await Seller Final Signature',
+          icon: 'history-edu',
+          color: Colors.accent
         };
       default:
         return {
@@ -285,13 +436,33 @@ const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate, user 
                                 <Text style={styles.detailText}>{new Date(tx.timestamp).toLocaleTimeString()}</Text>
                             </View>
 
-                            {tx.detailedStatus === 'PENDING_PAYMENT' && (
+                            {tx.detailedStatus === 'PENDING_SELLER_APPROVAL' && tx.from === user?.name && (
+                                <Pressable 
+                                    style={[styles.payButton, { backgroundColor: '#F59E0B' }]}
+                                    onPress={() => handleSellerApproval(tx)}
+                                >
+                                    <MaterialIcons name="check-circle" size={18} color={Colors.white} />
+                                    <Text style={styles.payButtonText}>Review & Approve Offer</Text>
+                                </Pressable>
+                            )}
+
+                            {tx.detailedStatus === 'PENDING_PAYMENT' && tx.to === user?.name && (
                                 <Pressable 
                                     style={styles.payButton}
-                                    onPress={() => handleUpdateStatus(tx, 'PENDING_NOTARY', 'Notary Verification', 60)}
+                                    onPress={() => handleBuyerPayment(tx)}
                                 >
                                     <MaterialIcons name="payment" size={18} color={Colors.white} />
-                                    <Text style={styles.payButtonText}>Pay Fees & Send to Notary</Text>
+                                    <Text style={styles.payButtonText}>Pay Fees & Submit to Notary</Text>
+                                </Pressable>
+                            )}
+
+                            {tx.detailedStatus === 'PENDING_SELLER' && tx.from === user?.name && (
+                                <Pressable 
+                                    style={[styles.payButton, { backgroundColor: Colors.success }]}
+                                    onPress={() => handleSellerFinalSign(tx)}
+                                >
+                                    <MaterialIcons name="verified" size={18} color={Colors.white} />
+                                    <Text style={styles.payButtonText}>Confirm & Sign Final Transfer</Text>
                                 </Pressable>
                             )}
                         </Pressable>

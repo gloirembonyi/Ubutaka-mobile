@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Image, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Image, ActivityIndicator, Alert, TextInput } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Screen, Parcel } from '../types';
 import { Colors } from '../styles/colors';
@@ -13,7 +13,10 @@ interface MarketplaceScreenProps {
 
 const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ onNavigate, user }) => {
   const [parcels, setParcels] = useState<Parcel[]>([]);
+  const [filteredParcels, setFilteredParcels] = useState<Parcel[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState('All Land');
 
   // Mock available parcels for demo
   const MOCK_MARKET: Parcel[] = [
@@ -56,20 +59,85 @@ const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ onNavigate, user 
       if (response.ok) {
         const data = await response.json();
         setParcels(data);
+        setFilteredParcels(data);
       } else {
-        // Fallback or error handling
         setParcels(MOCK_MARKET);
+        setFilteredParcels(MOCK_MARKET);
       }
     } catch (error) {
        console.error("Marketplace fetch error", error);
        setParcels(MOCK_MARKET);
+       setFilteredParcels(MOCK_MARKET);
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    applyFilters();
+  }, [searchQuery, activeCategory, parcels]);
+
+  const applyFilters = () => {
+    let result = [...parcels];
+
+    if (activeCategory !== 'All Land') {
+      result = result.filter(p => p.use?.includes(activeCategory) || p.use === activeCategory);
+    }
+
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(p => 
+        p.upi?.toLowerCase().includes(query) || 
+        p.location?.toLowerCase().includes(query) || 
+        p.district?.toLowerCase().includes(query)
+      );
+    }
+
+    setFilteredParcels(result);
+  };
+
   const handleBuy = (parcel: Parcel) => {
     onNavigate('buy-land', { parcel });
+  };
+
+  const handleRemoveListing = async (parcel: Parcel) => {
+    Alert.alert(
+      "Remove Listing",
+      "Are you sure you want to remove this parcel from the marketplace?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Remove", 
+          style: "destructive",
+          onPress: async () => {
+            setLoading(true);
+            try {
+              // We reset status to 'Verified' and price to null
+              const response = await fetch(`${API_ENDPOINTS.PARCELS}/${encodeURIComponent(parcel.upi)}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  status: 'Verified',
+                  price: null
+                })
+              });
+
+              if (response.ok) {
+                Alert.alert("Success", "Parcel removed from marketplace.");
+                fetchMarketplaceParcels();
+              } else {
+                Alert.alert("Error", "Failed to remove listing.");
+              }
+            } catch (error) {
+              console.error(error);
+              Alert.alert("Error", "Network error occurred.");
+            } finally {
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
   };
 
   return (
@@ -86,7 +154,7 @@ const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ onNavigate, user 
 
       <View style={styles.marketStats}>
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>{parcels.length}</Text>
+          <Text style={styles.statValue}>{filteredParcels.length}</Text>
           <Text style={styles.statLabel}>Active listings</Text>
         </View>
         <View style={styles.statDivider} />
@@ -98,19 +166,34 @@ const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ onNavigate, user 
 
       <View style={styles.searchSection}>
         <View style={styles.searchBar}>
-            <MaterialIcons name="search" size={20} color={Colors.textTertiary} />
-            <Text style={styles.searchText}>Search area or UPI...</Text>
+            <MaterialIcons name="search" size={24} color={Colors.textTertiary} />
+            <TextInput 
+              style={styles.searchInput}
+              placeholder="Search area or UPI..."
+              placeholderTextColor={Colors.textTertiary}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery.length > 0 && (
+              <Pressable onPress={() => setSearchQuery('')}>
+                <MaterialIcons name="cancel" size={20} color={Colors.textTertiary} />
+              </Pressable>
+            )}
         </View>
         <Pressable style={styles.filterButton}>
-          <MaterialIcons name="tune" size={20} color={Colors.white} />
+          <MaterialIcons name="tune" size={24} color={Colors.white} />
         </Pressable>
       </View>
 
       <View style={styles.filterChips}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsContent}>
-            {['All Land', 'Residential', 'Agricultural', 'Commercial', 'Industrial'].map((chip, i) => (
-                <Pressable key={chip} style={[styles.chip, i === 0 && styles.chipActive]}>
-                    <Text style={[styles.chipText, i === 0 && styles.chipTextActive]}>{chip}</Text>
+            {['All Land', 'Residential', 'Agricultural', 'Commercial', 'Industrial'].map((chip) => (
+                <Pressable 
+                  key={chip} 
+                  onPress={() => setActiveCategory(chip)}
+                  style={[styles.chip, activeCategory === chip && styles.chipActive]}
+                >
+                    <Text style={[styles.chipText, activeCategory === chip && styles.chipTextActive]}>{chip}</Text>
                 </Pressable>
             ))}
         </ScrollView>
@@ -123,7 +206,7 @@ const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ onNavigate, user 
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content}>
-           {parcels.map((parcel, index) => {
+           {filteredParcels.length > 0 ? filteredParcels.map((parcel, index) => {
              const isOwner = user?.name === parcel.ownerName;
              
              return (
@@ -153,10 +236,13 @@ const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ onNavigate, user 
                     </Text>
 
                     {isOwner ? (
-                       <View style={[styles.buyButton, { backgroundColor: Colors.border }]}>
-                         <Text style={styles.buyButtonText}>Your Listing</Text>
-                         <MaterialIcons name="edit" size={16} color={Colors.white} />
-                       </View>
+                       <Pressable 
+                         style={[styles.buyButton, { backgroundColor: Colors.error }]}
+                         onPress={() => handleRemoveListing(parcel)}
+                       >
+                         <Text style={styles.buyButtonText}>Remove Listing</Text>
+                         <MaterialIcons name="delete-outline" size={16} color={Colors.white} />
+                       </Pressable>
                     ) : (
                       <Pressable 
                         style={styles.buyButton}
@@ -169,7 +255,15 @@ const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ onNavigate, user 
                 </View>
               </Pressable>
              );
-           })}
+           }) : (
+             <View style={styles.emptyContainer}>
+                <MaterialIcons name="search-off" size={64} color={Colors.border} />
+                <Text style={styles.emptyText}>No land matches your search filters.</Text>
+                <Pressable onPress={() => {setSearchQuery(''); setActiveCategory('All Land');}} style={styles.resetButton}>
+                  <Text style={styles.resetText}>Clear All Filters</Text>
+                </Pressable>
+             </View>
+           )}
         </ScrollView>
       )}
     </View>
@@ -236,12 +330,17 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   filterButton: {
-    width: 48,
-    height: 48,
-    backgroundColor: Colors.secondary,
+    width: 56,
+    height: 56,
+    backgroundColor: '#FBBF24', // Yellow color from image
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#FBBF24',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   filterChips: {
     marginTop: 16,
@@ -270,7 +369,11 @@ const styles = StyleSheet.create({
   chipTextActive: {
     color: Colors.white,
   },
-  searchText: { color: Colors.textTertiary, fontSize: 13 },
+  searchInput: { flex: 1, color: Colors.textPrimary, fontSize: 13, paddingVertical: 0 },
+  emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', marginTop: 80, gap: 16 },
+  emptyText: { color: Colors.textSecondary, fontSize: 15, fontWeight: '500' },
+  resetButton: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, backgroundColor: Colors.backgroundLight, borderWidth: 1, borderColor: Colors.border },
+  resetText: { color: Colors.primary, fontWeight: 'bold', fontSize: 13 },
   content: { padding: 16, gap: 16, paddingBottom: 160 },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   loadingText: { marginTop: 12, color: Colors.textSecondary },

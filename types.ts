@@ -74,6 +74,7 @@ export interface Parcel {
   children?: string;
   coordinates?: string;
   userId?: string;
+  ownerHistory?: string; // JSON string of ownership transfer history
 }
 
 export interface Transaction {

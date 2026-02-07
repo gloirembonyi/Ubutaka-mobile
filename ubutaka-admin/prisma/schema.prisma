@@ -51,6 +51,7 @@ model Parcel {
   village       String?
   children      String?
   partners      String?
+  ownerHistory  String?   // JSON array of ownership transfers
 }
 
 model Transaction {

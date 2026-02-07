@@ -124,7 +124,7 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
 const styles = StyleSheet.create({
   content: {
     padding: 24,
-    paddingBottom: 40,
+    paddingBottom: 160,
   },
   formSection: {
     marginBottom: 24,

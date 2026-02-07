@@ -8,9 +8,10 @@ import {
   Image,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
-import { Screen, Parcel, User } from "../types";
+import { Screen, Parcel, User, Transaction } from "../types";
 import { API_ENDPOINTS } from "../config/api";
 import { Colors, getColorWithOpacity } from "../styles/colors";
 import { GlobalStyles } from "../styles/globalStyles";
@@ -26,6 +27,7 @@ const MyParcelsScreen: React.FC<MyParcelsScreenProps> = ({
   user,
 }) => {
   const [parcels, setParcels] = useState<Parcel[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -65,11 +67,17 @@ const MyParcelsScreen: React.FC<MyParcelsScreenProps> = ({
     }
     
     try {
-      const url = `${API_ENDPOINTS.PARCELS}?ownerName=${encodeURIComponent(user?.name || '')}`;
-      if (!isBackground) console.log('Fetching parcels from:', url);
-      const resp = await fetch(url);
-      if (resp.ok) {
-         const data = await resp.json();
+      // Fetch Parcels
+      const parcelUrl = `${API_ENDPOINTS.PARCELS}?ownerName=${encodeURIComponent(user?.name || '')}`;
+      if (!isBackground) console.log('Fetching parcels from:', parcelUrl);
+      const parcelResp = await fetch(parcelUrl);
+      
+      // Fetch Transactions
+      const txUrl = API_ENDPOINTS.TRANSACTIONS;
+      const txResp = await fetch(txUrl);
+      
+      if (parcelResp.ok) {
+         const data = await parcelResp.json();
          // Sort verified first, then by date
          const sorted = data.sort((a: Parcel, b: Parcel) => {
             if (a.status === 'Verified' && b.status !== 'Verified') return -1;
@@ -78,16 +86,60 @@ const MyParcelsScreen: React.FC<MyParcelsScreenProps> = ({
          });
          setParcels(data.length > 0 ? sorted : MOCK_PARCELS);
       } else {
-        if (!isBackground) console.error('Failed to fetch parcels:', resp.status);
+        if (!isBackground) console.error('Failed to fetch parcels:', parcelResp.status);
         if (parcels.length === 0) setParcels(MOCK_PARCELS);
       }
+      
+      if (txResp.ok) {
+        const txData = await txResp.json();
+        setTransactions(txData);
+      }
     } catch (err) {
-      if (!isBackground) console.error("Fetch parcels error:", err);
+      if (!isBackground) console.error("Fetch data error:", err);
       if (parcels.length === 0) setParcels(MOCK_PARCELS);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
+  };
+
+  const handleRemoveListing = async (parcel: Parcel) => {
+    Alert.alert(
+      "Remove Listing",
+      "Are you sure you want to remove this parcel from the marketplace?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Remove", 
+          style: "destructive",
+          onPress: async () => {
+            setLoading(true);
+            try {
+              const response = await fetch(`${API_ENDPOINTS.PARCELS}/${encodeURIComponent(parcel.upi)}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  status: 'Verified',
+                  price: null
+                })
+              });
+
+              if (response.ok) {
+                Alert.alert("Success", "Parcel removed from marketplace.");
+                fetchParcels();
+              } else {
+                Alert.alert("Error", "Failed to remove listing.");
+              }
+            } catch (error) {
+              console.error(error);
+              Alert.alert("Error", "Network error occurred.");
+            } finally {
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
   };
 
   const onRefresh = () => {
@@ -171,7 +223,20 @@ const MyParcelsScreen: React.FC<MyParcelsScreenProps> = ({
                 />
                 <View style={styles.parcelInfo}>
                   <View style={styles.parcelHeader}>
-                    <Text style={styles.parcelUpi} numberOfLines={1}>UPI: {parcel.upi}</Text>
+                    <Text style={styles.parcelUpi} numberOfLines={1}>
+                      UPI: {parcel.upi}
+                      {parcel.price && <Text style={styles.priceTag}> $</Text>}
+                    </Text>
+                    {transactions.some(tx => tx.upi === parcel.upi && (
+                      tx.status === 'Pending' || 
+                      tx.status === 'In Progress' || 
+                      tx.status === 'PENDING_PAYMENT' || 
+                      tx.status === 'PENDING_NOTARY' || 
+                      tx.status === 'PENDING_SELLER' ||
+                      tx.status === 'PENDING_SELLER_APPROVAL'
+                    )) && (
+                       <MaterialIcons name="hourglass-empty" size={16} color={Colors.accent} />
+                    )}
                     <MaterialIcons
                       name={parcel.status === 'Verified' ? "verified" : "hourglass-top"}
                       size={16}
@@ -181,6 +246,10 @@ const MyParcelsScreen: React.FC<MyParcelsScreenProps> = ({
                   <Text style={styles.parcelDistrict}>
                     {parcel.district}, {parcel.location}
                   </Text>
+                  
+                  {parcel.price && (
+                    <Text style={styles.priceValue}>{parcel.price}</Text>
+                  )}
 
                   <View style={styles.parcelDetails}>
                     <View style={styles.detailItem}>
@@ -202,12 +271,14 @@ const MyParcelsScreen: React.FC<MyParcelsScreenProps> = ({
                   </View>
                 </View>
                 <View style={styles.actionsContainer}>
-                  <Pressable 
-                    style={styles.sellButton}
-                    onPress={() => onNavigate("sell-land", { parcel })}
-                  >
-                    <Text style={styles.sellButtonText}>Sell</Text>
-                  </Pressable>
+                  {parcel.status === 'Verified' && (
+                    <Pressable 
+                      style={[styles.sellButton, parcel.price && { backgroundColor: Colors.error }]}
+                      onPress={() => parcel.price ? handleRemoveListing(parcel) : onNavigate("sell-land", { parcel })}
+                    >
+                      <Text style={styles.sellButtonText}>{parcel.price ? 'Remove' : 'Sell'}</Text>
+                    </Pressable>
+                  )}
                   <MaterialIcons
                     name="chevron-right"
                     size={24}
@@ -355,6 +426,16 @@ const styles = StyleSheet.create({
   arrowContainer: {
     width: 24,
     alignItems: "center",
+  },
+  priceTag: {
+    color: Colors.primary,
+    fontWeight: 'bold',
+  },
+  priceValue: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: Colors.primary,
+    marginBottom: 4,
   },
 });
 
