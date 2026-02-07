@@ -1,5 +1,6 @@
 import AdminLayout from "@/components/AdminLayout";
 import prisma from "@/lib/db";
+import Link from "next/link";
 import { 
   CheckCircle2,
   Clock,
@@ -84,10 +85,13 @@ export default async function TransactionsPage() {
                       {tx.date}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button className="text-slate-400 hover:text-emerald-600 transition-all font-bold text-xs uppercase tracking-widest flex items-center gap-1 ml-auto">
+                      <Link 
+                        href={`/admin/transactions/${tx.id}`}
+                        className="text-slate-400 hover:text-emerald-600 transition-all font-bold text-xs uppercase tracking-widest flex items-center gap-1 ml-auto"
+                      >
                         View
                         <ArrowRight size={14} />
-                      </button>
+                      </Link>
                     </td>
                   </tr>
                 ))}

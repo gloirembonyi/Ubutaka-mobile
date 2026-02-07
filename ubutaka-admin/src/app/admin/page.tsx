@@ -68,21 +68,34 @@ const StatCard = ({ title, value, icon: Icon, change, isPositive, color }: StatC
 };
 
 export default async function AdminDashboard() {
-  const [userCount, parcelCount, transactionCount, disputeCount, recentTransactions, recentDisputes] = await Promise.all([
-    prisma.user.count(),
-    prisma.parcel.count(),
-    prisma.transaction.count(),
-    prisma.dispute.count(),
-    prisma.transaction.findMany({
-      take: 5,
-      orderBy: { createdAt: 'desc' }
-    }),
-    prisma.dispute.findMany({
-      take: 3,
-      orderBy: { createdAt: 'desc' },
-      where: { status: 'PENDING' }
-    })
-  ]);
+  let userCount = 0;
+  let parcelCount = 0;
+  let transactionCount = 0;
+  let disputeCount = 0;
+  let recentTransactions: Transaction[] = [];
+  let recentDisputes: Dispute[] = [];
+  let dbError = null;
+
+  try {
+    [userCount, parcelCount, transactionCount, disputeCount, recentTransactions, recentDisputes] = await Promise.all([
+      prisma.user.count(),
+      prisma.parcel.count(),
+      prisma.transaction.count(),
+      prisma.dispute.count(),
+      prisma.transaction.findMany({
+        take: 5,
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.dispute.findMany({
+        take: 3,
+        orderBy: { createdAt: 'desc' },
+        where: { status: 'PENDING' }
+      })
+    ]);
+  } catch (error) {
+    console.error("Database connection error:", error);
+    dbError = "Unable to connect to database. Please check your connection.";
+  }
 
   return (
     <AdminLayout>
@@ -99,6 +112,18 @@ export default async function AdminDashboard() {
             </div>
           </div>
         </header>
+
+        {dbError && (
+          <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-4">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-5 h-5 text-red-600" />
+              <div>
+                <p className="text-sm font-bold text-red-900">{dbError}</p>
+                <p className="text-xs text-red-700 mt-1">Data shown below may be incomplete or outdated.</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard title="Total Users" value={userCount.toLocaleString()} icon={Users} change="12" isPositive={true} color="emerald" />
