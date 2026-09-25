@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Image, ActivityIndicator, Alert, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Image, ActivityIndicator, TextInput } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Screen, Parcel } from '../types';
 import { Colors } from '../styles/colors';
@@ -18,56 +18,37 @@ const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ onNavigate, user 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All Land');
 
-  // Mock available parcels for demo
-  const MOCK_MARKET: Parcel[] = [
-    {
-      upi: "5/03/12/05/991",
-      size: "800 sqm",
-      use: "Residential (R2)",
-      district: "Kicukiro",
-      location: "Niboye",
-      status: "Verified",
-      ownerName: "KALISA Peter",
-      imageUrl: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
-      price: "12,000,000 RWF",
-      isVerified: true,
-      verifiedAt: new Date().toISOString()
-    },
-    {
-       upi: "2/01/08/04/442",
-       size: "5 Hectares",
-       use: "Agricultural",
-       district: "Rwamagana",
-       location: "Karenge",
-       status: "Verified",
-       ownerName: "MUKAMANA Sarah",
-       imageUrl: "https://images.unsplash.com/photo-1500076656116-558758c991c1?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
-       price: "45,000,000 RWF",
-       isVerified: true,
-       verifiedAt: new Date().toISOString()
-    }
-  ];
+  const [error, setError] = useState<string | null>(null);
+  const [sortByPrice, setSortByPrice] = useState(false);
 
   useEffect(() => {
     fetchMarketplaceParcels();
   }, []);
 
+  const parsePrice = (price?: string | null): number => {
+    const n = parseFloat(String(price ?? '').replace(/[^0-9.]/g, ''));
+    return isNaN(n) ? 0 : n;
+  };
+
+  const isOwnParcel = (parcel: Parcel) =>
+    !!user && ((!!parcel.userId && parcel.userId === user.id) || parcel.ownerName === user.name);
+
   const fetchMarketplaceParcels = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const response = await fetch(`${API_ENDPOINTS.PARCELS}?status=For Sale`);
-      if (response.ok) {
-        const data = await response.json();
-        setParcels(data);
-        setFilteredParcels(data);
-      } else {
-        setParcels(MOCK_MARKET);
-        setFilteredParcels(MOCK_MARKET);
-      }
-    } catch (error) {
-       console.error("Marketplace fetch error", error);
-       setParcels(MOCK_MARKET);
-       setFilteredParcels(MOCK_MARKET);
+      const response = await fetch(`${API_ENDPOINTS.PARCELS}?status=${encodeURIComponent('For Sale')}`);
+      if (!response.ok) throw new Error(`Server responded ${response.status}`);
+      const data: Parcel[] = await response.json();
+      const listings = (Array.isArray(data) ? data : [])
+        .filter(p => p.status === 'For Sale' && !!p.price && !isOwnParcel(p));
+      setParcels(listings);
+      setFilteredParcels(listings);
+    } catch (err: any) {
+      console.error("Marketplace fetch error", err);
+      setError(err?.message || 'Could not load listings');
+      setParcels([]);
+      setFilteredParcels([]);
     } finally {
       setLoading(false);
     }
@@ -75,7 +56,7 @@ const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ onNavigate, user 
 
   useEffect(() => {
     applyFilters();
-  }, [searchQuery, activeCategory, parcels]);
+  }, [searchQuery, activeCategory, parcels, sortByPrice]);
 
   const applyFilters = () => {
     let result = [...parcels];
@@ -93,6 +74,10 @@ const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ onNavigate, user 
       );
     }
 
+    if (sortByPrice) {
+      result.sort((a, b) => parsePrice(a.price) - parsePrice(b.price));
+    }
+
     setFilteredParcels(result);
   };
 
@@ -100,45 +85,11 @@ const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ onNavigate, user 
     onNavigate('buy-land', { parcel });
   };
 
-  const handleRemoveListing = async (parcel: Parcel) => {
-    Alert.alert(
-      "Remove Listing",
-      "Are you sure you want to remove this parcel from the marketplace?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { 
-          text: "Remove", 
-          style: "destructive",
-          onPress: async () => {
-            setLoading(true);
-            try {
-              // We reset status to 'Verified' and price to null
-              const response = await fetch(`${API_ENDPOINTS.PARCELS}/${encodeURIComponent(parcel.upi)}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  status: 'Verified',
-                  price: null
-                })
-              });
-
-              if (response.ok) {
-                Alert.alert("Success", "Parcel removed from marketplace.");
-                fetchMarketplaceParcels();
-              } else {
-                Alert.alert("Error", "Failed to remove listing.");
-              }
-            } catch (error) {
-              console.error(error);
-              Alert.alert("Error", "Network error occurred.");
-            } finally {
-              setLoading(false);
-            }
-          }
-        }
-      ]
-    );
-  };
+  const averagePrice = filteredParcels.length > 0
+    ? filteredParcels.reduce((sum, p) => sum + parsePrice(p.price), 0) / filteredParcels.length
+    : 0;
+  const formatShort = (n: number) =>
+    n >= 1e9 ? `${(n / 1e9).toFixed(1)}B` : n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(0)}K` : n > 0 ? `${Math.round(n)}` : '-';
 
   return (
     <View style={GlobalStyles.container}>
@@ -147,8 +98,8 @@ const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ onNavigate, user 
           <MaterialIcons name="arrow-back" size={24} color={Colors.textPrimary} />
         </Pressable>
         <Text style={styles.headerTitle}>Land Marketplace</Text>
-        <Pressable style={styles.headerButton}>
-          <MaterialIcons name="filter-list" size={24} color={Colors.primary} />
+        <Pressable style={styles.headerButton} onPress={fetchMarketplaceParcels}>
+          <MaterialIcons name="refresh" size={24} color={Colors.primary} />
         </Pressable>
       </View>
 
@@ -159,7 +110,7 @@ const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ onNavigate, user 
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>~2.4M</Text>
+          <Text style={styles.statValue}>{formatShort(averagePrice)}</Text>
           <Text style={styles.statLabel}>Avg Price (RWF)</Text>
         </View>
       </View>
@@ -180,8 +131,11 @@ const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ onNavigate, user 
               </Pressable>
             )}
         </View>
-        <Pressable style={styles.filterButton}>
-          <MaterialIcons name="tune" size={24} color={Colors.white} />
+        <Pressable
+          style={[styles.filterButton, sortByPrice && { opacity: 0.7 }]}
+          onPress={() => setSortByPrice(prev => !prev)}
+        >
+          <MaterialIcons name={sortByPrice ? 'sort' : 'tune'} size={24} color={Colors.white} />
         </Pressable>
       </View>
 
@@ -207,11 +161,9 @@ const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ onNavigate, user 
       ) : (
         <ScrollView contentContainerStyle={styles.content}>
            {filteredParcels.length > 0 ? filteredParcels.map((parcel, index) => {
-             const isOwner = user?.name === parcel.ownerName;
-             
              return (
               <Pressable 
-                key={index}
+                key={parcel.upi || index}
                 style={styles.card}
                 onPress={() => onNavigate('parcel-details', { parcel })}
               >
@@ -232,36 +184,38 @@ const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ onNavigate, user 
                     
                     {/* Hide sensitive info */}
                     <Text style={styles.cardOwner}>
-                      {isOwner ? "Owned by Me" : "Verified Seller"}
+                      {parcel.isVerified || parcel.status !== 'Pending Verification' ? "Verified Seller" : "Seller"}
                     </Text>
 
-                    {isOwner ? (
-                       <Pressable 
-                         style={[styles.buyButton, { backgroundColor: Colors.error }]}
-                         onPress={() => handleRemoveListing(parcel)}
-                       >
-                         <Text style={styles.buyButtonText}>Remove Listing</Text>
-                         <MaterialIcons name="delete-outline" size={16} color={Colors.white} />
-                       </Pressable>
-                    ) : (
-                      <Pressable 
-                        style={styles.buyButton}
-                        onPress={() => handleBuy(parcel)}
-                      >
-                        <Text style={styles.buyButtonText}>Purchase</Text>
-                        <MaterialIcons name="shopping-cart" size={16} color={Colors.white} />
-                      </Pressable>
-                    )}
+                    <Pressable 
+                      style={styles.buyButton}
+                      onPress={() => handleBuy(parcel)}
+                    >
+                      <Text style={styles.buyButtonText}>Purchase</Text>
+                      <MaterialIcons name="shopping-cart" size={16} color={Colors.white} />
+                    </Pressable>
                 </View>
               </Pressable>
              );
            }) : (
              <View style={styles.emptyContainer}>
                 <MaterialIcons name="search-off" size={64} color={Colors.border} />
-                <Text style={styles.emptyText}>No land matches your search filters.</Text>
-                <Pressable onPress={() => {setSearchQuery(''); setActiveCategory('All Land');}} style={styles.resetButton}>
-                  <Text style={styles.resetText}>Clear All Filters</Text>
-                </Pressable>
+                <Text style={styles.emptyText}>
+                  {error
+                    ? `Could not load listings: ${error}`
+                    : parcels.length === 0
+                      ? 'No land is currently listed for sale.'
+                      : 'No land matches your search filters.'}
+                </Text>
+                {error || parcels.length === 0 ? (
+                  <Pressable onPress={fetchMarketplaceParcels} style={styles.resetButton}>
+                    <Text style={styles.resetText}>Refresh</Text>
+                  </Pressable>
+                ) : (
+                  <Pressable onPress={() => {setSearchQuery(''); setActiveCategory('All Land');}} style={styles.resetButton}>
+                    <Text style={styles.resetText}>Clear All Filters</Text>
+                  </Pressable>
+                )}
              </View>
            )}
         </ScrollView>

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Platform, Image, Share } from 'react-native';
 import { MaterialIcons, Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
+import { API_ENDPOINTS } from '../config/api';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { Screen, Parcel } from '../types';
@@ -29,7 +30,7 @@ const translations = {
     size: "Size",
     use: "Land Use",
     issueDate: "Issue Date",
-    hash: "Blockchain Hash",
+    hash: "Certificate Fingerprint (SHA-256)",
     download: "Download PDF",
     share: "Share Certificate",
     verified: "Blockchain Verified",
@@ -50,7 +51,7 @@ const translations = {
     size: "Ubuso",
     use: "Icyo gikoreshwa",
     issueDate: "Itariki cyatangiweho",
-    hash: "Kodu ya Blockchain",
+    hash: "Igikumwe cy\'Icyemezo (SHA-256)",
     download: "Manura PDF",
     share: "Sangiza abandi",
     verified: "Byemejwe na Blockchain",
@@ -71,7 +72,7 @@ const translations = {
     size: "Taille",
     use: "Usage des Terres",
     issueDate: "Date d'Émission",
-    hash: "Empreinte Blockchain",
+    hash: "Empreinte du certificat (SHA-256)",
     download: "Télécharger PDF",
     share: "Partager",
     verified: "Vérifié Blockchain",
@@ -87,45 +88,50 @@ type LangCode = 'EN' | 'RW' | 'FR';
 
 const CertificateScreen: React.FC<CertificateScreenProps> = ({ onNavigate, parcelData }) => {
   const [lang, setLang] = useState<LangCode>('EN');
-  const user = useAuthStore((state: any) => state.user); // AuthState import not strictly needed if we use any, but let's keep it safe. Actually, I'll just change any to what's defined.
-  
-  // Use parcel data if available, otherwise mock for demo
-  const parcel = parcelData || {
-    upi: "1/03/04/05/1234",
-    ownerName: user?.name || "MUGAKIHIRE Jean",
-    district: "Gasabo",
-    location: "Kimironko",
-    size: "650 sqm",
-    use: "Residential",
-    certificateId: "CERT-2026-00129",
-    verifiedAt: new Date().toISOString(),
-  } as any;
+  const user = useAuthStore((state: any) => state.user);
+  const [loaded, setLoaded] = useState<any>(null);
+
+  // Always read the certificate from the registry so the QR fingerprint matches the current record.
+  React.useEffect(() => {
+    const upi = parcelData?.upi;
+    const url = upi ? API_ENDPOINTS.PARCEL_BY_ID(upi) : `${API_ENDPOINTS.PARCELS}?ownerName=${encodeURIComponent(user?.name || '')}`;
+    fetch(url)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (Array.isArray(data)) setLoaded(data.find((p: any) => p.isVerified) || data[0] || null);
+        else if (data) setLoaded(data);
+      })
+      .catch(() => undefined);
+  }, [parcelData?.upi, user?.name]);
+
+  const parcel = (loaded || parcelData || {}) as any;
+
 
   const certificate: Certificate = {
-    id: parcel.certificateId || `CERT-2026-${Math.floor(10000 + Math.random() * 90000)}`,
+    id: parcel.certificateId || 'Pending verification',
     issuedAt: parcel.verifiedAt || new Date().toISOString(),
-    issuedBy: "RLMUA",
+    issuedBy: "National Land Authority (NLA)",
     watermarkText: "VALID E-TITLE",
     qrData: JSON.stringify({
       ver: 1,
       upi: parcel.upi,
       certId: parcel.certificateId,
-      owner: parcel.ownerName
+      hash: parcel.certificateHash,
     }),
     landTitle: {
       upi: parcel.upi,
       ownerName: parcel.ownerName,
-      ownerAuthId: user?.id || "u1",
-      nationalId: user?.nationalId || "1199080000000000",
-      district: parcel.district || "Gasabo",
-      sector: parcel.location?.split(',')[0] || "Kimironko",
-      cell: parcel.location?.split(',')[1] || "Kibagabaga",
-      village: "Buriga",
+      ownerAuthId: user?.id || "",
+      nationalId: user?.nationalId || "",
+      district: parcel.district || "",
+      sector: parcel.sector || parcel.location?.split(',')[2]?.trim() || "",
+      cell: parcel.cell || parcel.location?.split(',')[1]?.trim() || "",
+      village: parcel.village || parcel.location?.split(',')[0]?.trim() || "",
       size: parcel.size || "Unknown",
       landUse: parcel.use || "Unknown",
-      issueDate: parcel.verifiedAt ? new Date(parcel.verifiedAt).toLocaleDateString() : new Date().toLocaleDateString(),
+      issueDate: parcel.verifiedAt ? new Date(parcel.verifiedAt).toLocaleDateString('en-GB') : '-',
       coordinates: [{ latitude: -1.9441, longitude: 30.0619 }],
-      blockchainHash: parcel.blockchainHash || "0x8f2d7e4b9c1a3f5d6e2b8a4c9d3e5f7a1c2b4d6e8f0a2c4e6b8d0f2a4c6e8d0",
+      blockchainHash: parcel.certificateHash || "Issued after NLA verification",
       status: "ACTIVE",
       ownerPhoto: user?.avatar || `https://ui-avatars.com/api/?name=${parcel.ownerName}&background=random`
     }

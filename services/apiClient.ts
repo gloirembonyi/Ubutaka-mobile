@@ -13,9 +13,9 @@ const PUBLIC_PATHS = ['/auth/login', '/auth/register', '/locations', '/verify'];
 export function installAuthFetch() {
   if (installed) return;
   installed = true;
-  const originalFetch = global.fetch.bind(global);
+  const originalFetch = globalThis.fetch.bind(globalThis);
 
-  global.fetch = async (input: RequestInfo | URL, init: RequestInit = {}) => {
+  globalThis.fetch = async (input: RequestInfo | URL, init: RequestInit = {}) => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
     if (!url.startsWith(API_BASE_URL)) return originalFetch(input, init);
 

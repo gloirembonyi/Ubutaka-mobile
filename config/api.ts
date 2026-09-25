@@ -62,4 +62,8 @@ export const API_ENDPOINTS = {
   
   // Documents
   DOCUMENTS: `${API_BASE_URL}/documents`,
+  DOCUMENT_BY_ID: (id: string) => `${API_BASE_URL}/documents/${id}`,
+
+  // Public certificate / ledger verification
+  VERIFY: `${API_BASE_URL}/verify`,
 };
