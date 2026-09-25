@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { Dispute } from "@/types";
 import Image from "next/image";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -43,12 +44,12 @@ export default async function DisputesPage() {
                       {dispute.type}
                     </span>
                     <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                      dispute.status === 'Resolved' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
+                      dispute.status === 'Resolved' ? 'bg-emerald-50 text-emerald-600' : dispute.status === 'Mediation' ? 'bg-blue-50 text-blue-600' : 'bg-red-50 text-red-600'
                     }`}>
                       {dispute.status}
                     </span>
                   </div>
-                  <h3 className="text-xl font-black text-slate-900 mb-2 uppercase tracking-tight">{dispute.description}</h3>
+                  <h3 className="text-lg font-black text-slate-900 mb-2 tracking-tight">{dispute.description}</h3>
                   
                   <div className="flex flex-wrap items-center gap-6 mt-4">
                     <div className="flex items-center gap-2 text-slate-500 font-medium text-sm">
@@ -79,13 +80,13 @@ export default async function DisputesPage() {
                 </div>
 
                 <div className="lg:w-48 flex flex-col gap-3 lg:border-l lg:border-slate-50 lg:pl-6 justify-center">
-                  <button className="w-full bg-slate-900 text-white px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-200">
+                  <Link href={`/admin/disputes/${dispute.id}`} className="w-full bg-slate-900 text-white px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-200">
                     <MessageCircle size={16} />
                     Mediate
-                  </button>
-                  <button className="w-full bg-white border border-slate-200 text-slate-600 px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all">
+                  </Link>
+                  <Link href={`/admin/disputes/${dispute.id}#history`} className="w-full text-center bg-white border border-slate-200 text-slate-600 px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all">
                     History
-                  </button>
+                  </Link>
                 </div>
               </div>
             </div>

@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { logout } from "@/app/actions/auth";
 import NextImage from "next/image";
 import { 
   LayoutDashboard, 
@@ -34,7 +35,21 @@ const SidebarItem = ({ icon: Icon, label, href, active }: { icon: LucideIcon, la
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [isSidebarOpen, setSidebarOpen] = useState(true);
+  const [query, setQuery] = useState("");
+
+  const handleLogout = async () => {
+    await logout();
+    router.replace("/admin/login");
+    router.refresh();
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = query.trim();
+    if (q) router.push(`/admin/parcels?q=${encodeURIComponent(q)}`);
+  };
 
   const menuItems = [
     { icon: LayoutDashboard, label: "Dashboard", href: "/admin" },
@@ -71,10 +86,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
           <div className="pt-4 border-t border-slate-100 mt-4">
             <SidebarItem icon={Settings} label="Settings" href="/admin/settings" active={pathname === "/admin/settings"} />
-            <div className="mt-1 flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all duration-200 cursor-pointer font-semibold text-sm">
+            <button type="button" onClick={handleLogout} className="mt-1 w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all duration-200 cursor-pointer font-semibold text-sm">
               <LogOut size={18} />
               <span>Logout</span>
-            </div>
+            </button>
           </div>
         </div>
       </aside>
@@ -92,14 +107,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             >
               <Menu size={20} />
             </button>
-            <div className="relative flex-1">
+            <form onSubmit={handleSearch} className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
               <input 
                 type="text" 
-                placeholder="Search anything..." 
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search parcels by UPI, owner or district..." 
                 className="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all text-xs font-medium"
               />
-            </div>
+            </form>
           </div>
 
           <div className="flex items-center gap-4">

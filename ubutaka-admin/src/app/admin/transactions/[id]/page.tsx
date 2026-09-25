@@ -45,9 +45,10 @@ async function getParcelDetails(upi: string) {
 export default async function TransactionDetailsPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const transaction = await getTransaction(params.id);
+  const { id } = await params;
+  const transaction = await getTransaction(id);
 
   if (!transaction) {
     notFound();

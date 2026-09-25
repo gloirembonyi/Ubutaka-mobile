@@ -1,18 +1,21 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { GENESIS_HASH, computeTxHash } from "@/lib/ledger";
 
 export async function GET(request: Request) {
+  const auth = requireAuth(request);
+  if (auth instanceof NextResponse) return auth;
   try {
     const { searchParams } = new URL(request.url);
-    const name = searchParams.get('name');
+    const name = searchParams.get("name");
+    const upi = searchParams.get("upi");
 
     const transactions = await prisma.transaction.findMany({
-      where: name ? {
-        OR: [
-          { sellerName: { equals: name, mode: 'insensitive' } },
-          { buyerName: { equals: name, mode: 'insensitive' } }
-        ]
-      } : {},
+      where: {
+        ...(name ? { OR: [{ sellerName: { equals: name, mode: "insensitive" } }, { buyerName: { equals: name, mode: "insensitive" } }] } : {}),
+        ...(upi ? { upi } : {}),
+      },
       orderBy: { createdAt: "desc" },
     });
     return NextResponse.json(transactions);
@@ -23,47 +26,44 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const auth = requireAuth(request);
+  if (auth instanceof NextResponse) return auth;
   try {
     const body = await request.json();
+    if (!body.upi) {
+      return NextResponse.json({ error: "UPI is required" }, { status: 400 });
+    }
 
-    // Blockchain Simulation: Fetch last block to chain it
-    const lastTx = await prisma.transaction.findFirst({
-      where: { upi: body.upi },
-      orderBy: { createdAt: 'desc' }
-    });
-
-    const previousHash = lastTx?.txHash || "0x0000000000000000000000000000000000000000000000000000000000000000";
+    // Tamper-evident ledger: link this record to the latest record of the same parcel.
+    const lastTx = await prisma.transaction.findFirst({ where: { upi: body.upi }, orderBy: { createdAt: "desc" } });
+    const previousHash = lastTx?.txHash || GENESIS_HASH;
     const blockNumber = (lastTx?.blockNumber || 0) + 1;
-    
-    // Simulate mining/hashing
-    const timestamp = new Date().toISOString();
-    const dataString = `${previousHash}${body.upi}${body.sellerName}${body.buyerName}${body.price}${timestamp}`;
-    
-    // Simple hash simulation for demo (in production use real crypto)
-    const randomNonce = Math.random().toString(36).substring(7);
-    const txHash = `0x${Math.abs(dataString.split('').reduce((a,b)=>{a=((a<<5)-a)+b.charCodeAt(0);return a&a},0)).toString(16)}${randomNonce}`;
+    const date = new Date().toISOString();
+    const type = body.type || "TRANSFER";
+    const price = body.price ? String(body.price) : null;
+    const sellerName = body.sellerName ?? null;
+    const buyerName = body.buyerName ?? null;
+    const txHash = computeTxHash({ previousHash, blockNumber, upi: body.upi, type, sellerName, buyerName, price, date });
 
     const transaction = await prisma.transaction.create({
       data: {
-        title: body.title,
+        title: body.title || `Transfer of ${body.upi}`,
         upi: body.upi,
-        type: body.type || "TRANSFER",
+        type,
         status: body.status || "PENDING_NOTARY",
-        date: body.date || new Date().toISOString(),
+        date,
         step: body.step || "Initiated",
         progress: body.progress || 10,
-        
-        sellerName: body.sellerName,
-        buyerName: body.buyerName,
-        price: body.price ? String(body.price) : null,
-        
-        txHash: txHash,
-        blockNumber: blockNumber,
-        previousHash: previousHash,
-        gasFee: "0.00045 ETH", // Simulated fee
+        sellerName,
+        buyerName,
+        price,
+        txHash,
+        blockNumber,
+        previousHash,
+        gasFee: null,
       },
     });
-    return NextResponse.json(transaction);
+    return NextResponse.json(transaction, { status: 201 });
   } catch (error) {
     console.error("POST transaction error:", error);
     return NextResponse.json({ error: "Failed to create transaction" }, { status: 500 });

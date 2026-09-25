@@ -1,10 +1,17 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
+import { checkPassword, hashPassword, signToken, verifyToken, type Role } from "@/lib/auth";
 
-const JWT_SECRET = process.env.JWT_SECRET || "ubutaka-secret-key-change-this-in-prod";
- 
+const publicUser = (user: { id: string; name: string; email: string; nationalId: string; role: string; isVerified: boolean; avatar: string | null }) => ({
+  id: user.id,
+  name: user.name,
+  email: user.email,
+  nationalId: user.nationalId,
+  role: user.role,
+  isVerified: user.isVerified,
+  avatar: user.avatar,
+});
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -13,85 +20,39 @@ export async function POST(request: Request) {
     let user;
 
     if (biometricToken) {
-      // Login via Biometric Token (JWT)
-      try {
-        const decoded: any = jwt.verify(biometricToken, JWT_SECRET);
-        user = await prisma.user.findUnique({
-          where: { id: decoded.userId }
-        });
-      } catch (err) {
-        return NextResponse.json(
-          { error: "Invalid or expired biometric session" },
-          { status: 401 }
-        );
+      // Biometric login: the device unlocked its securely stored session token.
+      const session = verifyToken(biometricToken);
+      if (!session) {
+        return NextResponse.json({ error: "Invalid or expired biometric session" }, { status: 401 });
       }
+      user = await prisma.user.findUnique({ where: { id: session.userId } });
     } else {
-      // Login via Password
       if (!email || !password) {
-        return NextResponse.json(
-            { error: "Please provide email and password" },
-            { status: 400 }
-          );
+        return NextResponse.json({ error: "Please provide email and password" }, { status: 400 });
       }
 
-      user = await prisma.user.findUnique({
-        where: { email }
-      });
-
+      user = await prisma.user.findUnique({ where: { email: String(email).trim().toLowerCase() } });
       if (!user) {
-        return NextResponse.json(
-          { error: "Invalid email or password" },
-          { status: 401 }
-        );
+        return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
       }
 
-      const validPassword = await bcrypt.compare(password, user.password);
-
-      if (!validPassword) {
-        return NextResponse.json(
-          { error: "Invalid email or password" },
-          { status: 401 }
-        );
+      const { ok, needsRehash } = await checkPassword(password, user.password);
+      if (!ok) {
+        return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
+      }
+      if (needsRehash) {
+        await prisma.user.update({ where: { id: user.id }, data: { password: await hashPassword(password) } });
       }
     }
 
     if (!user) {
-        return NextResponse.json(
-          { error: "User not found" },
-          { status: 404 }
-        );
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Generate NEW JWT token (refresh session)
-    const token = jwt.sign(
-      { 
-        userId: user.id, 
-        email: user.email, 
-        role: user.role 
-      },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
-    const userWithoutPassword = {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      nationalId: user.nationalId,
-      role: user.role,
-      isVerified: user.isVerified,
-      avatar: user.avatar,
-    };
-
-    return NextResponse.json({
-      user: userWithoutPassword,
-      token
-    });
+    const token = signToken({ userId: user.id, email: user.email, role: user.role as Role });
+    return NextResponse.json({ user: publicUser(user), token });
   } catch (error) {
     console.error("POST login error:", error);
-    return NextResponse.json(
-      { error: "Failed to login" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to login" }, { status: 500 });
   }
 }

@@ -1,34 +1,44 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { ADMIN_COOKIE, verifyToken } from '@/lib/auth';
+
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
 
 export function proxy(request: NextRequest) {
-  // Handle CORS for API routes
-  if (request.nextUrl.pathname.startsWith('/api')) {
-    // Handle preflight requests
-    if (request.method === 'OPTIONS') {
-      return new NextResponse(null, {
-        status: 200,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-          'Access-Control-Max-Age': '86400',
-        },
-      });
-    }
+  const { pathname } = request.nextUrl;
 
-    // Add CORS headers to all API responses
+  // Handle CORS for API routes (authorisation is enforced inside each route handler)
+  if (pathname.startsWith('/api')) {
+    if (request.method === 'OPTIONS') {
+      return new NextResponse(null, { status: 200, headers: { ...CORS_HEADERS, 'Access-Control-Max-Age': '86400' } });
+    }
     const response = NextResponse.next();
-    response.headers.set('Access-Control-Allow-Origin', '*');
-    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    
+    for (const [k, v] of Object.entries(CORS_HEADERS)) response.headers.set(k, v);
     return response;
+  }
+
+  // Protect the administration dashboard: only a valid ADMIN session may open /admin or /dashboard pages.
+  const isProtected = (pathname.startsWith('/admin') && pathname !== '/admin/login') || pathname.startsWith('/dashboard');
+  if (isProtected) {
+    const session = verifyToken(request.cookies.get(ADMIN_COOKIE)?.value);
+    if (!session || session.role !== 'ADMIN') {
+      const url = request.nextUrl.clone();
+      url.pathname = '/admin/login';
+      url.searchParams.set('next', pathname);
+      return NextResponse.redirect(url);
+    }
+  }
+  if (pathname === '/admin/login' && verifyToken(request.cookies.get(ADMIN_COOKIE)?.value)?.role === 'ADMIN') {
+    return NextResponse.redirect(new URL('/admin', request.url));
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: '/api/:path*',
+  matcher: ['/api/:path*', '/admin/:path*', '/dashboard/:path*'],
 };

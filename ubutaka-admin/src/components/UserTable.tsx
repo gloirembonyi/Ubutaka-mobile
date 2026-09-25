@@ -25,11 +25,11 @@ export default function UserTable({ initialUsers }: UserTableProps) {
   const [users, setUsers] = useState(initialUsers);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [currentUser, setCurrentUser] = useState<Partial<User>>({
+  const [currentUser, setCurrentUser] = useState<Partial<User> & { password?: string }>({
     name: "",
     email: "",
     nationalId: "",
-    role: "CITIZEN",
+    role: "USER",
     isVerified: false
   });
 
@@ -38,7 +38,7 @@ export default function UserTable({ initialUsers }: UserTableProps) {
       name: "",
       email: "",
       nationalId: "",
-      role: "CITIZEN",
+      role: "USER",
       isVerified: false
     });
     setIsEditing(false);
@@ -65,7 +65,7 @@ export default function UserTable({ initialUsers }: UserTableProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isEditing && currentUser.id) {
-      const result = await updateUser(currentUser.id, currentUser);
+      const result = await updateUser(currentUser.id, currentUser as Parameters<typeof updateUser>[1]);
       if (result.success) {
         setUsers(users.map(u => u.id === currentUser.id ? (result.user as unknown as User) : u));
         setIsModalOpen(false);
@@ -73,7 +73,7 @@ export default function UserTable({ initialUsers }: UserTableProps) {
         alert("Failed to update user: " + result.error);
       }
     } else {
-      const result = await createUser(currentUser);
+      const result = await createUser(currentUser as Parameters<typeof createUser>[0]);
       if (result.success) {
         setUsers([result.user as unknown as User, ...users]);
         setIsModalOpen(false);
@@ -87,6 +87,8 @@ export default function UserTable({ initialUsers }: UserTableProps) {
     switch (role) {
       case "ADMIN":
         return <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1"><Shield size={10} /> ADMIN</span>;
+      case "NOTARY":
+        return <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1"><Shield size={10} /> NOTARY</span>;
       case "ABUNZI":
         return <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1"><Scale size={10} /> ABUNZI</span>;
       default:
@@ -223,6 +225,19 @@ export default function UserTable({ initialUsers }: UserTableProps) {
                 />
               </div>
 
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">{isEditing ? "New Password (optional)" : "Password"}</label>
+                <input 
+                  type="password" 
+                  value={currentUser.password || ""}
+                  onChange={e => setCurrentUser({...currentUser, password: e.target.value})}
+                  required={!isEditing}
+                  minLength={8}
+                  placeholder="At least 8 characters"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-medium"
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">User Role</label>
@@ -231,7 +246,8 @@ export default function UserTable({ initialUsers }: UserTableProps) {
                     onChange={e => setCurrentUser({...currentUser, role: e.target.value})}
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-bold"
                   >
-                    <option value="CITIZEN">Citizen</option>
+                    <option value="USER">Citizen</option>
+                    <option value="NOTARY">Notary</option>
                     <option value="ABUNZI">Abunzi</option>
                     <option value="ADMIN">Admin</option>
                   </select>

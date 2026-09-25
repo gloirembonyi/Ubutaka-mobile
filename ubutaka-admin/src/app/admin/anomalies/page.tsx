@@ -9,6 +9,14 @@ import {
   ExternalLink
 } from "lucide-react";
 import Image from "next/image";
+import { setAnomalyStatus } from "@/app/actions/cases";
+
+const STATUS_STYLE: Record<string, string> = {
+  PENDING: "bg-amber-50 text-amber-600 border border-amber-100",
+  INVESTIGATING: "bg-blue-50 text-blue-600 border border-blue-100",
+  RESOLVED: "bg-emerald-50 text-emerald-600 border border-emerald-100",
+  DISMISSED: "bg-slate-100 text-slate-500 border border-slate-200",
+};
 
 export const dynamic = "force-dynamic";
 
@@ -51,9 +59,7 @@ export default async function AnomaliesPage() {
               
               <div className="p-6 flex-1 flex flex-col">
                 <div className="flex items-center gap-3 mb-4">
-                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                    anomaly.status === 'PENDING' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
-                  }`}>
+                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${STATUS_STYLE[anomaly.status] || STATUS_STYLE.PENDING}`}>
                     {anomaly.status}
                   </span>
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-auto">
@@ -68,23 +74,54 @@ export default async function AnomaliesPage() {
                   <div className="flex items-center gap-2 text-slate-500 font-medium text-xs">
                     <MapPin size={14} className="text-emerald-600" />
                     {anomaly.location || 'Unknown Location'}
+                    {anomaly.latitude != null && <span className="text-slate-400">({anomaly.latitude.toFixed(4)}, {anomaly.longitude?.toFixed(4)})</span>}
                   </div>
                   <div className="flex items-center gap-2 text-slate-500 font-medium text-xs">
                     <Calendar size={14} className="text-emerald-600" />
-                    Reported: {new Date(anomaly.createdAt).toLocaleDateString()}
+                    Reported: {new Date(anomaly.createdAt).toLocaleDateString("en-GB")}{anomaly.upi ? ` · UPI ${anomaly.upi}` : ""}
                   </div>
                 </div>
 
                 <div className="mt-6 flex gap-3">
-                  <button className="flex-1 bg-slate-900 text-white px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
-                    Mark as Investigated
-                  </button>
-                  <button 
-                    className="w-12 h-12 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center hover:bg-slate-100 transition-all"
-                    title="View Details"
-                  >
-                    <ExternalLink size={18} />
-                  </button>
+                  {anomaly.status === "PENDING" && (
+                    <form action={setAnomalyStatus.bind(null, anomaly.id, "INVESTIGATING")} className="flex-1">
+                      <button className="w-full bg-slate-900 text-white px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all">
+                        Start Investigation
+                      </button>
+                    </form>
+                  )}
+                  {anomaly.status === "INVESTIGATING" && (
+                    <>
+                      <form action={setAnomalyStatus.bind(null, anomaly.id, "RESOLVED")} className="flex-1">
+                        <button className="w-full bg-emerald-600 text-white px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all">
+                          Mark Resolved
+                        </button>
+                      </form>
+                      <form action={setAnomalyStatus.bind(null, anomaly.id, "DISMISSED")}>
+                        <button className="px-4 py-2.5 bg-white border border-slate-200 text-slate-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all">
+                          Dismiss
+                        </button>
+                      </form>
+                    </>
+                  )}
+                  {(anomaly.status === "RESOLVED" || anomaly.status === "DISMISSED") && (
+                    <form action={setAnomalyStatus.bind(null, anomaly.id, "INVESTIGATING")} className="flex-1">
+                      <button className="w-full bg-white border border-slate-200 text-slate-600 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all">
+                        Reopen
+                      </button>
+                    </form>
+                  )}
+                  {anomaly.latitude != null && anomaly.longitude != null && (
+                    <a
+                      href={`https://www.google.com/maps?q=${anomaly.latitude},${anomaly.longitude}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="w-12 h-10 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center hover:bg-slate-100 hover:text-emerald-600 transition-all"
+                      title="Open reported location on the map"
+                    >
+                      <ExternalLink size={18} />
+                    </a>
+                  )}
                 </div>
               </div>
             </div>

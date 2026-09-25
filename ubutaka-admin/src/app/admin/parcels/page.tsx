@@ -8,15 +8,26 @@ import Image from "next/image";
 
 export const dynamic = "force-dynamic";
 
-async function getParcels(): Promise<Parcel[]> {
+async function getParcels(q?: string): Promise<Parcel[]> {
   const parcels = await prisma.parcel.findMany({
+    where: q
+      ? {
+          OR: [
+            { upi: { contains: q, mode: "insensitive" } },
+            { ownerName: { contains: q, mode: "insensitive" } },
+            { district: { contains: q, mode: "insensitive" } },
+            { location: { contains: q, mode: "insensitive" } },
+          ],
+        }
+      : {},
     orderBy: { createdAt: "desc" },
   });
   return parcels as unknown as Parcel[];
 }
 
-export default async function ParcelsPage() {
-  const parcels = await getParcels();
+export default async function ParcelsPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+  const { q } = await searchParams;
+  const parcels = await getParcels(q?.trim() || undefined);
 
   return (
     <AdminLayout>
@@ -24,7 +35,9 @@ export default async function ParcelsPage() {
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-black text-slate-900 tracking-tight">Parcel Registry</h1>
-            <p className="text-slate-500 text-sm font-medium">Manage and verify land parcels across districts.</p>
+            <p className="text-slate-500 text-sm font-medium">
+              {q ? `${parcels.length} result(s) for "${q}"` : "Manage and verify land parcels across districts."}
+            </p>
           </div>
         </header>
 

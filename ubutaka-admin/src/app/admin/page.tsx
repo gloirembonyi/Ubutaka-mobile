@@ -9,7 +9,6 @@ import {
   AlertTriangle, 
   TrendingUp,
   ArrowUpRight,
-  ArrowDownRight,
   Clock,
   ExternalLink
 } from "lucide-react";
@@ -35,12 +34,11 @@ interface StatCardProps {
   title: string;
   value: string | number;
   icon: LucideIcon;
-  change: string;
-  isPositive: boolean;
+  note: string;
   color: "emerald" | "blue" | "amber" | "rose";
 }
 
-const StatCard = ({ title, value, icon: Icon, change, isPositive, color }: StatCardProps) => {
+const StatCard = ({ title, value, icon: Icon, note, color }: StatCardProps) => {
   const colorMap = {
     emerald: "text-emerald-600 bg-emerald-50 shadow-emerald-100",
     blue: "text-blue-600 bg-blue-50 shadow-blue-100",
@@ -54,11 +52,9 @@ const StatCard = ({ title, value, icon: Icon, change, isPositive, color }: StatC
         <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${colorMap[color]} transition-transform group-hover:scale-110`}>
           <Icon size={20} />
         </div>
-        <div className={`flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full ${
-          isPositive ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
-        }`}>
-          {isPositive ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
-          {change}%
+        <div className="flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-50 text-slate-500">
+          <ArrowUpRight size={12} />
+          {note}
         </div>
       </div>
       <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider mb-1">{title}</p>
@@ -74,23 +70,26 @@ export default async function AdminDashboard() {
   let disputeCount = 0;
   let recentTransactions: Transaction[] = [];
   let recentDisputes: Dispute[] = [];
+  let pendingParcels = 0;
+  let newUsers = 0, newTransactions = 0, newDisputes = 0;
+  let pendingAnomalies: { id: string; type: string; description: string; location: string | null }[] = [];
   let dbError = null;
 
   try {
-    [userCount, parcelCount, transactionCount, disputeCount, recentTransactions, recentDisputes] = await Promise.all([
+    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const openDispute = { NOT: { status: { in: ["Resolved", "RESOLVED"] } } };
+    [userCount, parcelCount, transactionCount, disputeCount, recentTransactions, recentDisputes, pendingParcels, newUsers, newTransactions, newDisputes, pendingAnomalies] = await Promise.all([
       prisma.user.count(),
       prisma.parcel.count(),
       prisma.transaction.count(),
-      prisma.dispute.count(),
-      prisma.transaction.findMany({
-        take: 5,
-        orderBy: { createdAt: 'desc' }
-      }),
-      prisma.dispute.findMany({
-        take: 3,
-        orderBy: { createdAt: 'desc' },
-        where: { status: 'PENDING' }
-      })
+      prisma.dispute.count({ where: openDispute }),
+      prisma.transaction.findMany({ take: 5, orderBy: { createdAt: "desc" } }),
+      prisma.dispute.findMany({ take: 3, orderBy: { createdAt: "desc" }, where: openDispute }),
+      prisma.parcel.count({ where: { status: "Pending Verification" } }),
+      prisma.user.count({ where: { createdAt: { gte: since } } }),
+      prisma.transaction.count({ where: { createdAt: { gte: since } } }),
+      prisma.dispute.count({ where: { createdAt: { gte: since } } }),
+      prisma.anomalyReport.findMany({ take: 3, orderBy: { createdAt: "desc" }, where: { status: "PENDING" }, select: { id: true, type: true, description: true, location: true } }),
     ]);
   } catch (error) {
     console.error("Database connection error:", error);
@@ -104,7 +103,7 @@ export default async function AdminDashboard() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-black text-slate-900 tracking-tight">Dashboard Overview</h1>
-              <p className="text-slate-500 text-sm font-medium">Welcome back, manager. Here&apos;s real-time data from Ubutaka.</p>
+              <p className="text-slate-500 text-sm font-medium">Real-time overview of the national land registry.</p>
             </div>
             <div className="flex items-center gap-2">
               <span className="flex h-2 w-2 rounded-full bg-emerald-500"></span>
@@ -126,10 +125,10 @@ export default async function AdminDashboard() {
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="Total Users" value={userCount.toLocaleString()} icon={Users} change="12" isPositive={true} color="emerald" />
-          <StatCard title="Registered Land" value={parcelCount.toLocaleString()} icon={MapIcon} change="5" isPositive={true} color="blue" />
-          <StatCard title="Transactions" value={transactionCount.toLocaleString()} icon={Receipt} change="8" isPositive={false} color="amber" />
-          <StatCard title="Open Disputes" value={disputeCount.toLocaleString()} icon={AlertTriangle} change="2" isPositive={true} color="rose" />
+          <StatCard title="Total Users" value={userCount.toLocaleString()} icon={Users} note={`${newUsers} new in 30 days`} color="emerald" />
+          <StatCard title="Registered Land" value={parcelCount.toLocaleString()} icon={MapIcon} note={`${pendingParcels} awaiting verification`} color="blue" />
+          <StatCard title="Transactions" value={transactionCount.toLocaleString()} icon={Receipt} note={`${newTransactions} in 30 days`} color="amber" />
+          <StatCard title="Open Disputes" value={disputeCount.toLocaleString()} icon={AlertTriangle} note={`${newDisputes} reported in 30 days`} color="rose" />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -160,12 +159,12 @@ export default async function AdminDashboard() {
                       <div className="text-right">
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
                           tx.status === 'COMPLETED' ? 'bg-emerald-50 text-emerald-600' : 
-                          tx.status === 'PENDING' ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-600'
+                          tx.status.startsWith('PENDING') ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-600'
                         }`}>
                           {tx.status}
                         </span>
                         <p className="text-[10px] text-slate-400 mt-1 flex items-center justify-end gap-1">
-                          <Clock size={10} /> {new Date(tx.createdAt).toLocaleDateString()}
+                          <Clock size={10} /> {new Date(tx.createdAt).toLocaleDateString("en-GB")}
                         </p>
                       </div>
                     </div>
@@ -186,24 +185,37 @@ export default async function AdminDashboard() {
                 Critical Alerts
               </h2>
               <span className="bg-rose-100 text-rose-600 text-[10px] font-black px-2 py-0.5 rounded-full">
-                {recentDisputes.length} NEW
+                {recentDisputes.length + pendingAnomalies.length} OPEN
               </span>
             </div>
             <div className="p-4 space-y-3 overflow-y-auto">
-              {recentDisputes.length > 0 ? (
-                recentDisputes.map((dispute: Dispute) => (
-                  <div key={dispute.id} className="flex gap-3 p-3 bg-rose-50/50 rounded-xl border border-rose-100 hover:border-rose-200 transition-colors group">
+              {recentDisputes.length + pendingAnomalies.length > 0 ? (
+                <>
+                {recentDisputes.map((dispute: Dispute) => (
+                  <Link href={`/admin/disputes/${dispute.id}`} key={dispute.id} className="flex gap-3 p-3 bg-rose-50/50 rounded-xl border border-rose-100 hover:border-rose-200 transition-colors group">
                     <div className="w-8 h-8 bg-rose-100 rounded-lg flex items-center justify-center text-rose-600 shrink-0 group-hover:scale-110 transition-transform">
                       <AlertTriangle size={16} />
                     </div>
                     <div>
-                      <h4 className="text-xs font-bold text-rose-900 uppercase tracking-tight">Dispute Created</h4>
+                      <h4 className="text-xs font-bold text-rose-900 uppercase tracking-tight">Open Dispute · {dispute.upi}</h4>
                       <p className="text-[11px] text-rose-700 font-medium leading-normal mt-0.5 line-clamp-2">
                         {dispute.description || `New dispute raised for UPI ${dispute.upi}`}
                       </p>
                     </div>
-                  </div>
-                ))
+                  </Link>
+                ))}
+                {pendingAnomalies.map((a) => (
+                  <Link href="/admin/anomalies" key={a.id} className="flex gap-3 p-3 bg-amber-50/50 rounded-xl border border-amber-100 hover:border-amber-200 transition-colors group">
+                    <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center text-amber-600 shrink-0">
+                      <AlertTriangle size={16} />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-amber-900 uppercase tracking-tight">Anomaly · {a.type}</h4>
+                      <p className="text-[11px] text-amber-700 font-medium leading-normal mt-0.5 line-clamp-2">{a.description}</p>
+                    </div>
+                  </Link>
+                ))}
+                </>
               ) : (
                 <div className="flex-1 flex flex-col items-center justify-center py-10 opacity-60">
                   <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-2">
@@ -213,10 +225,10 @@ export default async function AdminDashboard() {
                 </div>
               )}
             </div>
-            {recentDisputes.length > 0 && (
+            {recentDisputes.length + pendingAnomalies.length > 0 && (
               <div className="mt-auto p-4 border-t border-slate-50 bg-slate-50/30">
                 <Link href="/admin/disputes" className="w-full py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors flex items-center justify-center gap-2">
-                  Resolve All Issues <ExternalLink size={12} />
+                  Open Dispute Queue <ExternalLink size={12} />
                 </Link>
               </div>
             )}
