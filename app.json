@@ -5,10 +5,6 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "splash": {
-      "backgroundColor": "#3b82f6",
-      "resizeMode": "contain"
-    },
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -43,7 +39,18 @@
           "faceIDPermission": "Allow $(PRODUCT_NAME) to use Face ID for secure login."
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-asset",
+      "expo-secure-store",
+      "expo-sharing",
+      "expo-status-bar",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#3b82f6",
+          "resizeMode": "contain"
+        }
+      ]
     ],
     "extra": {
       "eas": {

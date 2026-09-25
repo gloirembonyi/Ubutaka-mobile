@@ -27,3 +27,6 @@ dist-ssr
 # env files
 .env
 .env.local
+
+# Expo local state
+.expo/

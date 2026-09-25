@@ -418,7 +418,7 @@ const styles = StyleSheet.create({
     padding: 2, // Inner border effect
   },
   watermarkContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: -1,

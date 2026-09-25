@@ -374,7 +374,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#e3f2fd',
   },
   polygonOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
   },

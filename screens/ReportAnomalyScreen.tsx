@@ -416,7 +416,7 @@ const styles = StyleSheet.create({
   },
   imagePreviewContainer: { width: '100%', height: '100%' },
   previewImage: { width: '100%', height: '100%', opacity: 0.8 },
-  previewOverlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.3)', gap: 8 },
+  previewOverlay: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.3)', gap: 8 },
   previewText: { color: Colors.white, fontWeight: 'bold', fontSize: 14 },
 
   uploadIconCircle: {
