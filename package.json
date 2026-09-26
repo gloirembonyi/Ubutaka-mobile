@@ -5,7 +5,6 @@
   "scripts": {
     "start": "expo start",
     "dev": "expo start",
-    "admin:dev": "pnpm --filter ubutaka-admin dev",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web"
@@ -49,8 +48,5 @@
     "@types/react": "~19.2.4",
     "typescript": "~6.0.3"
   },
-  "private": true,
-  "workspaces": [
-    "ubutaka-admin"
-  ]
+  "private": true
 }
