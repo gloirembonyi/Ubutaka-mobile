@@ -9,6 +9,7 @@ import { GlobalStyles } from '../styles/globalStyles';
 import MainHeader from '../components/MainHeader';
 import { API_ENDPOINTS } from '../config/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuthStore } from '../store/authStore';
 
 interface EditProfileScreenProps {
   onNavigate: (screen: Screen) => void;
@@ -16,14 +17,12 @@ interface EditProfileScreenProps {
   onUpdate: () => void;
 }
 
-const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ 
-  onNavigate, 
+const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
+  onNavigate,
   user,
   onUpdate
 }) => {
   const [formData, setFormData] = useState({
-    email: user?.email || '',
-    phone: user?.phone || '',
     district: user?.district || '',
     sector: user?.sector || '',
     cell: user?.cell || '',
@@ -33,29 +32,36 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
 
   const handleSave = async () => {
     if (!user) return;
+    const payload = {
+      district: formData.district.trim(),
+      sector: formData.sector.trim(),
+      cell: formData.cell.trim(),
+      village: formData.village.trim(),
+    };
     setSaving(true);
     try {
-      // In a real app, validate inputs here
-      
       const response = await fetch(`${API_ENDPOINTS.USERS}/${user.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
-      if (response.ok || true) { // Simulating success if API not ready
-        // Update local user object
-        const updatedUser = { ...user, ...formData };
+      if (response.ok) {
+        const saved = await response.json();
+        const updatedUser: User = { ...user, ...saved };
         await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
-        
+        const { token, login } = useAuthStore.getState();
+        if (token) login(updatedUser, token);
+
         // Trigger refresh in parent
         onUpdate();
-        
+
         Alert.alert('Success', 'Profile updated successfully!', [
            { text: 'OK', onPress: () => onNavigate('profile') }
         ]);
       } else {
-         Alert.alert('Error', 'Failed to update profile.');
+        const body = await response.json().catch(() => ({}));
+        Alert.alert('Error', body?.error || `Failed to update profile (${response.status}).`);
       }
     } catch (error) {
       console.error(error);
@@ -82,18 +88,27 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
   return (
     <View style={GlobalStyles.container}>
       <SafeAreaView edges={['top', 'bottom']} style={GlobalStyles.safeArea}>
-        <MainHeader 
-          user={user} 
-          showBack 
-          onBack={() => onNavigate('profile')} 
+        <MainHeader
+          user={user}
+          showBack
+          onBack={() => onNavigate('profile')}
           title="Edit Profile"
         />
 
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.formSection}>
             <Text style={styles.sectionTitle}>Contact Information</Text>
-            {renderInput('Email Address', 'email', 'Enter your email', 'email-address')}
-            {renderInput('Phone Number', 'phone', 'Enter your phone number', 'phone-pad')}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Email Address</Text>
+              <TextInput
+                style={[styles.input, { opacity: 0.6 }]}
+                value={user?.email || ''}
+                editable={false}
+              />
+              <Text style={{ fontSize: 12, color: Colors.textTertiary, marginTop: 4 }}>
+                Your email is linked to your account and cannot be changed here.
+              </Text>
+            </View>
           </View>
 
           <View style={styles.formSection}>
@@ -104,8 +119,8 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
             {renderInput('Village', 'village', 'Enter your village')}
           </View>
 
-          <Pressable 
-            style={[styles.saveButton, saving && styles.disabledButton]} 
+          <Pressable
+            style={[styles.saveButton, saving && styles.disabledButton]}
             onPress={handleSave}
             disabled={saving}
           >

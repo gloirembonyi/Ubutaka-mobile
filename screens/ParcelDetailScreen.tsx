@@ -6,7 +6,6 @@ import { Screen, Parcel, Transaction } from '../types';
 import { Colors, getColorWithOpacity } from '../styles/colors';
 import { GlobalStyles } from '../styles/globalStyles';
 import { API_ENDPOINTS } from '../config/api';
-import { decryptData } from '../utils/encryption';
 
 interface ParcelDetailScreenProps {
   onNavigate: (screen: Screen, params?: any) => void;
@@ -33,41 +32,30 @@ const ParcelDetailScreen: React.FC<ParcelDetailScreenProps> = ({ onNavigate, par
 
   React.useEffect(() => {
      if (parcel.upi) {
-         fetch(API_ENDPOINTS.TRANSACTIONS)
+         fetch(`${API_ENDPOINTS.TRANSACTIONS}?upi=${encodeURIComponent(parcel.upi)}`)
              .then(r => r.json())
              .then(data => {
                  if (Array.isArray(data)) {
                    // Filter for this parcel and sort by date desc
-                   const relevant = data.filter((t: any) => t.upi === parcel.upi || t.upi === '1/03/04/05/1230'); // Demo fallback
-                   setHistory(typeof relevant === 'object' ? relevant : []);
+                   setHistory(data.filter((t: Transaction) => t.upi === parcel.upi));
                  }
              })
              .catch(e => console.log(e));
      }
   }, [parcel.upi]);
 
-  // Decrypt partners and children
-  const partners = React.useMemo(() => {
+  // Co-owners and heirs are stored encrypted (AES-256-GCM) and returned decrypted to the owner.
+  const parseList = (value: unknown) => {
     try {
-      if (!parcel.partners) return [];
-      const decrypted = decryptData(parcel.partners);
-      return JSON.parse(decrypted);
-    } catch (e) {
-      console.log('Error decrypting partners:', e);
+      if (!value) return [];
+      const list = typeof value === 'string' ? JSON.parse(value) : value;
+      return Array.isArray(list) ? list : [];
+    } catch {
       return [];
     }
-  }, [parcel.partners]);
-
-  const children = React.useMemo(() => {
-    try {
-      if (!parcel.children) return [];
-      const decrypted = decryptData(parcel.children);
-      return JSON.parse(decrypted);
-    } catch (e) {
-      console.log('Error decrypting children:', e);
-      return [];
-    }
-  }, [parcel.children]);
+  };
+  const partners = React.useMemo(() => parseList(parcel.partners), [parcel.partners]);
+  const children = React.useMemo(() => parseList(parcel.children), [parcel.children]);
 
   return (
     <ScrollView style={GlobalStyles.container} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 160 }}>
@@ -374,7 +362,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#e3f2fd',
   },
   polygonOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
   },

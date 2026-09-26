@@ -27,3 +27,9 @@ dist-ssr
 # env files
 .env
 .env.local
+
+# Expo local state
+.expo/
+
+# Admin/API moved to https://github.com/gloirembonyi/land-management-v2-app (local leftovers)
+ubutaka-admin/

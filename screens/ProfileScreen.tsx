@@ -1,11 +1,10 @@
 
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Image, ImageBackground } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Image, ImageBackground, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import NetInfo from '@react-native-community/netinfo';
-import { Screen, User, Parcel } from '../types';
-import { MOCK_USER } from '../constants';
+import { Screen, User, Parcel, Dispute } from '../types';
 import { Colors, getColorWithOpacity } from '../styles/colors';
 import { GlobalStyles } from '../styles/globalStyles';
 import { API_ENDPOINTS } from '../config/api';
@@ -22,42 +21,69 @@ interface ProfileScreenProps {
 const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?background=0D8ABC&color=fff&name=';
 
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme, onLogout, user }) => {
-  const displayUser = user || MOCK_USER;
   const isDark = theme === 'dark';
   const [isOffline, setIsOffline] = React.useState(false);
   const [parcelCount, setParcelCount] = React.useState(0);
+  const [pendingCount, setPendingCount] = React.useState(0);
+  const [caseCount, setCaseCount] = React.useState(0);
+  const [resolvedRate, setResolvedRate] = React.useState<number | null>(null);
   const [loading, setLoading] = React.useState(true);
 
-  const completionPercentage = React.useMemo(() => getProfileCompletionPercentage(displayUser), [displayUser]);
-  const isComplete = React.useMemo(() => isProfileComplete(displayUser), [displayUser]);
+  const completionPercentage = React.useMemo(() => getProfileCompletionPercentage(user), [user]);
+  const isComplete = React.useMemo(() => isProfileComplete(user), [user]);
 
   React.useEffect(() => {
     const unsubscribe = NetInfo.addEventListener((state: any) => {
       setIsOffline(!state.isConnected);
     });
 
-    const fetchParcelCount = async () => {
-      if (!displayUser.id) return;
+    const fetchStats = async () => {
+      if (!user?.id) {
+        setLoading(false);
+        return;
+      }
       try {
-        const response = await fetch(`${API_ENDPOINTS.PARCELS}?ownerName=${encodeURIComponent(displayUser.name)}`);
-        if (response.ok) {
-          const data: Parcel[] = await response.json();
-          setParcelCount(data.length);
+        if (user.role === 'ABUNZI') {
+          const response = await fetch(`${API_ENDPOINTS.DISPUTES}?assignedAbunziId=${encodeURIComponent(user.id)}`);
+          if (response.ok) {
+            const data: Dispute[] = await response.json();
+            const list = Array.isArray(data) ? data : [];
+            setCaseCount(list.length);
+            setResolvedRate(list.length > 0 ? Math.round((list.filter(d => d.status === 'Resolved').length / list.length) * 100) : null);
+          }
+        } else {
+          const response = await fetch(`${API_ENDPOINTS.PARCELS}?ownerName=${encodeURIComponent(user.name)}`);
+          if (response.ok) {
+            const data: Parcel[] = await response.json();
+            const list = Array.isArray(data) ? data : [];
+            setParcelCount(list.length);
+            setPendingCount(list.filter(p => p.status === 'Pending Verification' || p.status === 'Pending Sale').length);
+          }
         }
       } catch (error) {
-        console.log('Error fetching parcel count:', error);
+        console.log('Error fetching profile stats:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchParcelCount();
+    fetchStats();
     return () => unsubscribe();
-  }, [displayUser.id, displayUser.name]);
+  }, [user?.id, user?.name, user?.role]);
+
+  if (!user) {
+    return (
+      <View style={[GlobalStyles.container, isDark && styles.containerDark, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+        <Text style={{ marginTop: 12, color: Colors.textSecondary }}>Loading your profile...</Text>
+      </View>
+    );
+  }
+  const displayUser = user;
 
   return (
     <View style={[GlobalStyles.container, isDark && styles.containerDark]}>
-      <ImageBackground 
+      <ImageBackground
         source={{ uri: 'https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=2000&auto=format&fit=crop' }}
         style={styles.headerBackground}
         imageStyle={{ opacity: 0.15 }}
@@ -65,20 +91,20 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme, onLogo
         <SafeAreaView edges={['top']} style={styles.safeHeader}>
           <View style={styles.topBar}>
             <Text style={[styles.headerTitle, isDark && styles.textDark]}>My Profile</Text>
-            <Pressable 
+            <Pressable
               onPress={() => onNavigate('settings')}
               style={[styles.settingsButton, isDark && styles.settingsButtonDark]}
             >
               <MaterialIcons name="settings" size={24} color={isDark ? Colors.white : Colors.textPrimary} />
             </Pressable>
           </View>
-          
+
           <View style={styles.profileCard}>
             <View style={styles.avatarSection}>
               <View style={styles.avatarContainer}>
-                <Image 
-                  source={{ uri: displayUser.avatar || `${DEFAULT_AVATAR}${encodeURIComponent(displayUser.name)}` }} 
-                  style={styles.avatar} 
+                <Image
+                  source={{ uri: displayUser.avatar || `${DEFAULT_AVATAR}${encodeURIComponent(displayUser.name)}` }}
+                  style={styles.avatar}
                 />
                 <View style={styles.verifiedBadge}>
                   <MaterialIcons name="verified" size={16} color={Colors.white} />
@@ -98,7 +124,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme, onLogo
                     <Text style={styles.locationTabText}>{displayUser.district}</Text>
                   </View>
                 )}
-                
+
                 {/* Profile Completion Badge */}
                 <View style={[styles.completionBadge, { backgroundColor: isComplete ? getColorWithOpacity(Colors.success, 0.1) : getColorWithOpacity(Colors.warning, 0.1) }]}>
                   <Text style={[styles.completionBadgeText, { color: isComplete ? Colors.success : Colors.warning }]}>
@@ -111,21 +137,21 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme, onLogo
             <View style={styles.statsRow}>
               <View style={styles.statItem}>
                 <Text style={[styles.statValue, isDark && styles.textDark]}>
-                  {displayUser.role === 'ABUNZI' ? '8' : parcelCount}
+                  {loading ? '...' : displayUser.role === 'ABUNZI' ? caseCount : parcelCount}
                 </Text>
                 <Text style={styles.statLabel}>{displayUser.role === 'ABUNZI' ? 'Cases' : 'Parcels'}</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
                 <Text style={[styles.statValue, isDark && styles.textDark]}>
-                  {displayUser.role === 'ABUNZI' ? '96%' : (parcelCount > 0 ? '0' : '1')}
+                  {loading ? '...' : displayUser.role === 'ABUNZI' ? (resolvedRate === null ? '-' : `${resolvedRate}%`) : pendingCount}
                 </Text>
-                <Text style={styles.statLabel}>{displayUser.role === 'ABUNZI' ? 'Success' : 'Pending'}</Text>
+                <Text style={styles.statLabel}>{displayUser.role === 'ABUNZI' ? 'Resolved' : 'Pending'}</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
                 <Text style={[styles.statValue, isDark && styles.textDark]}>
-                  {displayUser.role === 'ABUNZI' ? 'Abunzi' : 'Citizen'}
+                  {displayUser.role === 'ABUNZI' ? 'Abunzi' : displayUser.role === 'NOTARY' ? 'Notary' : displayUser.role === 'ADMIN' ? 'Admin' : 'Citizen'}
                 </Text>
                 <Text style={styles.statLabel}>Level</Text>
               </View>
@@ -134,8 +160,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme, onLogo
         </SafeAreaView>
       </ImageBackground>
 
-      <ScrollView 
-        style={styles.content} 
+      <ScrollView
+        style={styles.content}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 160 }]}
       >
@@ -153,7 +179,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme, onLogo
         {/* Digital ID Card */}
         <View style={styles.idCard}>
           <View style={styles.idCardHeader}>
-            <Image 
+            <Image
               source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/17/Coat_of_arms_of_Rwanda.svg/1200px-Coat_of_arms_of_Rwanda.svg.png' }}
               style={styles.coatOfArms}
               resizeMode="contain"
@@ -164,9 +190,9 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme, onLogo
             </View>
           </View>
           <View style={styles.idCardContent}>
-            <Image 
-              source={{ uri: displayUser.avatar || `${DEFAULT_AVATAR}${encodeURIComponent(displayUser.name)}` }} 
-              style={styles.idAvatar} 
+            <Image
+              source={{ uri: displayUser.avatar || `${DEFAULT_AVATAR}${encodeURIComponent(displayUser.name)}` }}
+              style={styles.idAvatar}
             />
             <View style={styles.idDetails}>
               <View>
@@ -180,7 +206,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme, onLogo
               <View style={styles.idRow}>
                 <View>
                   <Text style={styles.idLabel}>Residence</Text>
-                  <Text style={styles.idValue}>{displayUser.district || 'Kigali'}</Text>
+                  <Text style={styles.idValue}>{displayUser.district || 'Not set'}</Text>
                 </View>
                 <View>
                   <Text style={styles.idLabel}>Issue Date</Text>
@@ -202,7 +228,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme, onLogo
         <View style={styles.sectionHeader}>
            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
               <Text style={[styles.sectionTitle, isDark && styles.textDark]}>Personal Details</Text>
-              <Pressable 
+              <Pressable
                 onPress={() => onNavigate('edit-profile')}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
               >
@@ -222,7 +248,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme, onLogo
                  <Text style={[styles.detailValue, isDark && styles.textDark]}>{displayUser.email || 'Not set'}</Text>
               </View>
            </View>
-           
+
            <View style={styles.divider} />
 
            <View style={styles.detailRow}>
@@ -244,14 +270,14 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme, onLogo
               <View>
                  <Text style={styles.detailLabel}>Address</Text>
                  <Text style={[styles.detailValue, isDark && styles.textDark]}>
-                    {[displayUser.district, displayUser.sector, displayUser.cell, displayUser.village].filter(Boolean).join(', ') || 'Kigali, Rwanda'}
+                    {[displayUser.district, displayUser.sector, displayUser.cell, displayUser.village].filter(Boolean).join(', ') || 'Not set'}
                  </Text>
               </View>
            </View>
         </View>
 
         <View style={styles.menuGrid}>
-          <Pressable 
+          <Pressable
             style={[styles.menuItem, isDark && styles.menuItemDark]}
             onPress={() => onNavigate('profile-completion')}
           >
@@ -260,7 +286,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme, onLogo
             </View>
             <Text style={[styles.menuLabel, isDark && styles.textDark]}>Complete Profile</Text>
           </Pressable>
-          <Pressable 
+          <Pressable
             style={[styles.menuItem, isDark && styles.menuItemDark]}
             onPress={() => onNavigate('dispute-list')}
           >
@@ -269,7 +295,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme, onLogo
             </View>
             <Text style={[styles.menuLabel, isDark && styles.textDark]}>My Reports</Text>
           </Pressable>
-          <Pressable 
+          <Pressable
             style={[styles.menuItem, isDark && styles.menuItemDark]}
             onPress={() => onNavigate('transactions')}
           >
@@ -284,7 +310,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, theme, onLogo
             </View>
             <Text style={[styles.menuLabel, isDark && styles.textDark]}>Security</Text>
           </Pressable>
-          <Pressable 
+          <Pressable
             onPress={onLogout}
             style={[styles.menuItem, isDark && styles.menuItemDark]}
           >

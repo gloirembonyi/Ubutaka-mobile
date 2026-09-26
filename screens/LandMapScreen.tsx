@@ -13,64 +13,54 @@ import { LandParcel, MapLayer, MapCoordinates, GeoPoint } from '../types/map';
 import { Colors, getColorWithOpacity } from '../styles/colors';
 import { GlobalStyles } from '../styles/globalStyles';
 import { API_ENDPOINTS } from '../config/api';
+import { Parcel } from '../types';
+import { toMapCoordinates } from '../utils/geo';
 
 interface LandMapScreenProps {
-  onNavigate: (screen: Screen) => void;
+  onNavigate: (screen: Screen, params?: any) => void;
 }
 
 const { width, height } = Dimensions.get('window');
 
-// Mock Data for Parcels
-const MOCK_PARCELS: LandParcel[] = [
-  {
-    id: 'p1',
-    upi: '1/03/04/05/1230',
-    ownerName: 'MUGAKIHIRE Jean',
-    status: 'active',
-    area: 1200,
-    value: 15000000,
-    landUse: 'Residential',
-    center: { latitude: -1.9441, longitude: 30.0619 },
-    boundary: [
-      { latitude: -1.9438, longitude: 30.0615 },
-      { latitude: -1.9438, longitude: 30.0623 },
-      { latitude: -1.9444, longitude: 30.0623 },
-      { latitude: -1.9444, longitude: 30.0615 },
-    ]
-  },
-  {
-    id: 'p2',
-    upi: '1/03/04/05/1231',
-    ownerName: 'Gasabo District',
-    status: 'active',
-    area: 2500,
-    value: 45000000,
-    landUse: 'Public Infrastructure',
-    center: { latitude: -1.9435, longitude: 30.0630 },
-    boundary: [
-      { latitude: -1.9430, longitude: 30.0625 },
-      { latitude: -1.9430, longitude: 30.0635 },
-      { latitude: -1.9440, longitude: 30.0635 },
-      { latitude: -1.9440, longitude: 30.0625 },
-    ]
-  },
-  {
-    id: 'p3',
-    upi: '1/03/04/05/1235',
-    ownerName: 'Unknown',
-    status: 'pending',
-    area: 800,
-    value: 5000000,
-    landUse: 'Agricultural',
-    center: { latitude: -1.9448, longitude: 30.0610 },
-    boundary: [
-      { latitude: -1.9445, longitude: 30.0605 },
-      { latitude: -1.9445, longitude: 30.0615 },
-      { latitude: -1.9451, longitude: 30.0615 },
-      { latitude: -1.9451, longitude: 30.0605 },
-    ]
-  }
-];
+const KIGALI_REGION = { latitude: -1.9441, longitude: 30.0619, latitudeDelta: 0.05, longitudeDelta: 0.05 };
+
+const toMapStatus = (status?: string): LandParcel['status'] => {
+  if (status === 'Pending Verification' || status === 'Pending Sale') return 'pending';
+  if (status === 'Rejected' || status === 'Disputed') return 'disputed';
+  return 'active';
+};
+
+const parseNumber = (value: unknown): number => {
+  const n = parseFloat(String(value ?? '').replace(/[^0-9.]/g, ''));
+  return isNaN(n) ? 0 : n;
+};
+
+/** Maps an API parcel to the map's LandParcel type; returns null when it has no valid boundary. */
+const toLandParcel = (p: Parcel): LandParcel | null => {
+  const ring = toMapCoordinates(p.coordinates);
+  // GeoJSON rings repeat the first point at the end; drop it for the map polygon.
+  const first = ring[0];
+  const last = ring[ring.length - 1];
+  const boundary = ring.length > 3 && first.latitude === last.latitude && first.longitude === last.longitude
+    ? ring.slice(0, -1)
+    : ring;
+  if (boundary.length < 3 || boundary.some(pt => !isFinite(pt.latitude) || !isFinite(pt.longitude))) return null;
+  const center = {
+    latitude: boundary.reduce((sum, pt) => sum + pt.latitude, 0) / boundary.length,
+    longitude: boundary.reduce((sum, pt) => sum + pt.longitude, 0) / boundary.length,
+  };
+  return {
+    id: p.upi,
+    upi: p.upi,
+    ownerName: p.ownerName,
+    status: toMapStatus(p.status),
+    area: parseNumber(p.size),
+    value: parseNumber(p.price),
+    landUse: p.use,
+    center,
+    boundary,
+  };
+};
 
 const LandMapScreen: React.FC<LandMapScreenProps> = ({ onNavigate }) => {
   const mapRef = useRef<MapView>(null);
@@ -82,56 +72,59 @@ const LandMapScreen: React.FC<LandMapScreenProps> = ({ onNavigate }) => {
   const [measureDistance, setMeasureDistance] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  const [parcels, setParcels] = useState<LandParcel[]>(MOCK_PARCELS || []);
+  const [parcels, setParcels] = useState<LandParcel[]>([]);
+  const [rawParcels, setRawParcels] = useState<Record<string, Parcel>>({});
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission to access location was denied');
-        return;
+      // 1. Load real parcels from the registry
+      let mapped: LandParcel[] = [];
+      try {
+        const resp = await fetch(API_ENDPOINTS.PARCELS);
+        if (!resp.ok) throw new Error(`Server responded ${resp.status}`);
+        const data: Parcel[] = await resp.json();
+        const list = Array.isArray(data) ? data : [];
+        const byUpi: Record<string, Parcel> = {};
+        list.forEach(p => { byUpi[p.upi] = p; });
+        mapped = list.map(toLandParcel).filter((p): p is LandParcel => p !== null);
+        setRawParcels(byUpi);
+        setParcels(mapped);
+        setLoadError(null);
+      } catch (err: any) {
+        console.error('Failed to load parcels for map:', err);
+        setLoadError(err?.message || 'Could not load parcels');
       }
 
-      let location = await Location.getCurrentPositionAsync({});
-      setUserLocation(location);
-
-      // Fetch parcels
-        try {
-            // In a real app, this would fetch based on map viewport (bounds)
-            const resp = await fetch(API_ENDPOINTS.PARCELS); 
-            if (resp.ok) {
-                const data = await resp.json();
-                // Transform API data to map data structure if needed
-                // Assuming API returns compatible LandParcel[] or we map it here
-               // For now, we might need to map your API Parcel type to LandParcel (Map type)
-               // This requires aligning types.
-               // Let's assume for now we keep using MOCK if API fails or returns empty for safety
-               if (data && data.length > 0) {
-                   // Ensure data has coordinates
-                   // setParcels(data); 
-                   // NOTE: Real implementation needs strict type alignment. 
-                   // Keeping MOCK_PARCELS as fallback/demo if API is not fully ready for map data
-               }
-            }
-        } catch (err) {
-            console.error(err);
+      // 2. User location (optional)
+      let location: Location.LocationObject | null = null;
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          location = await Location.getCurrentPositionAsync({});
+          setUserLocation(location);
         }
-      
-      // Focus on user location or first parcel
-      if (mapRef.current && location) {
-         mapRef.current.animateToRegion({
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-          latitudeDelta: 0.005,
-          longitudeDelta: 0.005,
-        });
-      } else if (mapRef.current) {
-         mapRef.current.animateToRegion({
-          latitude: -1.9441, 
-          longitude: 30.0619,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
-        });
+      } catch (err) {
+        console.warn('Location unavailable:', err);
+      }
+
+      // 3. Focus: fit to parcels, else user location, else Kigali
+      if (mapRef.current) {
+        if (mapped.length > 0) {
+          mapRef.current.fitToCoordinates(mapped.flatMap(p => p.boundary), {
+            edgePadding: { top: 120, right: 60, bottom: 260, left: 60 },
+            animated: true,
+          });
+        } else if (location) {
+          mapRef.current.animateToRegion({
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+            latitudeDelta: 0.005,
+            longitudeDelta: 0.005,
+          });
+        } else {
+          mapRef.current.animateToRegion(KIGALI_REGION);
+        }
       }
       setLoading(false);
     })();
@@ -191,31 +184,29 @@ const LandMapScreen: React.FC<LandMapScreenProps> = ({ onNavigate }) => {
   };
 
   const handleExportMap = async () => {
+    if (!mapRef.current) return;
+    const wasMeasuring = isMeasuring;
     try {
-      if (mapRef.current) {
-        const resetAction = isMeasuring; 
-        if(resetAction) setIsMeasuring(false); // Hide markers for clean shot
-
-        // Wait a tick for UI update
-        setTimeout(async () => {
-            const uri = await mapRef.current?.takeSnapshot({
-                width: 300,
-                height: 300,
-                format: 'png',
-                quality: 0.8,
-                result: 'file'
-            });
-
-            if(resetAction) setIsMeasuring(true);
-
-            if (uri) {
-                await Sharing.shareAsync(uri);
-            }
-        }, 100);
+      if (wasMeasuring) {
+        // Hide measure markers for a clean snapshot and let the map re-render first
+        setIsMeasuring(false);
+        await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+      }
+      const uri = await mapRef.current.takeSnapshot({
+        width: 300,
+        height: 300,
+        format: 'png',
+        quality: 0.8,
+        result: 'file',
+      });
+      if (uri) {
+        await Sharing.shareAsync(uri);
       }
     } catch (error) {
       console.error(error);
       Alert.alert("Error", "Failed to export map");
+    } finally {
+      if (wasMeasuring) setIsMeasuring(true);
     }
   };
 
@@ -235,6 +226,7 @@ const LandMapScreen: React.FC<LandMapScreenProps> = ({ onNavigate }) => {
       <MapView
         ref={mapRef}
         style={styles.map}
+        initialRegion={KIGALI_REGION}
         mapType={mapType === 'hybrid' ? 'hybrid' : mapType === 'satellite' ? 'satellite' : 'standard'}
         showsUserLocation={true}
         showsCompass={true}
@@ -330,6 +322,19 @@ const LandMapScreen: React.FC<LandMapScreenProps> = ({ onNavigate }) => {
         </View>
       )}
 
+      {/* Load status */}
+      {!isMeasuring && (loading || loadError || parcels.length === 0) && (
+        <View style={styles.statusBanner}>
+          <Text style={styles.statusText}>
+            {loading
+              ? 'Loading registered parcels...'
+              : loadError
+                ? `Could not load parcels: ${loadError}`
+                : 'No parcels with mapped boundaries yet.'}
+          </Text>
+        </View>
+      )}
+
       {/* Parcel Detail Modal */}
       {selectedParcel && (
         <View style={styles.parcelCard}>
@@ -360,7 +365,7 @@ const LandMapScreen: React.FC<LandMapScreenProps> = ({ onNavigate }) => {
                 <Text style={styles.parcelValueHighlight}>{selectedParcel.value.toLocaleString()} RWF</Text>
             </View>
             <View style={styles.parcelActions}>
-                <Pressable onPress={() => onNavigate('parcel-details')} style={styles.detailsButton}>
+                <Pressable onPress={() => onNavigate('parcel-details', { parcel: rawParcels[selectedParcel.upi] })} style={styles.detailsButton}>
                     <Text style={styles.detailsButtonText}>View Full Details</Text>
                 </Pressable>
             </View>
@@ -458,6 +463,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
     color: Colors.textPrimary,
+  },
+  statusBanner: {
+    position: 'absolute',
+    top: 130,
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    padding: 12,
+    borderRadius: 12,
+  },
+  statusText: {
+    color: Colors.white,
+    fontSize: 13,
+    textAlign: 'center',
   },
   measureInfo: {
     position: 'absolute',

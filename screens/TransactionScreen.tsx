@@ -1,14 +1,37 @@
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Modal, ActivityIndicator, Linking, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Modal, ActivityIndicator, Platform } from 'react-native';
 import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import { Screen, User } from '../types';
-import { BlockchainTransaction } from '../types/blockchain';
-import { BlockchainService } from '../services/blockchainService';
+
 import { Colors, getColorWithOpacity } from '../styles/colors';
 import { GlobalStyles } from '../styles/globalStyles';
 
 import { API_ENDPOINTS } from '../config/api';
+
+/** One record of the tamper-evident land ledger, as returned by /api/transactions. */
+interface LedgerRecord {
+  id: string;
+  upi: string;
+  title: string;
+  type: string;
+  hash: string;
+  previousHash: string;
+  blockNumber: number;
+  timestamp: string;
+  from: string;
+  to: string;
+  value: string;
+  status: 'confirmed' | 'pending';
+  detailedStatus?: string;
+  step?: string;
+}
+
+interface LedgerCheck {
+  valid: boolean;
+  blocks: number;
+  reason?: string;
+}
 
 interface TransactionScreenProps {
   onNavigate: (screen: Screen) => void;
@@ -16,10 +39,11 @@ interface TransactionScreenProps {
 }
 
 const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate, user }) => {
-  const [selectedTx, setSelectedTx] = useState<BlockchainTransaction | null>(null);
+  const [selectedTx, setSelectedTx] = useState<LedgerRecord | null>(null);
+  const [ledgerCheck, setLedgerCheck] = useState<LedgerCheck | null>(null);
   const [verifying, setVerifying] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [history, setHistory] = useState<BlockchainTransaction[]>([]);
+  const [history, setHistory] = useState<LedgerRecord[]>([]);
 
   React.useEffect(() => {
     fetchHistory();
@@ -32,18 +56,21 @@ const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate, user 
       const response = await fetch(`${API_ENDPOINTS.TRANSACTIONS}?name=${encodeURIComponent(user.name)}`);
       if (response.ok) {
         const data = await response.json();
-        const mappedData: BlockchainTransaction[] = data.map((tx: any) => ({
+        const mappedData: LedgerRecord[] = data.map((tx: any) => ({
+          id: tx.id,
+          upi: tx.upi,
+          title: tx.title,
+          type: tx.type,
           hash: tx.txHash,
+          previousHash: tx.previousHash,
           blockNumber: tx.blockNumber,
           timestamp: tx.createdAt,
           from: tx.sellerName || 'System',
           to: tx.buyerName || 'Unassigned',
           value: tx.price || '0',
-          gasUsed: 42000,
           status: tx.status === 'COMPLETED' ? 'confirmed' : 'pending',
           detailedStatus: tx.status,
           step: tx.step,
-          contractAddress: '0xRegistry'
         }));
         setHistory(mappedData);
       }
@@ -54,31 +81,20 @@ const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate, user 
     }
   };
 
-  const handleCreateMockTx = async () => {
+  // Re-checks the parcel's whole hash chain on the server (each record must link to the previous one
+  // and its SHA-256 hash must match its content).
+  const handleVerify = async (tx: LedgerRecord) => {
     setVerifying(true);
-    // Simulate mining
-    setTimeout(() => {
-        const newTx = BlockchainService.createMockTransaction('transfer', 5000000, '0xMe', '0xBuyer');
-        setHistory([newTx, ...history]);
-        setVerifying(false);
-        Alert.alert("Transaction Mined", `Block #${newTx.blockNumber} confirmed on chain.`);
-    }, 2000);
-  };
-
-  const handleVerify = async (tx: BlockchainTransaction) => {
-    setVerifying(true);
-    const isValid = await BlockchainService.verifyTransaction(tx.hash);
-    setVerifying(false);
-    
-    if (isValid) {
-        setSelectedTx(tx);
-    } else {
-        Alert.alert("Error", "Could not verify transaction integrity.");
+    try {
+      const response = await fetch(`${API_ENDPOINTS.VERIFY}?upi=${encodeURIComponent(tx.upi)}`);
+      const data = await response.json();
+      setLedgerCheck(data.ledger || null);
+      setSelectedTx(tx);
+    } catch (error) {
+      Alert.alert('Error', 'Could not reach the registry to verify this record.');
+    } finally {
+      setVerifying(false);
     }
-  };
-
-  const openExplorer = (hash: string) => {
-     Linking.openURL(BlockchainService.getExplorerUrl(hash));
   };
 
   const handleSellerApproval = async (tx: any) => {
@@ -88,10 +104,7 @@ const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate, user 
       [
         { text: "Reject", style: "cancel", onPress: async () => {
           try {
-            const originalResp = await fetch(`${API_ENDPOINTS.TRANSACTIONS}`);
-            const data = await originalResp.json();
-            const originalTx = data.find((d: any) => d.txHash === tx.hash || d.id === tx.id);
-            if (!originalTx) throw new Error("Transaction not found");
+            const originalTx = { id: tx.id, upi: tx.upi, sellerName: tx.from, buyerName: tx.to, price: tx.value, txHash: tx.hash };
 
             await fetch(`${API_ENDPOINTS.TRANSACTIONS}/${originalTx.id}`, {
               method: 'DELETE',
@@ -107,11 +120,7 @@ const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate, user 
           onPress: async () => {
             setVerifying(true);
             try {
-              const originalResp = await fetch(`${API_ENDPOINTS.TRANSACTIONS}`);
-              const data = await originalResp.json();
-              const originalTx = data.find((d: any) => d.txHash === tx.hash || d.id === tx.id);
-              
-              if (!originalTx) throw new Error("Transaction not found");
+              const originalTx = { id: tx.id, upi: tx.upi, sellerName: tx.from, buyerName: tx.to, price: tx.value, txHash: tx.hash };
 
               const updateResp = await fetch(`${API_ENDPOINTS.TRANSACTIONS}/${originalTx.id}`, {
                 method: 'PATCH',
@@ -149,11 +158,7 @@ const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate, user 
           onPress: async () => {
             setVerifying(true);
             try {
-              const originalResp = await fetch(`${API_ENDPOINTS.TRANSACTIONS}`);
-              const data = await originalResp.json();
-              const originalTx = data.find((d: any) => d.txHash === tx.hash || d.id === tx.id);
-              
-              if (!originalTx) throw new Error("Transaction not found");
+              const originalTx = { id: tx.id, upi: tx.upi, sellerName: tx.from, buyerName: tx.to, price: tx.value, txHash: tx.hash };
 
               const updateResp = await fetch(`${API_ENDPOINTS.TRANSACTIONS}/${originalTx.id}`, {
                 method: 'PATCH',
@@ -183,7 +188,7 @@ const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate, user 
   const handleSellerFinalSign = async (tx: any) => {
     Alert.alert(
       "Final Confirmation",
-      "As the seller, by signing this you agree to transfer all rights of this parcel to the buyer. This action is recorded on the blockchain and is irreversible. Proceed?",
+      "As the seller, by signing this you agree to transfer all rights of this parcel to the buyer. This action is recorded in the tamper-evident land ledger and cannot be undone. Proceed?",
       [
         { text: "Cancel", style: "cancel" },
         { 
@@ -191,11 +196,7 @@ const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate, user 
           onPress: async () => {
             setVerifying(true);
             try {
-              const originalResp = await fetch(`${API_ENDPOINTS.TRANSACTIONS}`);
-              const data = await originalResp.json();
-              const originalTx = data.find((d: any) => d.txHash === tx.hash || d.id === tx.id);
-              
-              if (!originalTx) throw new Error("Transaction not found");
+              const originalTx = { id: tx.id, upi: tx.upi, sellerName: tx.from, buyerName: tx.to, price: tx.value, txHash: tx.hash };
 
               // Complete the transaction
               const updateResp = await fetch(`${API_ENDPOINTS.TRANSACTIONS}/${originalTx.id}`, {
@@ -212,13 +213,10 @@ const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate, user 
                 console.log('Transaction completed, now updating parcel ownership...');
                 
                 // Fetch current parcel to get ownership history
-                const parcelResp = await fetch(`${API_ENDPOINTS.PARCELS}?upi=${encodeURIComponent(originalTx.upi)}`);
-                let currentParcel = null;
-                
-                if (parcelResp.ok) {
-                  const parcels = await parcelResp.json();
-                  currentParcel = Array.isArray(parcels) ? parcels[0] : parcels;
-                }
+                const parcelResp = await fetch(API_ENDPOINTS.PARCEL_BY_ID(originalTx.upi));
+                const currentParcel = parcelResp.ok ? await parcelResp.json() : null;
+                const buyerResp = await fetch(API_ENDPOINTS.USERS);
+                const buyer = buyerResp.ok ? (await buyerResp.json()).find((u: any) => u.name === originalTx.buyerName) : null;
 
                 // Build ownership history
                 let ownerHistory = [];
@@ -236,6 +234,7 @@ const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate, user 
                   previousOwner: originalTx.sellerName,
                   newOwner: originalTx.buyerName,
                   transactionId: originalTx.id,
+                  txHash: originalTx.txHash,
                   price: originalTx.price
                 });
 
@@ -243,9 +242,10 @@ const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate, user 
                 const parcelUpdateResp = await fetch(`${API_ENDPOINTS.PARCELS}/${encodeURIComponent(originalTx.upi)}`, {
                   method: 'PATCH',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ 
-                    status: 'Verified', 
+                  body: JSON.stringify({
+                    status: 'Verified',
                     ownerName: originalTx.buyerName,
+                    ...(buyer ? { userId: buyer.id } : {}),
                     price: null, // Remove from marketplace
                     ownerHistory: JSON.stringify(ownerHistory)
                   })
@@ -316,7 +316,7 @@ const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate, user 
         <Pressable onPress={() => onNavigate(user?.role === 'ABUNZI' ? 'abunzi-dashboard' : 'dashboard')} style={styles.headerButton}>
           <MaterialIcons name="arrow-back" size={24} color={Colors.textSecondary} />
         </Pressable>
-        <Text style={styles.headerTitle}>{user?.role === 'ABUNZI' ? 'Abunzi Operations' : 'Blockchain Registry'}</Text>
+        <Text style={styles.headerTitle}>{user?.role === 'ABUNZI' ? 'Abunzi Operations' : 'Land Transactions'}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -329,19 +329,19 @@ const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate, user 
                     <FontAwesome5 name="link" size={20} color={Colors.white} />
                 </View>
                 <View>
-                    <Text style={styles.statusTitle}>Ubutaka Chain</Text>
-                    <Text style={styles.statusSub}>Status: Operational</Text>
+                    <Text style={styles.statusTitle}>Ubutaka Land Ledger</Text>
+                    <Text style={styles.statusSub}>SHA-256 hash-chained records</Text>
                 </View>
             </View>
             <View style={styles.blockInfo}>
-                <Text style={styles.blockText}>Current Block: #18,239,412</Text>
+                <Text style={styles.blockText}>{history.length} record(s) · {history.filter((t) => t.status === 'pending').length} in progress</Text>
                 <View style={styles.indicator} />
             </View>
         </View>
 
         {/* Actions */}
         <View style={styles.actionSection}>
-            <Text style={styles.sectionTitle}>{user?.role === 'ABUNZI' ? 'Job Functions' : 'Simulate Transaction'}</Text>
+            <Text style={styles.sectionTitle}>{user?.role === 'ABUNZI' ? 'Job Functions' : 'Start a Transaction'}</Text>
             {user?.role === 'ABUNZI' ? (
               <View style={{ gap: 12 }}>
                 <Pressable 
@@ -352,35 +352,37 @@ const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate, user 
                     <Text style={styles.simulateText}>Review Pending Disputes</Text>
                 </Pressable>
                 <Pressable 
-                    onPress={() => Alert.alert("Calendar", "Opening mediation desk schedule...")}
+                    onPress={() => onNavigate('abunzi-dashboard')}
                     style={({pressed}: {pressed: boolean}) => [styles.simulateButton, { backgroundColor: Colors.primary }, pressed && {opacity: 0.8}]}
                 >
                     <MaterialIcons name="event-available" size={24} color={Colors.white} />
-                    <Text style={styles.simulateText}>Manage Mediation Calendar</Text>
+                    <Text style={styles.simulateText}>Open Mediation Dashboard</Text>
                 </Pressable>
               </View>
             ) : (
-              <Pressable 
-                  onPress={handleCreateMockTx}
-                  style={({pressed}: {pressed: boolean}) => [styles.simulateButton, pressed && {opacity: 0.8}]}
-                  disabled={verifying}
-              >
-                  {verifying ? (
-                      <ActivityIndicator color={Colors.white} />
-                  ) : (
-                      <>
-                          <MaterialIcons name="add-circle-outline" size={24} color={Colors.white} />
-                          <Text style={styles.simulateText}>Record New Land Transfer</Text>
-                      </>
-                  )}
-              </Pressable>
+              <View style={{ gap: 12 }}>
+                <Pressable
+                    onPress={() => onNavigate('sell-land')}
+                    style={({pressed}: {pressed: boolean}) => [styles.simulateButton, pressed && {opacity: 0.8}]}
+                >
+                    <MaterialIcons name="add-circle-outline" size={24} color={Colors.white} />
+                    <Text style={styles.simulateText}>Sell or Transfer My Land</Text>
+                </Pressable>
+                <Pressable
+                    onPress={() => onNavigate('marketplace')}
+                    style={({pressed}: {pressed: boolean}) => [styles.simulateButton, { backgroundColor: Colors.primary }, pressed && {opacity: 0.8}]}
+                >
+                    <MaterialIcons name="storefront" size={24} color={Colors.white} />
+                    <Text style={styles.simulateText}>Browse Land for Sale</Text>
+                </Pressable>
+              </View>
             )}
         </View>
 
         {/* Transaction Legend */}
         <View style={styles.legendContainer}>
-            <Text style={styles.legendTitle}>Immutable Ledger</Text>
-            <Text style={styles.legendSub}>All land transactions are cryptographically signed and permanently recorded.</Text>
+            <Text style={styles.legendTitle}>Tamper-Evident Ledger</Text>
+            <Text style={styles.legendSub}>Each record stores the SHA-256 hash of the previous record of the same parcel. Tap a record to re-check its integrity.</Text>
         </View>
 
         {/* List */}
@@ -407,7 +409,7 @@ const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate, user 
                                     <FontAwesome5 name="cube" size={16} color={Colors.primary} />
                                 </View>
                                 <View style={styles.txInfo}>
-                                    <Text style={styles.txType}>{tx.detailedStatus?.replace('_', ' ') || 'Land Operation'}</Text>
+                                    <Text style={styles.txType}>{tx.title || tx.detailedStatus?.replace(/_/g, ' ') || 'Land Operation'}</Text>
                                     <View style={styles.hashContainer}>
                                         <Text style={styles.txHash} numberOfLines={1} ellipsizeMode="middle">{tx.hash}</Text>
                                         <Text style={styles.txStep}>{tx.step}</Text>
@@ -432,8 +434,8 @@ const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate, user 
                             </View>
 
                             <View style={styles.txDetails}>
-                                <Text style={styles.detailText}>Block: #{tx.blockNumber}</Text>
-                                <Text style={styles.detailText}>{new Date(tx.timestamp).toLocaleTimeString()}</Text>
+                                <Text style={styles.detailText}>Block #{tx.blockNumber} · {tx.value}</Text>
+                                <Text style={styles.detailText}>{new Date(tx.timestamp).toLocaleDateString('en-GB')}</Text>
                             </View>
 
                             {tx.detailedStatus === 'PENDING_SELLER_APPROVAL' && tx.from === user?.name && (
@@ -483,13 +485,15 @@ const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate, user 
         <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
                 <View style={styles.modalHeader}>
-                    <FontAwesome5 name="shield-alt" size={40} color={Colors.success} />
-                    <Text style={styles.modalTitle}>Verified On-Chain</Text>
+                    <FontAwesome5 name="shield-alt" size={40} color={ledgerCheck?.valid ? Colors.success : Colors.error} />
+                    <Text style={styles.modalTitle}>{ledgerCheck?.valid ? 'Record Verified' : 'Integrity Check Failed'}</Text>
                 </View>
                 
                 <View style={styles.integritySection}>
-                    <Text style={styles.integrityLabel}>Transaction Hash Integrity:</Text>
-                    <Text style={styles.integrityValue}>SHA-256 Valid</Text>
+                    <Text style={styles.integrityLabel}>Parcel ledger ({ledgerCheck?.blocks ?? 0} block(s)):</Text>
+                    <Text style={[styles.integrityValue, !ledgerCheck?.valid && { color: Colors.error }]}>
+                        {ledgerCheck?.valid ? 'SHA-256 chain intact' : ledgerCheck?.reason || 'Not verified'}
+                    </Text>
                 </View>
 
                 {selectedTx && (
@@ -506,22 +510,18 @@ const TransactionScreen: React.FC<TransactionScreenProps> = ({ onNavigate, user 
                         <Text style={styles.label}>To:</Text>
                         <Text style={styles.valueMono}>{selectedTx.to}</Text>
 
-                        <Text style={styles.label}>Gas Used:</Text>
-                        <Text style={styles.value}>{selectedTx.gasUsed} GWEI</Text>
+                        <Text style={styles.label}>Previous Hash:</Text>
+                        <Text style={styles.valueMono}>{selectedTx.previousHash}</Text>
+
+                        <Text style={styles.label}>Parcel / Amount:</Text>
+                        <Text style={styles.value}>{selectedTx.upi} · {selectedTx.value}</Text>
                     </View>
                 )}
 
-                <Pressable 
-                    style={styles.explorerButton}
-                    onPress={() => selectedTx && openExplorer(selectedTx.hash)}
-                >
-                    <Text style={styles.explorerText}>View on Block Explorer</Text>
-                    <MaterialIcons name="open-in-new" size={16} color={Colors.primary} />
-                </Pressable>
 
                 <Pressable 
                     style={styles.closeButton}
-                    onPress={() => setSelectedTx(null)}
+                    onPress={() => { setSelectedTx(null); setLedgerCheck(null); }}
                 >
                     <Text style={styles.closeText}>Close Verification</Text>
                 </Pressable>

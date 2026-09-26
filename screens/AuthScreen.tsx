@@ -6,7 +6,7 @@ import { Colors, getColorWithOpacity } from '../styles/colors';
 import { GlobalStyles } from '../styles/globalStyles';
 import { AuthService } from '../services/authService';
 import { useAuthStore } from '../store/authStore';
-import { mockNidaVerification } from '../services/mockNida';
+import { validateNationalId } from '../services/nidaValidation';
 
 interface AuthScreenProps {
   onNavigate: (screen: Screen) => void;
@@ -79,20 +79,12 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onNavigate, onLogin, type: init
   };
 
   const verifyNida = async () => {
-    setLoading(true);
-    try {
-      const result = await mockNidaVerification(nationalId);
-      if (!result.isValid) {
-        Alert.alert('Verification Failed', result.error || 'Invalid National ID');
-        return false;
-      }
-      return true;
-    } catch (error) {
-      Alert.alert('Error', 'NIDA verification failed');
+    const result = validateNationalId(nationalId);
+    if (!result.isValid) {
+      Alert.alert('Invalid National ID', result.error || 'Please check your National ID number.');
       return false;
-    } finally {
-      setLoading(false);
     }
+    return true;
   };
 
   const handleSubmit = async () => {

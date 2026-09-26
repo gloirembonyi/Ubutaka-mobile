@@ -7,7 +7,8 @@ import { Colors, getColorWithOpacity } from '../styles/colors';
 import { GlobalStyles } from '../styles/globalStyles';
 import { API_ENDPOINTS, API_BASE_URL } from '../config/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { encryptData, encryptObject } from '../utils/encryption';
+import * as Location from 'expo-location';
+import { districtCentre, squareAround } from '../utils/geo';
 import MainHeader from '../components/MainHeader';
 import { User } from '../types';
 
@@ -256,7 +257,22 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
         return;
       }
 
-      // Prepare parcel data
+      // Boundary: a square of the declared area centred on the owner's current position
+      // (captured on site), or on the district centre when location access is not available.
+      let [lat, lng] = districtCentre(formData.district);
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          lat = pos.coords.latitude;
+          lng = pos.coords.longitude;
+        }
+      } catch {
+        // keep the district centre
+      }
+      const areaSqm = parseFloat(String(formData.size).replace(/[^0-9.]/g, '')) || 100;
+
+      // Prepare parcel data (co-owners and heirs are encrypted by the server before storage)
       const parcelData = {
         upi: formData.upi,
         size: `${formData.size} sqm`,
@@ -271,18 +287,9 @@ const RegisterLandScreen: React.FC<RegisterLandScreenProps> = ({ onNavigate }) =
         imageUrl: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800',
         price: null,
         userId: user.id,
-        partners: encryptData(JSON.stringify(formData.partners)),
-        children: encryptData(JSON.stringify(formData.children)),
-        coordinates: {
-          type: "Polygon",
-          coordinates: [[
-            [30.0619, -1.9441],
-            [30.0625, -1.9441],
-            [30.0625, -1.9450],
-            [30.0619, -1.9450],
-            [30.0619, -1.9441]
-          ]]
-        },
+        partners: JSON.stringify(formData.partners),
+        children: JSON.stringify(formData.children),
+        coordinates: squareAround(lat, lng, areaSqm),
         documents: [
           { name: "National ID Copy", status: "Uploaded", type: "ID" },
           { name: "Sale Agreement", status: "Uploaded", type: "CONTRACT" },

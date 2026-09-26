@@ -31,35 +31,15 @@ const MyParcelsScreen: React.FC<MyParcelsScreenProps> = ({
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Mock data as fallback if API doesn't return or for demo
-  const MOCK_PARCELS: Parcel[] = [
-    {
-      upi: "1/03/04/05/1230",
-      size: "1200 sqm",
-      use: "Residential (R1)",
-      district: "Gasabo",
-      location: "Kimironko",
-      status: "registered",
-      ownerName: user?.name || "MUGAKIHIRE Jean",
-      imageUrl:
-        "https://images.unsplash.com/photo-1500382017468-9049fed747ef?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
-      price: "15,000,000 RWF",
-    },
-    {
-      upi: "1/03/04/05/1231",
-      size: "2500 sqm",
-      use: "Agricultural",
-      district: "Gasabo",
-      location: "Bumbogo",
-      status: "registered",
-      ownerName: user?.name || "MUGAKIHIRE Jean",
-      imageUrl:
-        "https://images.unsplash.com/photo-1500076656116-558758c991c1?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
-      price: "8,000,000 RWF",
-    },
-  ];
+  const [error, setError] = useState<string | null>(null);
 
   const fetchParcels = async (isRefresh = false, isBackground = false) => {
+    if (!user?.name) {
+      setParcels([]);
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
     if (isRefresh) {
       setRefreshing(true);
     } else if (!isBackground) {
@@ -67,36 +47,31 @@ const MyParcelsScreen: React.FC<MyParcelsScreenProps> = ({
     }
     
     try {
-      // Fetch Parcels
-      const parcelUrl = `${API_ENDPOINTS.PARCELS}?ownerName=${encodeURIComponent(user?.name || '')}`;
-      if (!isBackground) console.log('Fetching parcels from:', parcelUrl);
-      const parcelResp = await fetch(parcelUrl);
-      
-      // Fetch Transactions
-      const txUrl = API_ENDPOINTS.TRANSACTIONS;
-      const txResp = await fetch(txUrl);
-      
-      if (parcelResp.ok) {
-         const data = await parcelResp.json();
-         // Sort verified first, then by date
-         const sorted = data.sort((a: Parcel, b: Parcel) => {
-            if (a.status === 'Verified' && b.status !== 'Verified') return -1;
-            if (a.status !== 'Verified' && b.status === 'Verified') return 1;
-            return 0;
-         });
-         setParcels(data.length > 0 ? sorted : MOCK_PARCELS);
-      } else {
-        if (!isBackground) console.error('Failed to fetch parcels:', parcelResp.status);
-        if (parcels.length === 0) setParcels(MOCK_PARCELS);
-      }
-      
+      const parcelUrl = `${API_ENDPOINTS.PARCELS}?ownerName=${encodeURIComponent(user.name)}`;
+      const txUrl = `${API_ENDPOINTS.TRANSACTIONS}?name=${encodeURIComponent(user.name)}`;
+      const [parcelResp, txResp] = await Promise.all([fetch(parcelUrl), fetch(txUrl)]);
+
+      if (!parcelResp.ok) throw new Error(`Server responded ${parcelResp.status}`);
+      const data: Parcel[] = await parcelResp.json();
+      const own = (Array.isArray(data) ? data : []).filter(p => p.ownerName === user.name);
+      // Sort verified first
+      own.sort((a: Parcel, b: Parcel) => {
+        if (a.status === 'Verified' && b.status !== 'Verified') return -1;
+        if (a.status !== 'Verified' && b.status === 'Verified') return 1;
+        return 0;
+      });
+      setParcels(own);
+      setError(null);
+
       if (txResp.ok) {
         const txData = await txResp.json();
-        setTransactions(txData);
+        setTransactions(Array.isArray(txData) ? txData : []);
       }
-    } catch (err) {
-      if (!isBackground) console.error("Fetch data error:", err);
-      if (parcels.length === 0) setParcels(MOCK_PARCELS);
+    } catch (err: any) {
+      if (!isBackground) {
+        console.error("Fetch data error:", err);
+        setError(err?.message || 'Could not load your parcels');
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -198,13 +173,15 @@ const MyParcelsScreen: React.FC<MyParcelsScreenProps> = ({
                 color={Colors.textTertiary}
               />
               <Text style={styles.emptyText}>
-                You have no registered parcels yet.
+                {error
+                  ? `Could not load your parcels: ${error}`
+                  : "You have no registered parcels yet."}
               </Text>
               <Pressable
                 style={styles.emptyButton}
-                onPress={() => onNavigate("register-land")}
+                onPress={() => (error ? fetchParcels() : onNavigate("register-land"))}
               >
-                <Text style={styles.emptyButtonText}>Register Land</Text>
+                <Text style={styles.emptyButtonText}>{error ? "Try Again" : "Register Land"}</Text>
               </Pressable>
             </View>
           ) : (
@@ -238,9 +215,9 @@ const MyParcelsScreen: React.FC<MyParcelsScreenProps> = ({
                        <MaterialIcons name="hourglass-empty" size={16} color={Colors.accent} />
                     )}
                     <MaterialIcons
-                      name={parcel.status === 'Verified' ? "verified" : "hourglass-top"}
+                      name={parcel.isVerified || parcel.status === 'Verified' || parcel.status === 'For Sale' ? "verified" : parcel.status === 'Rejected' ? "cancel" : "hourglass-top"}
                       size={16}
-                      color={parcel.status === 'Verified' ? Colors.success : Colors.accent}
+                      color={parcel.isVerified || parcel.status === 'Verified' || parcel.status === 'For Sale' ? Colors.success : parcel.status === 'Rejected' ? Colors.error : Colors.accent}
                     />
                   </View>
                   <Text style={styles.parcelDistrict}>
@@ -271,12 +248,12 @@ const MyParcelsScreen: React.FC<MyParcelsScreenProps> = ({
                   </View>
                 </View>
                 <View style={styles.actionsContainer}>
-                  {parcel.status === 'Verified' && (
+                  {(parcel.status === 'Verified' || parcel.status === 'For Sale') && (
                     <Pressable 
-                      style={[styles.sellButton, parcel.price && { backgroundColor: Colors.error }]}
-                      onPress={() => parcel.price ? handleRemoveListing(parcel) : onNavigate("sell-land", { parcel })}
+                      style={[styles.sellButton, parcel.status === 'For Sale' && { backgroundColor: Colors.error }]}
+                      onPress={() => parcel.status === 'For Sale' ? handleRemoveListing(parcel) : onNavigate("sell-land", { parcel })}
                     >
-                      <Text style={styles.sellButtonText}>{parcel.price ? 'Remove' : 'Sell'}</Text>
+                      <Text style={styles.sellButtonText}>{parcel.status === 'For Sale' ? 'Remove' : 'Sell'}</Text>
                     </Pressable>
                   )}
                   <MaterialIcons

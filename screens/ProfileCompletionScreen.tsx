@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Image, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert, ActivityIndicator, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { Screen, User } from '../types';
 import { Colors, getColorWithOpacity } from '../styles/colors';
@@ -10,6 +9,7 @@ import { GlobalStyles } from '../styles/globalStyles';
 import { API_ENDPOINTS } from '../config/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import MainHeader from '../components/MainHeader';
+import { useAuthStore } from '../store/authStore';
 import { getProfileCompletionPercentage, getMissingRequirements } from '../utils/profileCompletion';
 
 interface ProfileCompletionScreenProps {
@@ -18,92 +18,35 @@ interface ProfileCompletionScreenProps {
   onComplete: () => void;
 }
 
-const ProfileCompletionScreen: React.FC<ProfileCompletionScreenProps> = ({ 
-  onNavigate, 
-  user, 
-  onComplete 
+const ProfileCompletionScreen: React.FC<ProfileCompletionScreenProps> = ({
+  onNavigate,
+  user,
+  onComplete
 }) => {
-  const [idPicture, setIdPicture] = useState<string | null>(user?.idPictureUrl || null);
+  const [idPicture] = useState<string | null>(user?.idPictureUrl || null);
   const [biometricRegistered, setBiometricRegistered] = useState(user?.biometricRegistered || false);
   const [digitalSignature, setDigitalSignature] = useState<string | null>(user?.digitalSignature || null);
   const [uploading, setUploading] = useState(false);
   const [registeringBiometric, setRegisteringBiometric] = useState(false);
   const [signing, setSigning] = useState(false);
+  const [showSignatureInput, setShowSignatureInput] = useState(false);
+  const [signatureName, setSignatureName] = useState('');
 
-  /* 
+  /*
     Calculate completion percentage
     * ID Picture is marked as "disabled" in UI but we treat it as done for percentage calculation
     * so users can reach 100% if they complete the other steps
   */
   const completionPercentage = getProfileCompletionPercentage({
     ...user,
-    idPictureUrl: idPicture || "disabled-but-counted", 
+    idPictureUrl: idPicture || "disabled-but-counted",
     biometricRegistered,
     digitalSignature: digitalSignature || undefined,
   } as User);
 
-  const handlePickIdPicture = async () => {
-    Alert.alert(
-      'Upload ID Picture',
-      'Select a photo of your National ID card',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Choose from Gallery', 
-          onPress: async () => {
-            const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-            if (permissionResult.granted === false) {
-              Alert.alert('Permission Required', 'Please allow access to your photos.');
-              return;
-            }
-
-            const result = await ImagePicker.launchImageLibraryAsync({
-              mediaTypes: ImagePicker.MediaTypeOptions.Images,
-              allowsEditing: true,
-              aspect: [3, 4],
-              quality: 0.8,
-            });
-
-            if (!result.canceled && result.assets[0]) {
-              setUploading(true);
-              // In production, upload to cloud storage and get URL
-              // For now, use the local URI
-              setIdPicture(result.assets[0].uri);
-              setUploading(false);
-              Alert.alert('Success', 'ID picture selected! (Upload to server in production)');
-            }
-          }
-        },
-        { 
-          text: 'Take Photo', 
-          onPress: async () => {
-            const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-            if (permissionResult.granted === false) {
-              Alert.alert('Permission Required', 'Please allow access to your camera.');
-              return;
-            }
-
-            const result = await ImagePicker.launchCameraAsync({
-              allowsEditing: true,
-              aspect: [3, 4],
-              quality: 0.8,
-            });
-
-            if (!result.canceled && result.assets[0]) {
-              setUploading(true);
-              setIdPicture(result.assets[0].uri);
-              setUploading(false);
-              Alert.alert('Success', 'ID picture captured! (Upload to server in production)');
-            }
-          }
-        }
-      ]
-    );
-  };
-
   const handleRegisterBiometric = async () => {
     setRegisteringBiometric(true);
-    
+
     try {
       // Check if device supports biometrics
       const compatible = await LocalAuthentication.hasHardwareAsync();
@@ -145,27 +88,43 @@ const ProfileCompletionScreen: React.FC<ProfileCompletionScreenProps> = ({
     }
   };
 
-  const handleCreateSignature = () => {
-    Alert.alert(
-      'Digital Signature',
-      'Draw your signature on the screen',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Start Drawing', 
-          onPress: () => {
-            // In a real app, open a signature pad component
-            // For now, simulate signature creation
-            setSigning(true);
-            setTimeout(() => {
-              setDigitalSignature('signature_data_base64_encoded');
-              setSigning(false);
-              Alert.alert('Success', 'Digital signature created successfully!');
-            }, 1500);
-          }
+  const normalizeName = (value: string) => value.trim().replace(/\s+/g, ' ').toLowerCase();
+
+  const handleCreateSignature = async () => {
+    if (!user) return;
+    const typed = signatureName.trim().replace(/\s+/g, ' ');
+    if (!typed) {
+      Alert.alert('Signature Required', 'Type your full legal name to sign.');
+      return;
+    }
+    if (normalizeName(typed) !== normalizeName(user.name || '')) {
+      Alert.alert('Name Mismatch', `The signature must match the name on your account exactly: "${user.name}".`);
+      return;
+    }
+    setSigning(true);
+    try {
+      // Confirm the signer is the device owner before binding the signature.
+      const hasHardware = await LocalAuthentication.hasHardwareAsync();
+      const enrolled = hasHardware && await LocalAuthentication.isEnrolledAsync();
+      if (enrolled) {
+        const auth = await LocalAuthentication.authenticateAsync({
+          promptMessage: 'Confirm your digital signature',
+          cancelLabel: 'Cancel',
+        });
+        if (!auth.success) {
+          Alert.alert('Not Signed', 'Signature confirmation was cancelled.');
+          return;
         }
-      ]
-    );
+      }
+      setDigitalSignature(`signed:${typed}:${new Date().toISOString()}`);
+      setShowSignatureInput(false);
+      Alert.alert('Signed', 'Your digital signature has been captured. Tap "Complete Profile" to save it.');
+    } catch (error) {
+      console.error('Signature error:', error);
+      Alert.alert('Error', 'Could not capture your signature. Please try again.');
+    } finally {
+      setSigning(false);
+    }
   };
 
   const handleCompleteProfile = async () => {
@@ -178,9 +137,9 @@ const ProfileCompletionScreen: React.FC<ProfileCompletionScreenProps> = ({
         biometricRegistered,
         digitalSignature: digitalSignature || undefined,
         // We consider ID picture 'done' or not required for this check since upload is disabled
-        idPictureUrl: 'skipped', 
+        idPictureUrl: 'skipped',
       } as User);
-      
+
       Alert.alert(
         'Incomplete Profile',
         `Please complete the following:\n${missing.join('\n')}`
@@ -199,20 +158,28 @@ const ProfileCompletionScreen: React.FC<ProfileCompletionScreenProps> = ({
           biometricRegistered: true,
           digitalSignature: digitalSignature,
           profileCompleted: true,
+          ...(user.district ? { district: user.district } : {}),
+          ...(user.sector ? { sector: user.sector } : {}),
+          ...(user.cell ? { cell: user.cell } : {}),
+          ...(user.village ? { village: user.village } : {}),
         }),
       });
 
       if (response.ok) {
-        const updatedUser = await response.json();
+        const updated = await response.json();
+        const updatedUser: User = { ...user, ...(updated?.user || updated) };
         await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
-        
+        const { token, login } = useAuthStore.getState();
+        if (token) login(updatedUser, token);
+
         Alert.alert(
           'Profile Complete!',
           'Your profile has been completed successfully. You can now use all features.',
           [{ text: 'OK', onPress: onComplete }]
         );
       } else {
-        Alert.alert('Error', 'Failed to update profile. Please try again.');
+        const body = await response.json().catch(() => ({}));
+        Alert.alert('Error', body?.error || `Failed to update profile (${response.status}). Please try again.`);
       }
     } catch (error) {
       console.error('Complete profile error:', error);
@@ -225,10 +192,10 @@ const ProfileCompletionScreen: React.FC<ProfileCompletionScreenProps> = ({
   return (
     <View style={GlobalStyles.container}>
       <SafeAreaView edges={['top', 'bottom']} style={GlobalStyles.safeArea}>
-        <MainHeader 
-          user={user} 
-          showBack 
-          onBack={() => onNavigate('profile')} 
+        <MainHeader
+          user={user}
+          showBack
+          onBack={() => onNavigate('profile')}
           title="Complete Profile"
         />
 
@@ -240,8 +207,8 @@ const ProfileCompletionScreen: React.FC<ProfileCompletionScreenProps> = ({
               <Text style={styles.progressPercentage}>{completionPercentage}%</Text>
             </View>
             <View style={styles.progressBar}>
-              <View 
-                style={[styles.progressFill, { width: `${completionPercentage}%` }]} 
+              <View
+                style={[styles.progressFill, { width: `${completionPercentage}%` }]}
               />
             </View>
             <Text style={styles.progressSubtext}>
@@ -253,10 +220,10 @@ const ProfileCompletionScreen: React.FC<ProfileCompletionScreenProps> = ({
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <View style={[styles.statusIcon, styles.statusIconComplete]}>
-                  <MaterialIcons 
-                    name="badge" 
-                    size={24} 
-                    color={Colors.success} 
+                  <MaterialIcons
+                    name="badge"
+                    size={24}
+                    color={Colors.success}
                   />
                 </View>
                 <View style={styles.sectionText}>
@@ -279,10 +246,10 @@ const ProfileCompletionScreen: React.FC<ProfileCompletionScreenProps> = ({
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View style={[styles.statusIcon, biometricRegistered && styles.statusIconComplete]}>
-                <MaterialIcons 
-                  name={biometricRegistered ? "check-circle" : "fingerprint"} 
-                  size={24} 
-                  color={biometricRegistered ? Colors.success : Colors.primary} 
+                <MaterialIcons
+                  name={biometricRegistered ? "check-circle" : "fingerprint"}
+                  size={24}
+                  color={biometricRegistered ? Colors.success : Colors.primary}
                 />
               </View>
               <View style={styles.sectionText}>
@@ -299,7 +266,7 @@ const ProfileCompletionScreen: React.FC<ProfileCompletionScreenProps> = ({
                 <Text style={styles.completeText}>Biometric Registered</Text>
               </View>
             ) : (
-              <Pressable 
+              <Pressable
                 style={styles.actionButton}
                 onPress={handleRegisterBiometric}
                 disabled={registeringBiometric}
@@ -320,10 +287,10 @@ const ProfileCompletionScreen: React.FC<ProfileCompletionScreenProps> = ({
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View style={[styles.statusIcon, digitalSignature && styles.statusIconComplete]}>
-                <MaterialIcons 
-                  name={digitalSignature ? "check-circle" : "edit"} 
-                  size={24} 
-                  color={digitalSignature ? Colors.success : Colors.primary} 
+                <MaterialIcons
+                  name={digitalSignature ? "check-circle" : "edit"}
+                  size={24}
+                  color={digitalSignature ? Colors.success : Colors.primary}
                 />
               </View>
               <View style={styles.sectionText}>
@@ -339,10 +306,39 @@ const ProfileCompletionScreen: React.FC<ProfileCompletionScreenProps> = ({
                 <MaterialIcons name="verified" size={20} color={Colors.success} />
                 <Text style={styles.completeText}>Signature Created</Text>
               </View>
+            ) : showSignatureInput ? (
+              <View style={{ gap: 12 }}>
+                <Text style={styles.sectionSubtitle}>
+                  Type your full legal name exactly as registered ({user?.name}). This acts as your binding signature.
+                </Text>
+                <TextInput
+                  style={styles.signatureInput}
+                  placeholder="Full legal name"
+                  placeholderTextColor={Colors.textTertiary}
+                  value={signatureName}
+                  onChangeText={setSignatureName}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                />
+                <Pressable
+                  style={styles.actionButton}
+                  onPress={handleCreateSignature}
+                  disabled={signing}
+                >
+                  {signing ? (
+                    <ActivityIndicator color={Colors.white} />
+                  ) : (
+                    <>
+                      <MaterialIcons name="draw" size={20} color={Colors.white} />
+                      <Text style={styles.actionButtonText}>Sign</Text>
+                    </>
+                  )}
+                </Pressable>
+              </View>
             ) : (
-              <Pressable 
+              <Pressable
                 style={styles.actionButton}
-                onPress={handleCreateSignature}
+                onPress={() => setShowSignatureInput(true)}
                 disabled={signing}
               >
                 {signing ? (
@@ -358,7 +354,7 @@ const ProfileCompletionScreen: React.FC<ProfileCompletionScreenProps> = ({
           </View>
 
           {/* Complete Button */}
-          <Pressable 
+          <Pressable
             style={[
               styles.completeButton,
               completionPercentage < 100 && styles.completeButtonDisabled
@@ -382,6 +378,16 @@ const ProfileCompletionScreen: React.FC<ProfileCompletionScreenProps> = ({
 };
 
 const styles = StyleSheet.create({
+  signatureInput: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 16,
+    fontStyle: 'italic',
+    color: Colors.textPrimary,
+    backgroundColor: Colors.white,
+  },
   scrollContent: {
     padding: 24,
     paddingBottom: 100,

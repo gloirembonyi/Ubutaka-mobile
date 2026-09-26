@@ -99,8 +99,8 @@ const DisputeDetailScreen: React.FC<DisputeDetailScreenProps> = ({ onNavigate, d
     <View style={GlobalStyles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable 
-          onPress={() => onNavigate(user?.role === 'ABUNZI' ? 'abunzi-dashboard' : 'dispute-list')} 
+        <Pressable
+          onPress={() => onNavigate(user?.role === 'ABUNZI' ? 'abunzi-dashboard' : 'dispute-list')}
           style={styles.backButton}
         >
           <MaterialIcons name="arrow-back" size={24} color={Colors.textPrimary} />
@@ -138,15 +138,15 @@ const DisputeDetailScreen: React.FC<DisputeDetailScreenProps> = ({ onNavigate, d
             { id: 'evidence', icon: 'attach-file', label: 'Evidence' },
             { id: 'decision', icon: 'gavel', label: 'Verdict' },
           ].map((tab) => (
-            <Pressable 
+            <Pressable
               key={tab.id}
               onPress={() => setActiveTab(tab.id as PortalTab)}
               style={[styles.tab, activeTab === tab.id && styles.tabActive]}
             >
-              <MaterialIcons 
-                name={tab.icon as any} 
-                size={18} 
-                color={activeTab === tab.id ? Colors.primary : Colors.textTertiary} 
+              <MaterialIcons
+                name={tab.icon as any}
+                size={18}
+                color={activeTab === tab.id ? Colors.primary : Colors.textTertiary}
               />
               <Text style={[styles.tabLabel, activeTab === tab.id && styles.tabLabelActive]}>
                 {tab.label}
@@ -158,13 +158,13 @@ const DisputeDetailScreen: React.FC<DisputeDetailScreenProps> = ({ onNavigate, d
 
       {/* Content */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
-        
+
         {activeTab === 'info' && (
           <View style={styles.section}>
             <View style={styles.summaryCard}>
               <Text style={styles.sectionTitle}>Case Description</Text>
               <Text style={styles.descriptionText}>{dispute.description}</Text>
-              
+
               <View style={styles.divider} />
 
               <Text style={styles.sectionTitle}>Attached Land (UPI)</Text>
@@ -201,29 +201,29 @@ const DisputeDetailScreen: React.FC<DisputeDetailScreenProps> = ({ onNavigate, d
                parseJson(dispute.statements).map((s: any, i: number) => (
                  <View key={i} style={styles.statementCard}>
                    <View style={styles.statementHeader}>
-                     <Text style={styles.statementAuthor}>{s.author}</Text>
-                     <Text style={styles.statementDate}>{s.date}</Text>
+                     <Text style={styles.statementAuthor}>{s.author || s.party}</Text>
+                     <Text style={styles.statementDate}>{s.date && !isNaN(new Date(s.date).getTime()) ? new Date(s.date).toLocaleDateString() : s.date}</Text>
                    </View>
-                   <Text style={styles.statementText}>{s.content}</Text>
+                   <Text style={styles.statementText}>{s.content || s.text}</Text>
                  </View>
                ))
              )}
 
              <View style={styles.addSection}>
                <Text style={styles.inputLabel}>Add New Party Statement</Text>
-               <TextInput 
+               <TextInput
                  style={styles.textArea}
                  placeholder="Type oral statement here..."
                  multiline
                  value={newStatement}
                  onChangeText={setNewStatement}
                />
-               <Pressable 
+               <Pressable
                 style={styles.addBtn}
                 onPress={() => {
                   if (!newStatement) return;
                   const current = parseJson(dispute.statements);
-                  const updated = [...current, { author: 'Party Participant', date: new Date().toLocaleDateString(), content: newStatement }];
+                  const updated = [...current, { author: user?.name || 'Participant', party: user?.name || 'Participant', date: new Date().toISOString(), content: newStatement, text: newStatement }];
                   handleUpdateDispute({ statements: JSON.stringify(updated) });
                   setNewStatement('');
                 }}
@@ -265,14 +265,14 @@ const DisputeDetailScreen: React.FC<DisputeDetailScreenProps> = ({ onNavigate, d
              </View>
 
              <Text style={styles.sectionTitle}>Record Minutes & Resolution</Text>
-             <TextInput 
+             <TextInput
                style={[styles.textArea, { height: 180 }]}
                placeholder="Describe the agreed resolution in detail..."
                multiline
                value={newDecision}
                onChangeText={setNewDecision}
              />
-             
+
              <View style={styles.decisionHistory}>
                 <Text style={styles.subTitle}>Previous Minutes</Text>
                 {parseJson(dispute.decisions).length === 0 ? (
@@ -287,15 +287,15 @@ const DisputeDetailScreen: React.FC<DisputeDetailScreenProps> = ({ onNavigate, d
                 )}
              </View>
 
-             <Pressable 
+             <Pressable
               style={[styles.verdictBtn, submitting && { opacity: 0.7 }]}
               onPress={() => {
                 if (!newDecision) return;
                 const current = parseJson(dispute.decisions);
                 const updated = [...current, { date: new Date().toLocaleDateString(), text: newDecision }];
-                handleUpdateDispute({ 
+                handleUpdateDispute({
                     decisions: JSON.stringify(updated),
-                    status: 'Resolved' 
+                    status: 'Resolved'
                 });
                 setNewDecision('');
               }}
@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: 'bold', color: Colors.textPrimary },
   headerSub: { fontSize: 10, color: Colors.textTertiary, letterSpacing: 1, textTransform: 'uppercase' },
   shareButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: getColorWithOpacity(Colors.primary, 0.05), alignItems: 'center', justifyContent: 'center' },
-  
+
   banner: { padding: 20, backgroundColor: Colors.white, borderBottomWidth: 1, borderBottomColor: Colors.borderLight },
   statusRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
@@ -338,15 +338,15 @@ const styles = StyleSheet.create({
 
   tabsContainer: { backgroundColor: Colors.white, borderBottomWidth: 1, borderBottomColor: Colors.borderLight },
   tabsScroll: { paddingHorizontal: 16, paddingVertical: 12, gap: 8 },
-  tab: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    gap: 6, 
-    paddingHorizontal: 16, 
-    paddingVertical: 8, 
-    borderRadius: 20, 
-    borderWidth: 1, 
-    borderColor: Colors.borderLight 
+  tab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: Colors.borderLight
   },
   tabActive: { backgroundColor: getColorWithOpacity(Colors.primary, 0.1), borderColor: Colors.primary },
   tabLabel: { fontSize: 13, color: Colors.textSecondary, fontWeight: '600' },
@@ -356,28 +356,28 @@ const styles = StyleSheet.create({
   section: { padding: 20 },
   sectionTitle: { fontSize: 16, fontWeight: 'bold', color: Colors.textPrimary, marginBottom: 12 },
   subTitle: { fontSize: 14, fontWeight: '700', color: Colors.textSecondary, marginBottom: 10, marginTop: 10 },
-  
+
   summaryCard: { backgroundColor: Colors.white, borderRadius: 20, padding: 20, marginBottom: 16, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8 },
   descriptionText: { fontSize: 14, color: Colors.textSecondary, lineHeight: 22 },
   divider: { height: 1, backgroundColor: Colors.borderLight, marginVertical: 16 },
-  
+
   upiCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F1F5F9', padding: 16, borderRadius: 16, gap: 12 },
   upiText: { flex: 1, fontSize: 15, fontWeight: 'bold', color: Colors.textPrimary },
   viewMapBtn: { backgroundColor: Colors.white, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: '#CBD5E1' },
   viewMapText: { fontSize: 12, color: Colors.primary, fontWeight: 'bold' },
-  
+
   treeBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: Colors.primary, padding: 16, borderRadius: 16, justifyContent: 'center', marginTop: 16 },
   treeBtnText: { color: Colors.white, fontWeight: 'bold' },
 
   emptyCard: { padding: 40, alignItems: 'center' },
   emptyText: { color: Colors.textTertiary, fontStyle: 'italic' },
-  
+
   statementCard: { backgroundColor: Colors.white, borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: Colors.borderLight },
   statementHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   statementAuthor: { fontSize: 12, fontWeight: 'bold', color: Colors.primary },
   statementDate: { fontSize: 10, color: Colors.textTertiary },
   statementText: { fontSize: 14, color: Colors.textPrimary, lineHeight: 20 },
-  
+
   addSection: { marginTop: 20, backgroundColor: Colors.white, padding: 16, borderRadius: 20 },
   inputLabel: { fontSize: 12, fontWeight: '700', color: Colors.textSecondary, marginBottom: 10 },
   textArea: { backgroundColor: '#F8FAFC', borderRadius: 12, padding: 16, height: 100, textAlignVertical: 'top', borderWidth: 1, borderColor: '#E2E8F0', fontSize: 14 },
@@ -390,20 +390,20 @@ const styles = StyleSheet.create({
 
   decisionWarning: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#FFFBEB', padding: 16, borderRadius: 16, marginBottom: 20, borderWidth: 1, borderColor: '#FEF3C7' },
   warningText: { flex: 1, fontSize: 12, color: '#92400E', fontWeight: 'bold', lineHeight: 18 },
-  
+
   decisionHistory: { marginTop: 24, paddingBottom: 20 },
   historyItem: { marginBottom: 16, borderLeftWidth: 2, borderLeftColor: Colors.primary, paddingLeft: 12 },
   historyDate: { fontSize: 10, fontWeight: 'bold', color: Colors.textTertiary, marginBottom: 4 },
   historyText: { fontSize: 13, color: Colors.textSecondary },
 
-  verdictBtn: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    gap: 10, 
-    backgroundColor: '#059669', 
-    padding: 18, 
-    borderRadius: 18, 
+  verdictBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: '#059669',
+    padding: 18,
+    borderRadius: 18,
     marginTop: 20,
     shadowColor: '#059669',
     shadowOffset: { width: 0, height: 4 },
