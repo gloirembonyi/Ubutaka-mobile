@@ -21,35 +21,18 @@ const NotaryDashboardScreen: React.FC<NotaryDashboardScreenProps> = ({ onNavigat
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  const [error, setError] = useState<string | null>(null);
+
   const fetchTransactions = async () => {
     try {
-      const url = API_ENDPOINTS.TRANSACTIONS;
-      console.log('Notary: Fetching transactions from:', url);
-      const resp = await fetch(url);
-      if (resp.ok) {
-        const data: Transaction[] = await resp.json();
-        // Fallback to mock data if empty for demo purposes
-        if (data.length === 0) {
-           setTransactions([
-             { 
-               id: '1', 
-               title: 'Sale of Parcel 48388hdjsj', 
-               upi: '48388hdjsj', 
-               status: 'PENDING_NOTARY', 
-               sellerName: 'Gloire Mbonyi', 
-               buyerName: '1846464949', 
-               price: '5464644', 
-               date: new Date().toISOString(),
-               step: 'Payment Received',
-               progress: 60
-             }
-           ]);
-        } else {
-           setTransactions(data);
-        }
-      }
-    } catch (err) {
+      const resp = await fetch(API_ENDPOINTS.TRANSACTIONS);
+      if (!resp.ok) throw new Error(`Server responded ${resp.status}`);
+      const data: Transaction[] = await resp.json();
+      setTransactions(Array.isArray(data) ? data : []);
+      setError(null);
+    } catch (err: any) {
       console.error('Fetch transactions error:', err);
+      setError(err?.message || 'Could not load transactions');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -59,14 +42,15 @@ const NotaryDashboardScreen: React.FC<NotaryDashboardScreenProps> = ({ onNavigat
   const fetchDocuments = async () => {
     try {
       const resp = await fetch(API_ENDPOINTS.DOCUMENTS);
-      if (resp.ok) {
-        const data = await resp.json();
-        setDocuments(data);
-      }
+      if (!resp.ok) throw new Error(`Server responded ${resp.status}`);
+      const data = await resp.json();
+      setDocuments(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Fetch documents error:', err);
     }
   };
+
+  const isDocCertified = (doc: LandDocument) => doc.isCertified || doc.status === 'CERTIFIED';
 
   useEffect(() => {
     fetchTransactions();
@@ -79,10 +63,10 @@ const NotaryDashboardScreen: React.FC<NotaryDashboardScreenProps> = ({ onNavigat
     fetchDocuments();
   };
 
-  const filteredTransactions = transactions.filter((tx: Transaction) => 
-    activeTab === 'pending' 
-      ? (tx.status === 'PENDING_NOTARY' || tx.status === 'PENDING' || tx.status === 'PENDING_SELLER' || tx.status === 'PENDING_PAYMENT' || tx.status === 'PENDING_SELLER_APPROVAL') 
-      : tx.status === 'COMPLETED'
+  const filteredTransactions = transactions.filter((tx: Transaction) =>
+    activeTab === 'pending'
+      ? tx.status === 'PENDING_NOTARY'
+      : (tx.status === 'PENDING_SELLER' || tx.status === 'COMPLETED')
   );
 
   const cleanPrice = (price?: string) => {
@@ -91,28 +75,26 @@ const NotaryDashboardScreen: React.FC<NotaryDashboardScreenProps> = ({ onNavigat
   };
 
   const stats = {
-    pending: transactions.filter(tx => tx.status === 'PENDING_NOTARY' || tx.status === 'PENDING').length,
-    completed: transactions.filter(tx => tx.status === 'COMPLETED').length,
+    pending: transactions.filter(tx => tx.status === 'PENDING_NOTARY').length,
+    completed: transactions.filter(tx => tx.status === 'PENDING_SELLER' || tx.status === 'COMPLETED').length,
     totalValue: transactions.reduce((acc, tx) => acc + cleanPrice(tx.price), 0).toLocaleString(),
-    paymentPending: transactions.filter(tx => tx.step?.includes('Payment')).length,
+    paymentPending: transactions.filter(tx => tx.status === 'PENDING_PAYMENT').length,
   };
 
   const handleViewDetails = async (tx: Transaction) => {
     try {
       setLoading(true);
-      const resp = await fetch(`${API_ENDPOINTS.PARCELS}?upi=${tx.upi}`);
+      const resp = await fetch(API_ENDPOINTS.PARCEL_BY_ID(encodeURIComponent(tx.upi)));
       if (resp.ok) {
-        const parcels = await resp.json();
-        const fullParcel = Array.isArray(parcels) ? parcels.find(p => p.upi === tx.upi) : parcels;
-        if (fullParcel) {
-          onNavigate('parcel-details', { parcel: fullParcel });
+        const parcel = await resp.json();
+        if (parcel && parcel.upi) {
+          onNavigate('parcel-details', { parcel });
           return;
         }
       }
-      // Fallback if parcel not found in search
-      onNavigate('parcel-details', { parcel: { upi: tx.upi, ownerName: tx.sellerName, price: tx.price } });
+      Alert.alert('Not Found', `Parcel ${tx.upi} could not be loaded from the registry.`);
     } catch (err) {
-      onNavigate('parcel-details', { parcel: { upi: tx.upi, ownerName: tx.sellerName, price: tx.price } });
+      Alert.alert('Error', 'Network error while loading the parcel.');
     } finally {
       setLoading(false);
     }
@@ -124,22 +106,25 @@ const NotaryDashboardScreen: React.FC<NotaryDashboardScreenProps> = ({ onNavigat
       `By certifying this, you verify that all documents are legal. The seller will be notified to give their final confirmation. Proceed?`,
       [
         { text: "Cancel", style: "cancel" },
-        { 
-          text: "Certify & Notify Seller", 
+        {
+          text: "Certify & Notify Seller",
           onPress: async () => {
             try {
-              const resp = await fetch(`${API_ENDPOINTS.TRANSACTIONS}/${tx.id}`, {
+              const resp = await fetch(API_ENDPOINTS.TRANSACTION_BY_ID(tx.id), {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                   status: 'PENDING_SELLER',
-                  step: 'Awaiting Seller Confirmation',
+                  step: 'Notary Certified',
                   progress: 80
                 })
               });
               if (resp.ok) {
-                Alert.alert("Certified", "You have notarized this transaction. We have sent a notification to the seller for final approval.");
+                Alert.alert("Certified", "You have notarized this transaction. The seller must now give final confirmation.");
                 fetchTransactions();
+              } else {
+                const body = await resp.json().catch(() => ({}));
+                Alert.alert("Error", body?.error || `Notarization failed (${resp.status}).`);
               }
             } catch (err) {
               Alert.alert("Error", "Failed to process notarization.");
@@ -156,21 +141,21 @@ const NotaryDashboardScreen: React.FC<NotaryDashboardScreenProps> = ({ onNavigat
       `Certify authenticity of ${doc.name}?`,
       [
         { text: "Cancel", style: "cancel" },
-        { 
-          text: "Certify", 
+        {
+          text: "Certify",
           onPress: async () => {
             try {
-              const resp = await fetch(`${API_ENDPOINTS.DOCUMENTS}/${doc.id}`, {
+              const resp = await fetch(API_ENDPOINTS.DOCUMENT_BY_ID(doc.id), {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                  status: 'CERTIFIED',
-                  isCertified: true
-                })
+                body: JSON.stringify({ status: 'CERTIFIED' })
               });
               if (resp.ok) {
                 Alert.alert("Success", "Document has been certified.");
                 fetchDocuments();
+              } else {
+                const body = await resp.json().catch(() => ({}));
+                Alert.alert("Error", body?.error || `Certification failed (${resp.status}).`);
               }
             } catch (err) {
               Alert.alert("Error", "Failed to certify document.");
@@ -185,9 +170,9 @@ const NotaryDashboardScreen: React.FC<NotaryDashboardScreenProps> = ({ onNavigat
     <View style={GlobalStyles.container}>
       <SafeAreaView edges={['top']} style={GlobalStyles.safeArea}>
         <MainHeader user={user} />
-        
-        <ScrollView 
-          showsVerticalScrollIndicator={false} 
+
+        <ScrollView
+          showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
@@ -210,7 +195,7 @@ const NotaryDashboardScreen: React.FC<NotaryDashboardScreenProps> = ({ onNavigat
               <View style={[styles.statIcon, { backgroundColor: '#FFFBEB' }]}>
                 <MaterialIcons name="insert-drive-file" size={20} color="#B45309" />
               </View>
-              <Text style={styles.statNumber}>{documents.filter(d => !d.isCertified).length}</Text>
+              <Text style={styles.statNumber}>{documents.filter(d => !isDocCertified(d)).length}</Text>
               <Text style={styles.statLabel}>Docs Pending</Text>
             </View>
             <View style={styles.statCard}>
@@ -235,19 +220,19 @@ const NotaryDashboardScreen: React.FC<NotaryDashboardScreenProps> = ({ onNavigat
           </View>
 
           <View style={styles.tabs}>
-            <Pressable 
+            <Pressable
               onPress={() => setActiveTab('pending')}
               style={[styles.tab, activeTab === 'pending' && styles.tabActive]}
             >
               <Text style={[styles.tabText, activeTab === 'pending' && styles.tabTextActive]}>Pending Verification</Text>
             </Pressable>
-            <Pressable 
+            <Pressable
               onPress={() => setActiveTab('completed')}
               style={[styles.tab, activeTab === 'completed' && styles.tabActive]}
             >
               <Text style={[styles.tabText, activeTab === 'completed' && styles.tabTextActive]}>Archives</Text>
             </Pressable>
-            <Pressable 
+            <Pressable
               onPress={() => setActiveTab('documents')}
               style={[styles.tab, activeTab === 'documents' && styles.tabActive]}
             >
@@ -259,7 +244,12 @@ const NotaryDashboardScreen: React.FC<NotaryDashboardScreenProps> = ({ onNavigat
             {loading ? (
               <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: 40 }} />
             ) : activeTab === 'documents' ? (
-              documents.map((doc: LandDocument) => (
+              documents.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <MaterialIcons name="folder-open" size={64} color={Colors.border} />
+                  <Text style={styles.emptyText}>No documents have been submitted yet.</Text>
+                </View>
+              ) : documents.map((doc: LandDocument) => (
                 <View key={doc.id} style={styles.txCard}>
                   <View style={styles.txHeader}>
                     <View style={{ flex: 1 }}>
@@ -269,19 +259,19 @@ const NotaryDashboardScreen: React.FC<NotaryDashboardScreenProps> = ({ onNavigat
                     </View>
                     <View style={[
                       styles.statusBadge,
-                      { backgroundColor: doc.isCertified ? getColorWithOpacity(Colors.success, 0.1) : getColorWithOpacity(Colors.warning, 0.1) }
+                      { backgroundColor: isDocCertified(doc) ? getColorWithOpacity(Colors.success, 0.1) : getColorWithOpacity(Colors.warning, 0.1) }
                     ]}>
                       <Text style={[
                         styles.statusText,
-                        { color: doc.isCertified ? Colors.success : Colors.warning }
-                      ]}>{doc.isCertified ? 'CERTIFIED' : 'PENDING'}</Text>
+                        { color: isDocCertified(doc) ? Colors.success : Colors.warning }
+                      ]}>{isDocCertified(doc) ? 'CERTIFIED' : 'PENDING'}</Text>
                     </View>
                   </View>
 
                   <Text style={styles.txDescription} numberOfLines={2}>{doc.description || 'No description provided.'}</Text>
 
-                  {!doc.isCertified && (
-                    <Pressable 
+                  {!isDocCertified(doc) && (
+                    <Pressable
                       onPress={() => handleCertifyDocument(doc)}
                       style={[styles.approveButton, { marginTop: 12 }]}
                     >
@@ -289,7 +279,7 @@ const NotaryDashboardScreen: React.FC<NotaryDashboardScreenProps> = ({ onNavigat
                       <Text style={styles.buttonText}>Certify Document</Text>
                     </Pressable>
                   )}
-                  {doc.isCertified && (
+                  {isDocCertified(doc) && (
                     <View style={[styles.certifiedRow, { marginTop: 12 }]}>
                       <MaterialIcons name="verified-user" size={16} color={Colors.success} />
                       <Text style={styles.certifiedText}>Officially Verified</Text>
@@ -328,30 +318,30 @@ const NotaryDashboardScreen: React.FC<NotaryDashboardScreenProps> = ({ onNavigat
                 </View>
 
                 <View style={styles.divider} />
-                
+
                 <View style={styles.priceRowCompact}>
                    <Text style={styles.priceLabelCompact}>Transaction Value</Text>
                    <Text style={styles.priceValueCompact}>{parseInt(tx.price || '0').toLocaleString()} RWF</Text>
                 </View>
 
                 {/* Payment Status Indicator */}
-                {tx.step?.toLowerCase().includes('payment') && (
+                {tx.status === 'PENDING_NOTARY' && (
                   <View style={styles.paymentNotification}>
                     <MaterialIcons name="payment" size={16} color={Colors.success} />
                     <Text style={styles.paymentText}>Payment Received - Ready for Review</Text>
                   </View>
                 )}
 
-                {tx.status !== 'COMPLETED' && tx.status !== 'PENDING_SELLER' && (
+                {tx.status === 'PENDING_NOTARY' && (
                   <View style={styles.actionButtons}>
-                    <Pressable 
+                    <Pressable
                       onPress={() => handleApprove(tx)}
                       style={styles.approveButton}
                     >
                       <MaterialIcons name="check-circle" size={18} color={Colors.white} />
                       <Text style={styles.buttonText}>Certify Transaction</Text>
                     </Pressable>
-                    <Pressable 
+                    <Pressable
                       onPress={() => handleViewDetails(tx)}
                       style={styles.detailsButton}
                     >
@@ -366,15 +356,15 @@ const NotaryDashboardScreen: React.FC<NotaryDashboardScreenProps> = ({ onNavigat
                       <MaterialIcons name="hourglass-top" size={16} color={Colors.warning} />
                       <Text style={styles.pendingSellerText}>Awaiting Seller Final Signature</Text>
                     </View>
-                    <Pressable 
-                      onPress={() => onNavigate('parcel-details', { parcel: { upi: tx.upi, ownerName: tx.sellerName } })}
+                    <Pressable
+                      onPress={() => handleViewDetails(tx)}
                       style={[styles.detailsButton, { width: '100%' }]}
                     >
                       <Text style={styles.detailsButtonText}>Monitor Progress</Text>
                     </Pressable>
                   </View>
                 )}
-                
+
                 {tx.status === 'COMPLETED' && (
                   <View style={styles.certifiedRow}>
                     <MaterialIcons name="verified-user" size={16} color={Colors.success} />
@@ -385,7 +375,9 @@ const NotaryDashboardScreen: React.FC<NotaryDashboardScreenProps> = ({ onNavigat
             )) : (
               <View style={styles.emptyState}>
                 <MaterialIcons name="assignment-turned-in" size={64} color={Colors.border} />
-                <Text style={styles.emptyText}>No transactions found in this category.</Text>
+                <Text style={styles.emptyText}>
+                  {error ? `Could not load transactions: ${error}` : activeTab === 'pending' ? 'No transactions are awaiting notarization.' : 'No notarized transactions yet.'}
+                </Text>
               </View>
             )}
           </View>

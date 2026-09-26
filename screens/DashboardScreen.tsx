@@ -5,12 +5,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import NetInfo from '@react-native-community/netinfo';
 import { Screen, User, Parcel } from '../types';
-import { MOCK_USER } from '../constants';
+import * as LocalAuthentication from 'expo-local-authentication';
 import { Colors, getColorWithOpacity } from '../styles/colors';
 import { GlobalStyles } from '../styles/globalStyles';
 import { API_ENDPOINTS } from '../config/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import MainHeader from '../components/MainHeader';
+import { useAuthStore } from '../store/authStore';
 
 interface DashboardScreenProps {
   onNavigate: (screen: Screen, params?: any) => void;
@@ -26,8 +27,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onR
   const [loading, setLoading] = useState(true);
   const [verifying, setVerifying] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
-  
-  const displayUser = user || MOCK_USER;
+
 
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener((state) => {
@@ -50,15 +50,18 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onR
   }, [user]);
 
   const fetchParcels = async () => {
-    if (!displayUser.name) return;
+    if (!user?.name) {
+      setLoading(false);
+      return;
+    }
     try {
-      const url = `${API_ENDPOINTS.PARCELS}?ownerName=${encodeURIComponent(displayUser.name)}`;
+      const url = `${API_ENDPOINTS.PARCELS}?ownerName=${encodeURIComponent(user.name)}`;
       console.log('Dashboard: Fetching parcels from:', url);
       const resp = await fetch(url);
       if (resp.ok) {
         const data = await resp.json();
         console.log('Dashboard: Fetched parcels:', data.length);
-        setParcels(data);
+        setParcels(Array.isArray(data) ? data : []);
       } else {
         console.error('Dashboard: Failed to fetch parcels:', resp.status);
       }
@@ -70,17 +73,18 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onR
   };
 
   const fetchTransactions = async () => {
-    if (!displayUser.name) return;
+    if (!user?.name) return;
+    const name = user.name;
     try {
-      const url = `${API_ENDPOINTS.TRANSACTIONS}?name=${encodeURIComponent(displayUser.name)}`;
+      const url = `${API_ENDPOINTS.TRANSACTIONS}?name=${encodeURIComponent(name)}`;
       const resp = await fetch(url);
       if (resp.ok) {
         const data = await resp.json();
         // Filter for pending transactions that need user action
-        const pendingTx = data.filter((tx: any) => 
-          (tx.status === 'PENDING_SELLER_APPROVAL' && tx.sellerName === displayUser.name) ||
-          (tx.status === 'PENDING_PAYMENT' && tx.buyerName === displayUser.name) ||
-          (tx.status === 'PENDING_SELLER' && tx.sellerName === displayUser.name)
+        const pendingTx = data.filter((tx: any) =>
+          (tx.status === 'PENDING_SELLER_APPROVAL' && tx.sellerName === name) ||
+          (tx.status === 'PENDING_PAYMENT' && tx.buyerName === name) ||
+          (tx.status === 'PENDING_SELLER' && tx.sellerName === name)
         );
         setTransactions(pendingTx);
       }
@@ -90,36 +94,61 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onR
   };
 
   const handleBiometricVerify = async () => {
-    if (displayUser.isVerified) return;
-    
+    if (!user || user.isVerified) return;
+
     setVerifying(true);
-    // Simulate biometric scan delay
-    setTimeout(async () => {
-      try {
-        const resp = await fetch(`${API_ENDPOINTS.USERS}/${displayUser.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ isVerified: true })
-        });
-        
-        if (resp.ok) {
-          const updatedUser = await resp.json();
-          // Update AsyncStorage
-          await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
-          // Notify parent to refresh state
-          if (onRefreshUser) onRefreshUser();
-          
-          Alert.alert("Success", "Biometric Identity Verified successfully!");
-        } else {
-          Alert.alert("Error", "Failed to verify identity. Please try again.");
-        }
-      } catch (err) {
-        console.error('Verify error:', err);
-        Alert.alert("Error", "Network error during verification.");
-      } finally {
-        setVerifying(false);
+    try {
+      // 1. Real biometric check on the device
+      const hasHardware = await LocalAuthentication.hasHardwareAsync();
+      const enrolled = hasHardware && await LocalAuthentication.isEnrolledAsync();
+      if (!enrolled) {
+        Alert.alert("Biometrics Unavailable", "Set up a fingerprint or face unlock on this device to verify your identity.");
+        return;
       }
-    }, 2000);
+      const auth = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Verify your identity',
+        cancelLabel: 'Cancel',
+      });
+      if (!auth.success) {
+        Alert.alert("Not Verified", "Biometric verification was cancelled or failed.");
+        return;
+      }
+
+      // 2. Record the biometric registration. The account becomes verified once the
+      //    profile is complete (digital signature + biometrics).
+      const completes = !!user.digitalSignature;
+      const resp = await fetch(`${API_ENDPOINTS.USERS}/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ biometricRegistered: true, ...(completes ? { profileCompleted: true } : {}) })
+      });
+
+      if (!resp.ok) {
+        const body = await resp.json().catch(() => ({}));
+        Alert.alert("Error", body?.error || "Failed to record verification. Please try again.");
+        return;
+      }
+      const updatedUser: User = { ...user, ...(await resp.json()) };
+      await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+      const { token, login } = useAuthStore.getState();
+      if (token) login(updatedUser, token);
+      if (onRefreshUser) onRefreshUser();
+
+      if (updatedUser.isVerified) {
+        Alert.alert("Success", "Biometric identity verified successfully!");
+      } else {
+        Alert.alert(
+          "Biometrics Registered",
+          "Complete your profile with a digital signature to finish verifying your account.",
+          [{ text: "Continue", onPress: () => onNavigate('profile-completion') }]
+        );
+      }
+    } catch (err) {
+      console.error('Verify error:', err);
+      Alert.alert("Error", "Verification failed. Please try again.");
+    } finally {
+      setVerifying(false);
+    }
   };
 
   const actions = [
@@ -133,6 +162,16 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onR
     { icon: 'report-problem', label: 'Report Anomaly', screen: 'report-anomaly', params: { type: 'Anomaly' } },
     { icon: 'wifi-off', label: 'Offline Mode', screen: 'offline' },
   ];
+
+  if (!user) {
+    return (
+      <View style={[GlobalStyles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+        <Text style={{ marginTop: 12, color: Colors.textSecondary }}>Loading your account...</Text>
+      </View>
+    );
+  }
+  const displayUser = user;
 
   return (
     <View style={GlobalStyles.container}>
@@ -148,7 +187,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onR
           )}
           <View style={styles.content}>
             {/* Verification Status Banner */}
-            <Pressable 
+            <Pressable
               onPress={handleBiometricVerify}
               style={({ pressed }: { pressed: boolean }) => [
                 styles.verificationBanner,
@@ -158,10 +197,10 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onR
             >
               <View style={styles.verificationContent}>
                 <View style={[styles.verificationIcon, displayUser.isVerified && styles.verificationIconActive]}>
-                  <MaterialIcons 
-                    name="fingerprint" 
-                    size={24} 
-                    color={displayUser.isVerified ? Colors.success : Colors.primary} 
+                  <MaterialIcons
+                    name="fingerprint"
+                    size={24}
+                    color={displayUser.isVerified ? Colors.success : Colors.primary}
                   />
                 </View>
                 <View style={styles.verificationText}>
@@ -171,10 +210,10 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onR
                   </Text>
                 </View>
               </View>
-              <MaterialIcons 
-                name={displayUser.isVerified ? "check-circle" : "chevron-right"} 
-                size={24} 
-                color={displayUser.isVerified ? Colors.success : Colors.neutral} 
+              <MaterialIcons
+                name={displayUser.isVerified ? "check-circle" : "chevron-right"}
+                size={24}
+                color={displayUser.isVerified ? Colors.success : Colors.neutral}
               />
             </Pressable>
 
@@ -183,7 +222,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onR
           <View style={styles.notificationsSection}>
             <Text style={styles.sectionTitle}>Action Required</Text>
             {transactions.map((tx: any, idx: number) => (
-              <Pressable 
+              <Pressable
                 key={idx}
                 onPress={() => onNavigate('transactions')}
                 style={({ pressed }) => [
@@ -192,24 +231,24 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onR
                 ]}
               >
                 <View style={styles.notificationIcon}>
-                  <MaterialIcons 
+                  <MaterialIcons
                     name={
                       tx.status === 'PENDING_SELLER_APPROVAL' ? 'rate-review' :
                       tx.status === 'PENDING_PAYMENT' ? 'payment' :
                       'edit-note'
-                    } 
-                    size={24} 
+                    }
+                    size={24}
                     color={
                       tx.status === 'PENDING_SELLER_APPROVAL' ? '#F59E0B' :
                       tx.status === 'PENDING_PAYMENT' ? Colors.primary :
                       Colors.success
-                    } 
+                    }
                   />
                 </View>
                 <View style={styles.notificationContent}>
                   <Text style={styles.notificationTitle}>{tx.title}</Text>
                   <Text style={styles.notificationSubtitle}>
-                    {tx.status === 'PENDING_SELLER_APPROVAL' && tx.sellerName === displayUser.name 
+                    {tx.status === 'PENDING_SELLER_APPROVAL' && tx.sellerName === displayUser.name
                       ? `📥 Buyer ${tx.buyerName} sent an offer`
                       : tx.status === 'PENDING_PAYMENT' && tx.buyerName === displayUser.name
                       ? `✅ Seller approved! Pay fees to proceed`
@@ -227,14 +266,14 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onR
         )}
 
         {/* Hero Card */}
-        <Pressable 
+        <Pressable
           onPress={() => onNavigate('my-parcels')}
           style={({ pressed }: { pressed: boolean }) => [
             styles.heroCard,
             pressed && GlobalStyles.pressed
           ]}
         >
-          <Image 
+          <Image
             source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBg3B2S4GgGnOLWO9G9snLyexmgoP8BoMiJYbNlHRmhhpZt-0LM2yKADDK40N_L83tq28leenpgC-0ZHu32zftdaKAWXOZXHV2FujdyWeNC3DVte7JcpPM9SphFSyhqaqVLT3u1uZ1NuGYlH4Ecd1klMuQZiEXqpiR2tvUH7LY3xiA_QmawIgGFRj2MlPoO1rWZyBb0Bx-ZctaP-MC0TRnujB-CfwWoi-0VYqeaLZw985AbeB37zg5cevXUbaF0lVUPs-Ra-rZdBGR3' }}
             style={styles.heroImage}
             resizeMode="cover"
@@ -248,8 +287,8 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onR
                 <View style={styles.heroLocation}>
                   <MaterialIcons name="location-on" size={14} color={Colors.accent} />
                   <Text style={styles.heroLocationText}>
-                    {loading ? 'Fetching location...' : 
-                     parcels.length > 0 ? Array.from(new Set(parcels.map((p: Parcel) => p.district))).join(' & ') + ' Districts' : 
+                    {loading ? 'Fetching location...' :
+                     parcels.length > 0 ? Array.from(new Set(parcels.map((p: Parcel) => p.district))).join(' & ') + ' Districts' :
                      'No parcels registered'}
                   </Text>
                 </View>
@@ -259,13 +298,13 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onR
               </View>
             </View>
             <View style={styles.heroButtons}>
-              <Pressable 
+              <Pressable
                 onPress={(e) => { e.stopPropagation(); onNavigate('certificate'); }}
                 style={styles.heroButtonPrimary}
               >
                 <Text style={styles.heroButtonText}>Land Certificates</Text>
               </Pressable>
-              <Pressable 
+              <Pressable
                 onPress={(e) => { e.stopPropagation(); onNavigate('register-land'); }}
                 style={styles.heroButtonSecondary}
               >
@@ -280,8 +319,8 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate, user, onR
           <Text style={styles.sectionTitle}>Land Actions</Text>
           <View style={styles.actionsGrid}>
             {actions.map((action, idx: number) => (
-              <Pressable 
-                key={idx} 
+              <Pressable
+                key={idx}
                 onPress={() => onNavigate(action.screen as Screen, (action as any).params)}
                 style={({ pressed }) => [
                   styles.actionCard,
